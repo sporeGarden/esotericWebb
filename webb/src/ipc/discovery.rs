@@ -292,15 +292,36 @@ fn plasmid_bin_directories() -> Vec<PathBuf> {
     dirs
 }
 
+/// Resolve the current user's UID for socket path construction.
+///
+/// Reads `/proc/self/status` (pure Rust, no libc) to get the real UID.
+/// Falls back to `$UID` env var, then 0 on non-Unix.
 fn process_uid() -> u32 {
     #[cfg(unix)]
     {
-        std::process::id()
+        uid_from_proc_status().or_else(uid_from_env).unwrap_or(0)
     }
     #[cfg(not(unix))]
     {
-        0
+        uid_from_env().unwrap_or(0)
     }
+}
+
+/// Parse real UID from `/proc/self/status` — toadStool sysmon pattern.
+#[cfg(unix)]
+fn uid_from_proc_status() -> Option<u32> {
+    let status = std::fs::read_to_string("/proc/self/status").ok()?;
+    for line in status.lines() {
+        if let Some(rest) = line.strip_prefix("Uid:") {
+            return rest.split_whitespace().next()?.parse().ok();
+        }
+    }
+    None
+}
+
+/// Fall back to `$UID` environment variable.
+fn uid_from_env() -> Option<u32> {
+    std::env::var("UID").ok()?.parse().ok()
 }
 
 #[cfg(test)]
@@ -310,10 +331,17 @@ mod tests {
 
     #[test]
     fn socket_directories_include_run_user_biomeos() {
-        let uid = std::process::id();
+        let uid = super::process_uid();
         let dirs = socket_directories();
         let expected = PathBuf::from(format!("/run/user/{uid}/biomeos"));
         assert!(dirs.contains(&expected));
+    }
+
+    #[test]
+    fn process_uid_returns_real_uid() {
+        let uid = super::process_uid();
+        // On a running Linux system the real UID is never u32::MAX
+        assert_ne!(uid, u32::MAX);
     }
 
     #[test]

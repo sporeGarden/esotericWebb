@@ -27,6 +27,7 @@
 //! Creative teams author YAML files (worlds, NPCs, abilities, scenes,
 //! narrative graphs) that the runtime loads, validates, and traverses.
 
+pub mod autoplay;
 pub mod content;
 pub mod director;
 pub mod experiment;

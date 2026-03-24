@@ -299,13 +299,17 @@ BIOMEOS_SOCKET_DIR = "${XDG_RUNTIME_DIR}/biomeos"
 timeout_ms = 20000
 
 [nodes.capabilities_provided]
+"health.liveness" = "health.liveness"
+"health.readiness" = "health.readiness"
+"health.check" = "health.check"
+"identity.get" = "identity.get"
+"capabilities.list" = "capabilities.list"
 "webb.health" = "webb.health"
 "webb.liveness" = "webb.liveness"
 "webb.readiness" = "webb.readiness"
 "webb.scene.current" = "webb.scene.current"
 "webb.narrative.status" = "webb.narrative.status"
 "webb.content.list" = "webb.content.list"
-"webb.content.validate" = "webb.content.validate"
 "tools.list" = "tools.list"
 "tools.call" = "tools.call"
 

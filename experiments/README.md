@@ -5,6 +5,8 @@ binary crate that exercises a specific capability or composition pattern.
 Experiments use a **shared validation harness** (`check_bool` / `check_skip`)
 and exit with a summary of pass/fail/skip counts.
 
+**Status**: 5 experiments, all passing (V4, March 24, 2026)
+
 ## Running
 
 ```bash
@@ -39,13 +41,22 @@ ESOTERICWEBB_JSON=1 cargo run --release --bin validate_all
 
 ## Experiments
 
-| # | Name | Track | Status |
-|---|------|-------|--------|
-| 001 | `narrative_reachability` | Narrative | local |
-| 002 | `composition_wiring` | Composition | local |
-| 003 | `state_emergence` | State | local |
-| 004 | `provenance_trio_tcp` | Provenance | skip (requires plasmidBin) |
-| 005 | `autoplay_coverage` | Gameplay | local |
+| # | Name | Track | Modules exercised | Status |
+|---|------|-------|-------------------|--------|
+| 001 | `narrative_reachability` | Narrative | `narrative`, `content`, BFS depth engine | local |
+| 002 | `composition_wiring` | Composition | `ipc::bridge`, `ipc::discovery`, degradation paths, resilience (retry + circuit breaker) | local |
+| 003 | `state_emergence` | State | `state`, `narrative::predicate`, `narrative::effect`, combinatorial space | local |
+| 004 | `provenance_trio_tcp` | Provenance | `ipc::client` (TCP), `ipc::launcher`, rhizoCrypt DAG lifecycle | skip (requires plasmidBin trio binaries) |
+| 005 | `autoplay_coverage` | Gameplay | `session`, `director`, `autoplay` heuristic engine, primal enrichment | local |
+
+## Next experiments (planned)
+
+| # | Name | Track | Modules | Blocked on |
+|---|------|-------|---------|------------|
+| 006 | `content_roundtrip` | Content | YAML load/save/validate, scaffold, cross-ref | — |
+| 007 | `flow_degradation` | DDA/Flow | `game.evaluate_flow` via bridge, degradation path | game science primal |
+| 008 | `deploy_graph_ordering` | Integration | `PrimalLauncher`, topological waves, readiness poll | plasmidBin binaries |
+| 009 | `ai_narration_pipeline` | Composition | `enrich_action()`, Squirrel fallback, voice notes | AI primal |
 
 ## Honest scaffolding
 

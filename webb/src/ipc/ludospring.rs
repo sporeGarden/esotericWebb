@@ -13,6 +13,7 @@ use serde_json::Value;
 
 use super::client::PrimalClient;
 use super::envelope::IpcError;
+use super::squirrel::ChatResponse;
 
 /// Game science primal JSON-RPC method names.
 pub const METHOD_EVALUATE_FLOW: &str = "game.evaluate_flow";
@@ -184,6 +185,134 @@ impl LudoSpringClient {
             adjustment: 0.0,
             reason: "default".to_owned(),
         })
+    }
+
+    /// NPC dialogue via ludoSpring → Squirrel delegation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IpcError`] if the call fails.
+    pub fn npc_dialogue(
+        &self,
+        params: &Value,
+        client: Option<&mut PrimalClient>,
+    ) -> Result<DialogueResponse, IpcError> {
+        if let Some(c) = client {
+            let resp = c.call(METHOD_NPC_DIALOGUE, params.clone())?;
+            if let Some(result) = resp.result {
+                if let Ok(d) = serde_json::from_value::<DialogueResponse>(result) {
+                    return Ok(d);
+                }
+            }
+        }
+        Ok(DialogueResponse {
+            text: "[game science primal unavailable — NPC dialogue degraded]".to_owned(),
+            voice_notes: Vec::new(),
+            passive_checks_fired: false,
+        })
+    }
+
+    /// Narrate an action via ludoSpring → Squirrel delegation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IpcError`] if the call fails.
+    pub fn narrate_action(
+        &self,
+        params: &Value,
+        client: Option<&mut PrimalClient>,
+    ) -> Result<ChatResponse, IpcError> {
+        if let Some(c) = client {
+            let resp = c.call(METHOD_NARRATE_ACTION, params.clone())?;
+            if let Some(result) = resp.result {
+                if let Ok(chat) = serde_json::from_value::<ChatResponse>(result) {
+                    return Ok(chat);
+                }
+            }
+        }
+        Ok(ChatResponse {
+            text: "[game science primal unavailable — narration degraded]".to_owned(),
+            model: "none".to_owned(),
+            tokens: 0,
+        })
+    }
+
+    /// Internal voice check via ludoSpring.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IpcError`] if the call fails.
+    pub fn voice_check(
+        &self,
+        params: &Value,
+        client: Option<&mut PrimalClient>,
+    ) -> Result<Vec<VoiceNote>, IpcError> {
+        if let Some(c) = client {
+            let resp = c.call(METHOD_VOICE_CHECK, params.clone())?;
+            if let Some(result) = resp.result {
+                if let Ok(notes) = serde_json::from_value::<Vec<VoiceNote>>(result) {
+                    return Ok(notes);
+                }
+            }
+        }
+        Ok(Vec::new())
+    }
+
+    /// Push scene to visualization via ludoSpring delegation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IpcError`] if the call fails.
+    pub fn push_scene(
+        &self,
+        params: &Value,
+        client: Option<&mut PrimalClient>,
+    ) -> Result<(), IpcError> {
+        if let Some(c) = client {
+            let _ = c.call(METHOD_PUSH_SCENE, params.clone())?;
+        }
+        Ok(())
+    }
+
+    /// Begin a game session via ludoSpring provenance delegation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IpcError`] if the call fails.
+    pub fn begin_session(
+        &self,
+        params: &Value,
+        client: Option<&mut PrimalClient>,
+    ) -> Result<Option<String>, IpcError> {
+        if let Some(c) = client {
+            let resp = c.call(METHOD_BEGIN_SESSION, params.clone())?;
+            if let Some(result) = resp.result {
+                if let Some(id) = result
+                    .get("session_id")
+                    .or_else(|| result.get("id"))
+                    .and_then(Value::as_str)
+                {
+                    return Ok(Some(id.to_owned()));
+                }
+            }
+        }
+        Ok(None)
+    }
+
+    /// Complete a game session via ludoSpring provenance delegation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IpcError`] if the call fails.
+    pub fn complete_session(
+        &self,
+        params: &Value,
+        client: Option<&mut PrimalClient>,
+    ) -> Result<(), IpcError> {
+        if let Some(c) = client {
+            let _ = c.call(METHOD_COMPLETE_SESSION, params.clone())?;
+        }
+        Ok(())
     }
 }
 

@@ -20,13 +20,24 @@ optional_dependencies = [
 ]
 
 capabilities = [
+    "health.liveness",
+    "health.readiness",
+    "health.check",
+    "identity.get",
+    "capabilities.list",
     "webb.health",
     "webb.liveness",
     "webb.readiness",
     "webb.scene.current",
     "webb.narrative.status",
     "webb.content.list",
-    "webb.content.validate",
+    "session.start",
+    "session.state",
+    "session.actions",
+    "session.act",
+    "session.history",
+    "session.narrate",
+    "session.graph",
     "tools.list",
     "tools.call",
 ]

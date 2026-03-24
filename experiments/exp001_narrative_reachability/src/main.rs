@@ -28,9 +28,7 @@ fn main() {
     check_bool("node count > 0", !graph.nodes.is_empty());
 
     let depths = graph.bfs_depths();
-    let start_id = graph
-        .start_node()
-        .map_or("(none)", |n| n.id.as_str());
+    let start_id = graph.start_node().map_or("(none)", |n| n.id.as_str());
     check_bool(
         &format!("BFS reaches start node '{start_id}'"),
         depths.contains_key(start_id),

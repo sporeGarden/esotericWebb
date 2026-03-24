@@ -97,6 +97,42 @@ pub struct NarrationContext {
     pub turn: u32,
     /// Hints from abilities in the bundle (for model guidance).
     pub narration_hints: Vec<String>,
+    /// Primal composition enrichments (AI narration, NPC dialogue, game science).
+    pub enrichment: PrimalEnrichment,
+}
+
+/// Enrichments from primal composition applied during [`GameSession::act`].
+///
+/// All fields are best-effort — absent primals result in `None` / empty
+/// values. Gameplay is never blocked by missing primals.
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct PrimalEnrichment {
+    /// AI-generated narration text (via ludoSpring → Squirrel, or direct Squirrel).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ai_narration: Option<String>,
+    /// NPC dialogue response (for talk actions, via ludoSpring → Squirrel).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub npc_dialogue: Option<String>,
+    /// Internal voice interjections (via ludoSpring game science).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub voice_notes: Vec<VoiceEnrichment>,
+    /// Flow evaluation score (0.0 = anxiety, 0.5 = flow, 1.0 = boredom).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub flow_score: Option<f64>,
+    /// Whether the player is currently in flow.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub in_flow: Option<bool>,
+    /// Whether the scene was successfully pushed to the UI primal.
+    pub scene_pushed: bool,
+}
+
+/// A voice interjection from the game science primal.
+#[derive(Debug, Clone, Serialize)]
+pub struct VoiceEnrichment {
+    /// Voice identifier (e.g. "logic", "empathy").
+    pub voice_id: String,
+    /// The voice's interjection text.
+    pub text: String,
 }
 
 impl GameSession {
@@ -139,9 +175,192 @@ impl GameSession {
         })
     }
 
+    /// Build a session from pre-constructed parts (for testing and composition).
+    pub const fn from_parts(
+        bundle: ContentBundle,
+        director: GameDirector,
+        state: WorldState,
+        bridge: Option<PrimalBridge>,
+    ) -> Self {
+        Self {
+            bundle,
+            director,
+            state,
+            history: Vec::new(),
+            turn: 0,
+            bridge,
+        }
+    }
+
     /// Get a reference to the primal bridge, if connected.
     pub const fn bridge(&self) -> Option<&PrimalBridge> {
         self.bridge.as_ref()
+    }
+
+    /// Remove the primal bridge from this session and return it.
+    ///
+    /// Used when replacing a session to preserve the bridge for the next one.
+    pub const fn take_bridge(&mut self) -> Option<PrimalBridge> {
+        self.bridge.take()
+    }
+
+    /// Initialize provenance session via DAG primal if available.
+    ///
+    /// Creates a DAG session and stores the returned session ID in
+    /// [`WorldState::session_id`] for subsequent event appends.
+    /// Degrades silently if the DAG primal is absent.
+    pub fn initialize_provenance(&mut self) {
+        let world_name = self.bundle.meta.name.clone();
+        let world_version = self.bundle.meta.version.clone();
+
+        let session_id = {
+            let Some(bridge) = self.bridge.as_mut() else {
+                return;
+            };
+            let params = serde_json::json!({
+                "world": world_name,
+                "content_version": world_version,
+            });
+            match bridge.dag_session_create(&params) {
+                Ok(Some(id)) => Some(id),
+                Ok(None) => {
+                    tracing::debug!("DAG primal unavailable — provenance session not created");
+                    None
+                }
+                Err(e) => {
+                    tracing::debug!("provenance session creation degraded: {e}");
+                    None
+                }
+            }
+        };
+
+        if let Some(id) = session_id {
+            tracing::debug!("provenance session created: {id}");
+            self.state.session_id = id;
+        }
+    }
+
+    /// Best-effort enrichment via primal composition.
+    ///
+    /// Calls AI and game science primals to enrich the mechanical action
+    /// outcome. All calls degrade silently — gameplay is never blocked.
+    fn enrich_action(&mut self, kind: &str, id: &str, outcome_text: &str) -> PrimalEnrichment {
+        let mut enrichment = PrimalEnrichment::default();
+        let turn = self.turn;
+
+        let Some(bridge) = self.bridge.as_mut() else {
+            return enrichment;
+        };
+
+        // Narrate action via ludoSpring (game-science-enriched → Squirrel)
+        if bridge.has(crate::ipc::DOMAIN_GAME) {
+            let params = serde_json::json!({
+                "action": format!("{kind}:{id}"),
+                "outcome": outcome_text,
+                "turn": turn,
+            });
+            if let Ok(chat) = bridge.narrate_action(&params) {
+                if chat.model != "none" {
+                    enrichment.ai_narration = Some(chat.text);
+                }
+            }
+        }
+
+        // Fall back to direct Squirrel narration if game science didn't provide one
+        if enrichment.ai_narration.is_none() && bridge.has(crate::ipc::DOMAIN_AI) {
+            let prompt =
+                format!("Narrate this RPG moment. Action: {kind}:{id}. Outcome: {outcome_text}");
+            if let Ok(chat) = bridge.ai_narrate(&prompt) {
+                if chat.model != "none" {
+                    enrichment.ai_narration = Some(chat.text);
+                }
+            }
+        }
+
+        // NPC dialogue for talk actions (via ludoSpring → Squirrel)
+        if kind == "talk" && bridge.has(crate::ipc::DOMAIN_GAME) {
+            let params = serde_json::json!({
+                "npc_id": id,
+                "context": outcome_text,
+                "turn": turn,
+            });
+            if let Ok(dialogue) = bridge.npc_dialogue(&params) {
+                if !dialogue.text.contains("degraded") {
+                    enrichment.npc_dialogue = Some(dialogue.text);
+                }
+                enrichment.voice_notes = dialogue
+                    .voice_notes
+                    .into_iter()
+                    .map(|v| VoiceEnrichment {
+                        voice_id: v.voice_id,
+                        text: v.text,
+                    })
+                    .collect();
+            }
+        }
+
+        // Flow evaluation via ludoSpring
+        if bridge.has(crate::ipc::DOMAIN_GAME) {
+            let params = serde_json::json!({ "turn": turn, "action_kind": kind });
+            if let Ok(flow) = bridge.evaluate_flow(&params) {
+                enrichment.flow_score = Some(flow.flow_score);
+                enrichment.in_flow = Some(flow.in_flow);
+            }
+        }
+
+        enrichment
+    }
+
+    /// Push current scene state to petalTongue for rendering.
+    fn push_scene_to_ui(&mut self) -> bool {
+        let npcs = self.current_scene_npcs();
+        let scene_desc = self.director.current_scene_description(&self.bundle);
+        let node_id = self.director.current_node_id().to_owned();
+        let turn = self.turn;
+        let is_ending = self.director.is_at_ending(&self.bundle);
+
+        let Some(bridge) = self.bridge.as_mut() else {
+            return false;
+        };
+
+        let scene = serde_json::json!({
+            "node": node_id,
+            "description": scene_desc,
+            "npcs": npcs,
+            "turn": turn,
+            "is_ending": is_ending,
+        });
+        match bridge.render_scene(&scene) {
+            Ok(()) => true,
+            Err(e) => {
+                tracing::debug!("scene push degraded: {e}");
+                false
+            }
+        }
+    }
+
+    /// Complete the provenance session if the game has reached an ending.
+    fn complete_provenance_if_ended(&mut self) {
+        if !self.director.is_at_ending(&self.bundle) {
+            return;
+        }
+        let session_id = self.state.session_id.clone();
+        if session_id.is_empty() {
+            return;
+        }
+        let turn = self.turn;
+
+        let Some(bridge) = self.bridge.as_mut() else {
+            return;
+        };
+        let params = serde_json::json!({
+            "session_id": session_id,
+            "turns": turn,
+            "completed": true,
+        });
+        if let Err(e) = bridge.dag_session_complete(&params) {
+            tracing::debug!("provenance session completion degraded: {e}");
+        }
     }
 
     /// Get the full game state snapshot.
@@ -216,6 +435,16 @@ impl GameSession {
 
     /// Execute an action by kind + id. Returns the outcome text and narration context.
     ///
+    /// The full primal composition pipeline runs after mechanical resolution:
+    /// 1. AI narration enrichment (ludoSpring → Squirrel, or direct Squirrel)
+    /// 2. NPC dialogue for talk actions (ludoSpring → Squirrel)
+    /// 3. Flow evaluation (ludoSpring game science)
+    /// 4. Scene push to UI (petalTongue via render_scene)
+    /// 5. Provenance vertex append (rhizoCrypt DAG)
+    /// 6. Session completion check (DAG close on ending)
+    ///
+    /// All primal calls are best-effort — failures degrade silently.
+    ///
     /// # Errors
     ///
     /// Returns an error if `kind` is not a recognized action kind.
@@ -240,12 +469,20 @@ impl GameSession {
         };
 
         let action_desc = format!("{kind}:{id}");
+        let node_after = self.director.current_node_id().to_owned();
+
         self.history.push(ActionRecord {
             turn: self.turn,
             action: action_desc.clone(),
             outcome: outcome_text.clone(),
-            node_after: self.director.current_node_id().to_owned(),
+            node_after: node_after.clone(),
         });
+
+        // Primal composition pipeline (all best-effort)
+        let mut enrichment = self.enrich_action(kind, id, &outcome_text);
+        enrichment.scene_pushed = self.push_scene_to_ui();
+        self.record_provenance_vertex(&action_desc, &node_after);
+        self.complete_provenance_if_ended();
 
         let mut knowledge: Vec<String> = self.state.knowledge.iter().cloned().collect();
         knowledge.sort();
@@ -268,9 +505,44 @@ impl GameSession {
             active_flags,
             turn: self.turn,
             narration_hints,
+            enrichment,
         };
 
         Ok((outcome_text, ctx))
+    }
+
+    /// Record a provenance vertex via the DAG primal if connected.
+    ///
+    /// Provenance is best-effort: failures degrade silently so gameplay
+    /// is never blocked by an unavailable or slow primal.
+    fn record_provenance_vertex(&mut self, action: &str, node_after: &str) {
+        let Some(bridge) = self.bridge.as_mut() else {
+            return;
+        };
+        if !bridge.has(crate::ipc::DOMAIN_DAG) {
+            return;
+        }
+        let parent_ids: Vec<&str> = self
+            .history
+            .len()
+            .checked_sub(2)
+            .and_then(|i| self.history.get(i))
+            .map(|prev| vec![prev.node_after.as_str()])
+            .unwrap_or_default();
+
+        let vertex = serde_json::json!({
+            "session_id": self.state.session_id,
+            "data": {
+                "type": "player_action",
+                "action": action,
+                "node_after": node_after,
+                "turn": self.turn,
+            },
+            "parents": parent_ids,
+        });
+        if let Err(e) = bridge.dag_event_append(&vertex) {
+            tracing::debug!("provenance append degraded: {e}");
+        }
     }
 
     /// Get the session history.
@@ -318,6 +590,7 @@ impl GameSession {
             active_flags,
             turn: self.turn,
             narration_hints,
+            enrichment: PrimalEnrichment::default(),
         }
     }
 
@@ -621,5 +894,45 @@ mod tests {
         let snap = s.snapshot();
         let json = serde_json::to_string_pretty(&snap);
         assert!(json.is_ok());
+    }
+
+    #[test]
+    fn act_returns_default_enrichment_without_bridge() {
+        let mut s = session_from_bundle(test_bundle());
+        let (_, ctx) = s.act("exit", "room").unwrap();
+        assert!(ctx.enrichment.ai_narration.is_none());
+        assert!(ctx.enrichment.npc_dialogue.is_none());
+        assert!(ctx.enrichment.voice_notes.is_empty());
+        assert!(ctx.enrichment.flow_score.is_none());
+        assert!(!ctx.enrichment.scene_pushed);
+    }
+
+    #[test]
+    fn act_enrichment_serializes_to_json() {
+        let mut s = session_from_bundle(test_bundle());
+        let (_, ctx) = s.act("exit", "room").unwrap();
+        let json = serde_json::to_string(&ctx).unwrap();
+        assert!(json.contains("enrichment"));
+    }
+
+    #[test]
+    fn take_bridge_returns_none_for_standalone() {
+        let mut s = session_from_bundle(test_bundle());
+        assert!(s.take_bridge().is_none());
+    }
+
+    #[test]
+    fn narration_context_has_default_enrichment() {
+        let s = session_from_bundle(test_bundle());
+        let ctx = s.narration_context();
+        assert!(ctx.enrichment.ai_narration.is_none());
+        assert!(!ctx.enrichment.scene_pushed);
+    }
+
+    #[test]
+    fn initialize_provenance_is_noop_without_bridge() {
+        let mut s = session_from_bundle(test_bundle());
+        s.initialize_provenance();
+        assert!(s.snapshot().trust.is_empty());
     }
 }

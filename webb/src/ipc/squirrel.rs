@@ -50,6 +50,10 @@ impl SquirrelClient {
 
     /// Generate narration text via live connection or degradation fallback.
     ///
+    /// When a live `PrimalClient` is provided, sends a real JSON-RPC call.
+    /// Otherwise returns a clearly-labeled degradation placeholder — no
+    /// path pretends to be a real AI response.
+    ///
     /// # Errors
     ///
     /// Returns [`IpcError`] if the call fails.
@@ -70,16 +74,9 @@ impl SquirrelClient {
             }
         }
 
-        if !self.available {
-            return Ok(ChatResponse {
-                text: format!("[AI primal unavailable — narration placeholder for: {prompt}]"),
-                model: "none".to_owned(),
-                tokens: 0,
-            });
-        }
         Ok(ChatResponse {
-            text: format!("[narration for: {prompt}]"),
-            model: "local".to_owned(),
+            text: format!("[degraded: AI primal not connected — narration for: {prompt}]"),
+            model: "degraded".to_owned(),
             tokens: 0,
         })
     }
@@ -102,11 +99,8 @@ impl SquirrelClient {
             }
         }
 
-        if !self.available {
-            let truncated: String = context.chars().take(200).collect();
-            return Ok(format!("[summary unavailable] {truncated}..."));
-        }
-        Ok(format!("[summary of {}-char context]", context.len()))
+        let truncated: String = context.chars().take(200).collect();
+        Ok(format!("[degraded: summary unavailable] {truncated}..."))
     }
 }
 
@@ -115,7 +109,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn unavailable_returns_placeholder() {
+    fn unavailable_returns_degraded_placeholder() {
         let client = SquirrelClient::new(false);
         let resp = client.narrate("test prompt", None);
         assert!(resp.is_ok());
@@ -124,14 +118,22 @@ mod tests {
             model: String::new(),
             tokens: 0,
         });
-        assert!(chat.text.contains("unavailable"));
+        assert!(chat.text.contains("degraded"));
+        assert_eq!(chat.model, "degraded");
     }
 
     #[test]
-    fn available_returns_narration() {
+    fn available_without_client_still_degrades() {
         let client = SquirrelClient::new(true);
-        let resp = client.narrate("describe the room", None);
-        assert!(resp.is_ok());
+        let resp = client
+            .narrate("describe the room", None)
+            .unwrap_or(ChatResponse {
+                text: String::new(),
+                model: String::new(),
+                tokens: 0,
+            });
+        assert!(resp.text.contains("degraded"));
+        assert_eq!(resp.model, "degraded");
     }
 
     #[test]
@@ -139,5 +141,7 @@ mod tests {
         let client = SquirrelClient::new(false);
         let resp = client.summarize("a long context string", None);
         assert!(resp.is_ok());
+        let text = resp.unwrap_or_default();
+        assert!(text.contains("degraded"));
     }
 }

@@ -8,9 +8,9 @@
 [registry]
 primal = "esotericwebb"
 version = "0.1.0"
-domain = "game"
+domain = "narrative"
 
-# ── Health (sourDough compliance) ──
+# ── sourDough compliance ──
 
 [[capabilities]]
 method = "health.liveness"
@@ -19,6 +19,14 @@ description = "Kubernetes-style liveness probe — process is alive"
 [[capabilities]]
 method = "health.readiness"
 description = "Kubernetes-style readiness probe — content loaded, session can start"
+
+[[capabilities]]
+method = "health.check"
+description = "Health check (sourDough alias)"
+
+[[capabilities]]
+method = "identity.get"
+description = "Self-identification — primal name, version, domain"
 
 [[capabilities]]
 method = "capabilities.list"

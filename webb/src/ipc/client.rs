@@ -19,8 +19,16 @@ use std::time::Duration;
 
 use super::envelope::{IpcError, JsonRpcRequest, JsonRpcResponse};
 
-/// Default timeout for socket operations (5 seconds).
-const DEFAULT_TIMEOUT: Duration = Duration::from_secs(5);
+/// Default timeout for socket operations.
+///
+/// Overridable via `ESOTERICWEBB_IPC_TIMEOUT_SECS` environment variable.
+fn default_timeout() -> Duration {
+    let secs = std::env::var("ESOTERICWEBB_IPC_TIMEOUT_SECS")
+        .ok()
+        .and_then(|v| v.parse::<u64>().ok())
+        .unwrap_or(5);
+    Duration::from_secs(secs)
+}
 
 /// Monotonically increasing request ID.
 static NEXT_ID: AtomicU64 = AtomicU64::new(1);
@@ -72,11 +80,12 @@ impl PrimalClient {
     pub fn connect(socket: &Path, primal: &str) -> Result<Self, IpcError> {
         let stream =
             UnixStream::connect(socket).map_err(|e| IpcError::ConnectionFailed(e.to_string()))?;
+        let timeout = default_timeout();
         stream
-            .set_read_timeout(Some(DEFAULT_TIMEOUT))
+            .set_read_timeout(Some(timeout))
             .map_err(|e| IpcError::Io(e.to_string()))?;
         stream
-            .set_write_timeout(Some(DEFAULT_TIMEOUT))
+            .set_write_timeout(Some(timeout))
             .map_err(|e| IpcError::Io(e.to_string()))?;
         Ok(Self {
             transport: Transport::Uds(BufReader::new(stream)),
@@ -92,11 +101,12 @@ impl PrimalClient {
     pub fn connect_tcp(addr: &str, primal: &str) -> Result<Self, IpcError> {
         let stream =
             TcpStream::connect(addr).map_err(|e| IpcError::ConnectionFailed(e.to_string()))?;
+        let timeout = default_timeout();
         stream
-            .set_read_timeout(Some(DEFAULT_TIMEOUT))
+            .set_read_timeout(Some(timeout))
             .map_err(|e| IpcError::Io(e.to_string()))?;
         stream
-            .set_write_timeout(Some(DEFAULT_TIMEOUT))
+            .set_write_timeout(Some(timeout))
             .map_err(|e| IpcError::Io(e.to_string()))?;
         Ok(Self {
             transport: Transport::Tcp(BufReader::new(stream)),

@@ -83,11 +83,24 @@ pub struct GraphSection {
     pub node: Vec<GraphNode>,
 }
 
-const READINESS_TIMEOUT: Duration = Duration::from_secs(10);
+/// Readiness timeout — overridable via `ESOTERICWEBB_READINESS_TIMEOUT_SECS`.
+fn readiness_timeout() -> Duration {
+    let secs = std::env::var("ESOTERICWEBB_READINESS_TIMEOUT_SECS")
+        .ok()
+        .and_then(|v| v.parse::<u64>().ok())
+        .unwrap_or(10);
+    Duration::from_secs(secs)
+}
+
 const READINESS_POLL_INTERVAL: Duration = Duration::from_millis(100);
 
-/// Default port base for auto-assigned ports.
-const DEFAULT_PORT_BASE: u16 = 9401;
+/// Port base for auto-assigned ports — overridable via `ESOTERICWEBB_PORT_BASE`.
+fn default_port_base() -> u16 {
+    std::env::var("ESOTERICWEBB_PORT_BASE")
+        .ok()
+        .and_then(|v| v.parse::<u16>().ok())
+        .unwrap_or(9401)
+}
 
 impl Default for PrimalLauncher {
     fn default() -> Self {
@@ -167,7 +180,7 @@ impl PrimalLauncher {
             toml::from_str(&contents).map_err(|e| format!("parse {graph_path}: {e}"))?;
 
         let waves = topological_waves(&graph)?;
-        let mut next_port = DEFAULT_PORT_BASE;
+        let mut next_port = default_port_base();
         let start_idx = self.spawned.len();
 
         for wave in &waves {
@@ -341,15 +354,16 @@ fn topological_waves(graph: &DeployGraph) -> Result<Vec<Vec<GraphNode>>, String>
 
 /// Poll a TCP address until it accepts connections, or time out.
 fn await_tcp_ready(addr: &str) -> Result<(), String> {
+    let timeout = readiness_timeout();
     let start = Instant::now();
     loop {
         if TcpStream::connect(addr).is_ok() {
             return Ok(());
         }
-        if start.elapsed() > READINESS_TIMEOUT {
+        if start.elapsed() > timeout {
             return Err(format!(
                 "primal at {addr} did not become ready within {}s",
-                READINESS_TIMEOUT.as_secs()
+                timeout.as_secs()
             ));
         }
         std::thread::sleep(READINESS_POLL_INTERVAL);

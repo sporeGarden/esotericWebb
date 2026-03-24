@@ -58,7 +58,7 @@ pub fn serve(path: &Path, session: &SharedSession) -> Result<(), String> {
     Ok(())
 }
 
-#[allow(clippy::needless_pass_by_value)] // owned: thread boundary
+#[allow(clippy::needless_pass_by_value)] // thread::spawn requires owned values
 fn handle_connection(stream: std::os::unix::net::UnixStream, session: &SharedSession) {
     let reader = BufReader::new(&stream);
     let mut writer = &stream;
@@ -89,5 +89,65 @@ fn handle_connection(stream: std::os::unix::net::UnixStream, session: &SharedSes
         };
         let _ = writeln!(writer, "{resp_json}");
         let _ = writer.flush();
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+    use std::io::{BufRead, BufReader, Write};
+
+    #[test]
+    fn socket_path_is_xdg_compliant() {
+        let path = socket_path();
+        let s = path.to_string_lossy();
+        assert!(s.contains("biomeos"));
+        assert!(s.ends_with("esotericwebb.sock"));
+    }
+
+    #[test]
+    fn socket_path_falls_back_to_tmp_or_xdg() {
+        let path = socket_path();
+        let s = path.to_string_lossy();
+        // XDG_RUNTIME_DIR is set: path starts there, else /tmp fallback.
+        let xdg = std::env::var("XDG_RUNTIME_DIR").unwrap_or_else(|_| "/tmp".to_owned());
+        assert!(s.starts_with(&xdg));
+    }
+
+    #[test]
+    fn handle_connection_returns_parse_error_for_garbage() {
+        let session = super::super::server::new_shared_session();
+        let sock_dir = std::env::temp_dir().join("esotericwebb_listener_test");
+        let _ = std::fs::create_dir_all(&sock_dir);
+        let sock_path = sock_dir.join("test.sock");
+        let _ = std::fs::remove_file(&sock_path);
+
+        let listener = std::os::unix::net::UnixListener::bind(&sock_path).unwrap();
+        let client = std::os::unix::net::UnixStream::connect(&sock_path).unwrap();
+        let (server_stream, _) = listener.accept().unwrap();
+
+        std::thread::spawn(move || {
+            handle_connection(server_stream, &session);
+        });
+
+        let mut client_writer = client.try_clone().unwrap();
+        writeln!(client_writer, "not valid json").unwrap();
+        client_writer.flush().unwrap();
+        client_writer.shutdown(std::net::Shutdown::Write).unwrap();
+
+        let reader = BufReader::new(&client);
+        let mut response = String::new();
+        reader.lines().for_each(|l| {
+            if let Ok(line) = l {
+                response = line;
+            }
+        });
+
+        assert!(response.contains("parse error"));
+        assert!(response.contains("-32700"));
+
+        let _ = std::fs::remove_file(&sock_path);
+        let _ = std::fs::remove_dir(&sock_dir);
     }
 }

@@ -35,21 +35,6 @@ Webb exercises primal composition -> discovers gap in a primal capability
 
 ## Open gaps
 
-### GAP-001: IPC clients are degradation stubs
-
-- **Primal**: all consumed primals (`game.*`, `ai.*`, `visualization.*`, `provenance.*`)
-- **Spring (producer)**: esotericWebb (self)
-- **Severity**: high
-- **Evidence**: All IPC client methods return default/placeholder values.
-  No actual Unix socket connection is established. exp001 validates
-  degradation works, but live IPC is not wired.
-- **Expected**: Full JSON-RPC call/response cycle over Unix domain sockets
-  using newline-delimited protocol, connecting to primals from `plasmidBin/`.
-- **Workaround**: Graceful degradation with sensible defaults; GameDirector
-  works in offline/preview mode without any primal stack running.
-- **Handoff**: N/A (self-owned — next Webb evolution phase)
-- **Status**: open
-
 ### GAP-002: Visualization primal lacks CRPG dialogue tree scene type
 
 - **Primal**: visualization (`visualization.render.scene`)
@@ -131,27 +116,15 @@ Webb exercises primal composition -> discovers gap in a primal capability
   - `rhizocrypt` v0.14.0-dev (5.7M, domain: dag)
   - `loamspine` v0.9.13 (8.3M, domain: lineage)
   - `sweetgrass` v0.7.27 (12M, domain: provenance)
-- **Next**: Wire Webb's `PrimalBridge` to discover trio binaries from
-  plasmidBin, start sessions, and validate `dag.event.append` against
-  Webb's BFS depth engine.
-- **Status**: trio deployed, IPC wiring pending
-
-### GAP-005: Content YAML format alignment with serde types
-
-- **Primal**: N/A (internal)
-- **Spring (producer)**: esotericWebb (self)
-- **Severity**: low
-- **Evidence**: The Weaver's Parlor content YAML uses a hand-authored format
-  that may not precisely match the `serde_yaml` serialization of the Rust
-  types (`StatePredicate`, `StateEffect`, `NarrativeNode`). The content
-  loader uses `serde_yaml::from_str` which requires exact field name
-  alignment.
-- **Expected**: Content YAML format is validated by roundtrip tests that
-  serialize Rust types to YAML and compare with hand-authored content.
-- **Workaround**: Integration tests construct content bundles in Rust code
-  rather than loading from YAML files.
-- **Handoff**: N/A (self-owned)
-- **Status**: open
+- **Progress (V4)**: Full provenance lifecycle wired into GameSession.
+  `initialize_provenance()` calls `dag.session.create` on session start and
+  stores the real session_id in WorldState. Every `act()` appends a vertex
+  via `dag.event.append` with the real session_id. `complete_provenance_if_ended()`
+  calls `dag.session.complete` when an ending is reached. PrimalBridge now
+  has `dag_session_complete()` and `dag_query_vertices()`.
+- **Next**: Integration test against live rhizoCrypt binary from plasmidBin,
+  `dag.slice.checkout` for save/load, `dag.event.append_batch` for bulk import.
+- **Status**: wiring complete (V4), live end-to-end validation pending
 
 ### GAP-006: Discovery primal capability-filtered queries
 
@@ -248,6 +221,16 @@ Webb exercises primal composition -> discovers gap in a primal capability
 
 ## Absorbed gaps
 
-(None yet — gaps are absorbed when the owning spring rebuilds the primal,
-deploys it to `plasmidBin/`, and Webb confirms the capability via
-integration testing.)
+### GAP-001: IPC clients are degradation stubs → RESOLVED (V4, 2026-03-24)
+
+All primal domains wired into `GameSession::act()` via `PrimalBridge` with
+23 bridge methods, retry + circuit breaker resilience, and graceful
+degradation. Full composition pipeline: AI narration → NPC dialogue → flow
+evaluation → scene push → provenance lifecycle. IPC handler split, MCP
+JSON Schema, sourDough compliance all complete.
+
+### GAP-005: Content YAML format alignment → RESOLVED (V3, 2026-03-24)
+
+YAML roundtrip tests added for all content types (`WorldMeta`, `SceneContent`,
+`AbilityDef`, `NpcDef`). Scaffold-then-load roundtrip verified. Content
+loader and serde types fully aligned.

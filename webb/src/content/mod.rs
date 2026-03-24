@@ -379,8 +379,11 @@ impl HasId for NpcDef {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
+    use crate::narrative::effect::StateEffect;
+    use crate::narrative::predicate::StatePredicate;
 
     #[test]
     fn scaffold_creates_structure() {
@@ -414,5 +417,100 @@ mod tests {
         };
         let issues = bundle.validate();
         assert!(issues.iter().any(|i| i.contains("no start node")));
+    }
+
+    // ── YAML roundtrip tests (GAP-005) ─────────────────────────────
+
+    #[test]
+    fn world_meta_yaml_roundtrip() {
+        let meta = WorldMeta {
+            name: "Roundtrip Test".to_owned(),
+            author: "Test Author".to_owned(),
+            version: "0.1.0".to_owned(),
+            description: "A test world.".to_owned(),
+        };
+        let yaml = serde_yaml::to_string(&meta).unwrap();
+        let parsed: WorldMeta = serde_yaml::from_str(&yaml).unwrap();
+        assert_eq!(parsed.name, meta.name);
+        assert_eq!(parsed.author, meta.author);
+        assert_eq!(parsed.version, meta.version);
+    }
+
+    #[test]
+    fn scene_content_yaml_roundtrip() {
+        let scene = SceneContent {
+            id: "parlor".to_owned(),
+            description: "A dimly lit parlor.".to_owned(),
+            npcs: vec!["maren".to_owned(), "tobias".to_owned()],
+            items: vec!["silver_key".to_owned()],
+        };
+        let yaml = serde_yaml::to_string(&scene).unwrap();
+        let parsed: SceneContent = serde_yaml::from_str(&yaml).unwrap();
+        assert_eq!(parsed.id, scene.id);
+        assert_eq!(parsed.npcs, scene.npcs);
+        assert_eq!(parsed.items, scene.items);
+    }
+
+    #[test]
+    fn ability_def_yaml_roundtrip() {
+        let ability = AbilityDef {
+            id: "read_aura".to_owned(),
+            name: "Read Aura".to_owned(),
+            description: "Sense emotional state.".to_owned(),
+            preconditions: vec![StatePredicate::HasKnowledge("psychic_training".to_owned())],
+            effects: vec![StateEffect::SetFlag("aura_active".to_owned())],
+            narration_hint: Some("Colors bloom.".to_owned()),
+        };
+        let yaml = serde_yaml::to_string(&ability).unwrap();
+        let parsed: AbilityDef = serde_yaml::from_str(&yaml).unwrap();
+        assert_eq!(parsed.id, ability.id);
+        assert_eq!(parsed.preconditions.len(), 1);
+        assert_eq!(parsed.effects.len(), 1);
+        assert_eq!(parsed.narration_hint, ability.narration_hint);
+    }
+
+    #[test]
+    fn npc_def_yaml_roundtrip() {
+        let npc = NpcDef {
+            id: "maren".to_owned(),
+            name: "Maren".to_owned(),
+            role: "proprietor".to_owned(),
+            knows: vec!["elder_sign".to_owned(), "ward_locations".to_owned()],
+            trust_initial: -1,
+            trust_rewards: std::collections::BTreeMap::from([(
+                3,
+                NpcTrustReward {
+                    description: "Maren softens.".to_owned(),
+                    grants_knowledge: vec!["maren_secret".to_owned()],
+                    grants_items: vec![],
+                    sets_flags: vec!["maren_trusts".to_owned()],
+                },
+            )]),
+            lies_about: HashMap::from([(
+                "ward_locations".to_owned(),
+                LieInfo { detection_dc: 14 },
+            )]),
+            arc: "suspicious → cautious → open".to_owned(),
+        };
+        let yaml = serde_yaml::to_string(&npc).unwrap();
+        let parsed: NpcDef = serde_yaml::from_str(&yaml).unwrap();
+        assert_eq!(parsed.id, npc.id);
+        assert_eq!(parsed.trust_initial, -1);
+        assert_eq!(parsed.trust_rewards.len(), 1);
+        assert_eq!(parsed.lies_about.len(), 1);
+        assert_eq!(parsed.knows.len(), 2);
+    }
+
+    #[test]
+    fn scaffold_then_load_roundtrip() {
+        let dir = std::env::temp_dir().join("esoteric_webb_test_roundtrip_load");
+        let _ = std::fs::remove_dir_all(&dir);
+        let path_str = dir.to_str().unwrap();
+        scaffold(path_str).unwrap();
+
+        let bundle = ContentBundle::load(path_str);
+        assert!(bundle.is_ok(), "scaffold output should load cleanly");
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

@@ -12,8 +12,8 @@ use esoteric_webb::state::WorldState;
 /// With `--launch`, spawns primal binaries from `plasmidBin/` using the
 /// deploy graph before discovering. Without it, connects to running primals.
 pub fn cmd_serve(content_path: &str, launch: bool, graph_path: &str) -> Result<(), String> {
-    // Launcher must live as long as the server — child processes are killed on Drop.
-    #[allow(clippy::collection_is_never_read)]
+    // Launcher owns child processes and kills them on Drop — must outlive the server.
+    #[allow(clippy::collection_is_never_read)] // held for Drop semantics, not read access
     let _launcher: Option<esoteric_webb::ipc::launcher::PrimalLauncher>;
 
     let bridge = if launch {
@@ -234,9 +234,10 @@ fn read_choice(max: usize) -> Option<usize> {
     input.parse::<usize>().ok().filter(|&i| i < max)
 }
 
-/// Visualize the NarrativeGraph as DOT format.
 /// Show primal composition status.
-#[allow(clippy::unnecessary_wraps)]
+///
+/// Returns `Result` for command dispatch uniformity — currently infallible.
+#[allow(clippy::unnecessary_wraps)] // all cmd_* share a uniform Result signature
 pub fn cmd_status() -> Result<(), String> {
     println!("Esoteric Webb — primal composition status");
     println!("Discovering primals...\n");
@@ -331,17 +332,11 @@ pub fn cmd_replay(session_path: &str, content_path: &str) -> Result<(), String> 
 }
 
 /// Automated playthrough — AI-as-player demonstration.
-///
-/// The game plays itself using a heuristic strategy:
-/// 1. Prefer unexplored exits over visited ones
-/// 2. Try abilities that haven't been used yet
-/// 3. Talk to NPCs in the scene
-/// 4. Fall back to examine
 pub fn cmd_autoplay(content_path: &str, max_turns: u32, json_output: bool) -> Result<(), String> {
+    use esoteric_webb::autoplay::{self, AutoplayConfig};
     use esoteric_webb::session::GameSession;
 
     let mut session = GameSession::new(content_path)?;
-    let mut tracker = HeuristicTracker::default();
 
     if !json_output {
         let snap = session.snapshot();
@@ -350,49 +345,23 @@ pub fn cmd_autoplay(content_path: &str, max_turns: u32, json_output: bool) -> Re
         println!();
     }
 
-    tracker.visited.insert(session.snapshot().current_node);
+    let config = AutoplayConfig {
+        max_turns,
+        ..AutoplayConfig::default()
+    };
+    let result = autoplay::run(&mut session, &config)?;
 
-    for _ in 0..max_turns {
-        if session.is_ended() {
-            break;
-        }
-
-        let actions = session.available_actions();
-        let node = session.snapshot().current_node.clone();
-        let choice = tracker.pick(&actions, &node);
-
-        let Some((kind, id)) = choice else {
-            break;
-        };
-
-        let (outcome_text, _ctx) = session.act(&kind, &id).map_err(|e| format!("act: {e}"))?;
-        let snap_after = session.snapshot();
-        let knowledge_count =
-            snap_after.knowledge.len() + snap_after.flags.len() + snap_after.inventory.len();
-        tracker.record_novelty(&kind, &id, knowledge_count);
-        tracker.visited.insert(snap_after.current_node.clone());
-
-        if !json_output {
-            println!("[turn {}] {kind}:{id}", session.snapshot().turn);
-            println!("> {outcome_text}");
-            println!();
-        }
-    }
-
-    autoplay_summary(&session, json_output);
-    Ok(())
-}
-
-fn autoplay_summary(session: &esoteric_webb::session::GameSession, json_output: bool) {
     if json_output {
         let output = serde_json::json!({
             "world": session.bundle().meta.name,
-            "ended": session.is_ended(),
-            "turns": session.snapshot().turn,
+            "ended": result.ended,
+            "turns": result.turns,
             "final_node": session.snapshot().current_node,
             "knowledge": session.snapshot().knowledge,
             "inventory": session.snapshot().inventory,
             "flags": session.snapshot().flags,
+            "nodes_visited": result.nodes_visited,
+            "stale_halt": result.stale_halt,
             "history": serde_json::to_value(session.history()).unwrap_or_default(),
         });
         println!(
@@ -402,93 +371,14 @@ fn autoplay_summary(session: &esoteric_webb::session::GameSession, json_output: 
     } else {
         let snap = session.snapshot();
         println!("=== AUTOPLAY COMPLETE ===");
-        println!("Ended: {}", session.is_ended());
+        println!("Ended: {}", result.ended);
         println!("Turns: {}", snap.turn);
         println!("Node: {}", snap.current_node);
         println!("Knowledge: {}", snap.knowledge.join(", "));
         println!("Flags: {}", snap.flags.join(", "));
+        println!("Nodes visited: {}", result.nodes_visited);
     }
-}
-
-/// Tracks the heuristic's exploration state so it doesn't loop.
-#[derive(Default)]
-struct HeuristicTracker {
-    visited: std::collections::HashSet<String>,
-    used_abilities: std::collections::HashSet<String>,
-    talk_count: std::collections::HashMap<String, u32>,
-    examined_at: std::collections::HashSet<String>,
-    stale_count: u32,
-    last_knowledge_count: usize,
-    exit_rotation: usize,
-}
-
-const MAX_TALKS_PER_NPC: u32 = 8;
-
-impl HeuristicTracker {
-    fn record_novelty(&mut self, kind: &str, id: &str, knowledge_now: usize) {
-        let novel = match kind {
-            "ability" => self.used_abilities.insert(id.to_owned()),
-            "talk" => knowledge_now > self.last_knowledge_count,
-            "examine" => self.examined_at.insert(id.to_owned()),
-            "exit" => !self.visited.contains(id),
-            _ => false,
-        };
-        self.last_knowledge_count = knowledge_now;
-        if novel {
-            self.stale_count = 0;
-        } else {
-            self.stale_count += 1;
-        }
-    }
-
-    fn pick(
-        &mut self,
-        actions: &[esoteric_webb::session::AvailableAction],
-        current_node: &str,
-    ) -> Option<(String, String)> {
-        if self.stale_count > 12 {
-            return None;
-        }
-        // 1. Unexplored exits — highest priority
-        for a in actions {
-            if a.kind == "exit" && !self.visited.contains(&a.id) {
-                return Some((a.kind.clone(), a.id.clone()));
-            }
-        }
-        // 2. Unused abilities that aren't blocked
-        for a in actions {
-            if a.kind == "ability"
-                && !self.used_abilities.contains(&a.id)
-                && !a.detail.as_deref().unwrap_or("").starts_with("[blocked]")
-            {
-                return Some((a.kind.clone(), a.id.clone()));
-            }
-        }
-        // 3. Talk to NPCs (up to MAX per NPC to build trust)
-        for a in actions {
-            if a.kind == "talk" {
-                let count = self.talk_count.get(&a.id).copied().unwrap_or(0);
-                if count < MAX_TALKS_PER_NPC {
-                    *self.talk_count.entry(a.id.clone()).or_insert(0) += 1;
-                    return Some((a.kind.clone(), a.id.clone()));
-                }
-            }
-        }
-        // 4. Examine if we haven't at this node
-        if !self.examined_at.contains(current_node) {
-            self.examined_at.insert(current_node.to_owned());
-            return Some(("examine".to_owned(), "examine".to_owned()));
-        }
-        // 5. Rotate through exits — state may have opened new paths deeper
-        let exits: Vec<_> = actions.iter().filter(|a| a.kind == "exit").collect();
-        if !exits.is_empty() {
-            let idx = self.exit_rotation % exits.len();
-            self.exit_rotation += 1;
-            let a = &exits[idx];
-            return Some((a.kind.clone(), a.id.clone()));
-        }
-        None
-    }
+    Ok(())
 }
 
 /// Scaffold a new content directory with template YAML.

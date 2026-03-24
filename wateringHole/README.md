@@ -35,6 +35,17 @@ wateringHole/
 - **Priority**: critical / high / medium / low
 ```
 
+## Active handoffs
+
+| Handoff | Direction | Summary |
+|---------|-----------|---------|
+| `ESOTERICWEBB_V3_ECOSYSTEM_ABSORPTION_HANDOFF_MAR24_2026.md` | Outbound | V3 IPC handler split, MCP, resilience patterns |
+| `ESOTERICWEBB_V4_LIVE_PRIMAL_COMPOSITION_HANDOFF_MAR24_2026.md` | Outbound | V4 bridge methods, composition pipeline, provenance lifecycle |
+| `ESOTERICWEBB_V4_ECOSYSTEM_REVIEW_ABSORPTION_HANDOFF_MAR24_2026.md` | Inbound | Absorption opportunities from 8 sibling springs |
+
+A corresponding ecosystem handoff lives at:
+`ecoPrimals/wateringHole/handoffs/ESOTERICWEBB_V4_GEN4_FIRST_CONSUMER_HANDOFF_MAR24_2026.md`
+
 ## Guides
 
 _Guides will be added as the team grows. Topics planned:_

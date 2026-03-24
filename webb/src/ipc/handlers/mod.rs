@@ -1,0 +1,225 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+//! JSON-RPC handler dispatch — domain-split (ludoSpring pattern).
+//!
+//! Each handler module owns a concern:
+//! - [`lifecycle`]: health, readiness, identity, capabilities
+//! - [`narrative`]: scene, narrative status, content listing
+//! - [`session`]: game session lifecycle (start, act, state, ...)
+//! - [`mcp`]: MCP `tools.list` / `tools.call` with JSON Schema
+
+use std::sync::{Arc, Mutex};
+
+use super::envelope::{JsonRpcError, JsonRpcRequest, JsonRpcResponse};
+use super::{
+    METHOD_CAPABILITIES_LIST, METHOD_CONTENT_LIST, METHOD_HEALTH, METHOD_HEALTH_CHECK,
+    METHOD_HEALTH_LIVENESS, METHOD_HEALTH_READINESS, METHOD_IDENTITY_GET, METHOD_LIVENESS,
+    METHOD_NARRATIVE_STATUS, METHOD_READINESS, METHOD_SCENE_CURRENT, METHOD_TOOLS_CALL,
+    METHOD_TOOLS_LIST,
+};
+use crate::session::GameSession;
+
+pub mod lifecycle;
+pub mod mcp;
+pub mod narrative;
+pub mod session;
+
+/// Shared session handle for the IPC server.
+pub type SharedSession = Arc<Mutex<Option<GameSession>>>;
+
+/// Create a new shared session handle (initially empty).
+pub fn new_shared_session() -> SharedSession {
+    Arc::new(Mutex::new(None))
+}
+
+/// Session method names.
+pub const METHOD_SESSION_START: &str = "session.start";
+/// Get full game state.
+pub const METHOD_SESSION_STATE: &str = "session.state";
+/// List available actions.
+pub const METHOD_SESSION_ACTIONS: &str = "session.actions";
+/// Perform an action.
+pub const METHOD_SESSION_ACT: &str = "session.act";
+/// Get session history.
+pub const METHOD_SESSION_HISTORY: &str = "session.history";
+/// Get narration context for AI-as-generator.
+pub const METHOD_SESSION_NARRATE: &str = "session.narrate";
+/// Get DOT graph with live session overlay.
+pub const METHOD_SESSION_GRAPH: &str = "session.graph";
+
+/// Dispatch a JSON-RPC request to the appropriate handler.
+pub fn dispatch(request: &JsonRpcRequest) -> JsonRpcResponse {
+    dispatch_with_session(request, &new_shared_session())
+}
+
+/// Dispatch with access to a shared session.
+pub fn dispatch_with_session(request: &JsonRpcRequest, session: &SharedSession) -> JsonRpcResponse {
+    let result = match request.method.as_str() {
+        METHOD_HEALTH
+        | METHOD_LIVENESS
+        | METHOD_READINESS
+        | METHOD_HEALTH_LIVENESS
+        | METHOD_HEALTH_CHECK => Ok(lifecycle::handle_health()),
+        METHOD_HEALTH_READINESS => Ok(lifecycle::handle_readiness(session)),
+        METHOD_IDENTITY_GET => Ok(lifecycle::handle_identity()),
+        METHOD_CAPABILITIES_LIST => Ok(lifecycle::handle_capabilities_list()),
+
+        METHOD_SCENE_CURRENT => Ok(narrative::handle_scene_current(session)),
+        METHOD_NARRATIVE_STATUS => Ok(narrative::handle_narrative_status(session)),
+        METHOD_CONTENT_LIST => Ok(narrative::handle_content_list(session)),
+
+        METHOD_TOOLS_LIST => Ok(mcp::handle_tools_list()),
+        METHOD_TOOLS_CALL => mcp::handle_tools_call(request.params.as_ref(), session),
+
+        METHOD_SESSION_START => session::handle_session_start(request.params.as_ref(), session),
+        METHOD_SESSION_STATE => session::handle_session_state(session),
+        METHOD_SESSION_ACTIONS => session::handle_session_actions(session),
+        METHOD_SESSION_ACT => session::handle_session_act(request.params.as_ref(), session),
+        METHOD_SESSION_HISTORY => session::handle_session_history(session),
+        METHOD_SESSION_NARRATE => session::handle_session_narrate(session),
+        METHOD_SESSION_GRAPH => session::handle_session_graph(session),
+
+        _ => Err(JsonRpcError {
+            code: -32601,
+            message: format!("method not found: {}", request.method),
+            data: None,
+        }),
+    };
+
+    match result {
+        Ok(value) => JsonRpcResponse {
+            jsonrpc: "2.0".to_owned(),
+            result: Some(value),
+            error: None,
+            id: request.id.clone(),
+        },
+        Err(err) => JsonRpcResponse {
+            jsonrpc: "2.0".to_owned(),
+            result: None,
+            error: Some(err),
+            id: request.id.clone(),
+        },
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+    use serde_json::Value;
+
+    #[test]
+    fn health_returns_ok() {
+        let req = JsonRpcRequest::new("webb.health", None);
+        let resp = dispatch(&req);
+        assert!(resp.error.is_none());
+        let status = resp
+            .result
+            .as_ref()
+            .and_then(|r| r.get("status"))
+            .and_then(Value::as_str);
+        assert_eq!(status, Some("healthy"));
+    }
+
+    #[test]
+    fn identity_get_returns_primal() {
+        let req = JsonRpcRequest::new("identity.get", None);
+        let resp = dispatch(&req);
+        assert!(resp.error.is_none());
+        let primal = resp
+            .result
+            .as_ref()
+            .and_then(|r| r.get("primal"))
+            .and_then(Value::as_str);
+        assert_eq!(primal, Some("esotericwebb"));
+    }
+
+    #[test]
+    fn unknown_method_returns_error() {
+        let req = JsonRpcRequest::new("nonexistent.method", None);
+        let resp = dispatch(&req);
+        assert!(resp.error.is_some());
+        if let Some(err) = &resp.error {
+            assert_eq!(err.code, -32601);
+        }
+    }
+
+    #[test]
+    fn tools_list_returns_tools_with_schema() {
+        let req = JsonRpcRequest::new("tools.list", None);
+        let resp = dispatch(&req);
+        assert!(resp.error.is_none());
+        let tools = resp
+            .result
+            .as_ref()
+            .and_then(|r| r.get("tools"))
+            .and_then(Value::as_array);
+        assert!(tools.is_some());
+        let tools = tools.unwrap();
+        assert!(!tools.is_empty());
+        for tool in tools {
+            assert!(tool.get("input_schema").is_some());
+        }
+    }
+
+    #[test]
+    fn tools_call_known_tool() {
+        let req = JsonRpcRequest::new(
+            "tools.call",
+            Some(serde_json::json!({"name": "webb.scene.current"})),
+        );
+        let resp = dispatch(&req);
+        assert!(resp.error.is_none());
+    }
+
+    #[test]
+    fn tools_call_session_methods() {
+        let session = new_shared_session();
+        let req = JsonRpcRequest::new(
+            "tools.call",
+            Some(serde_json::json!({"name": "session.state"})),
+        );
+        let resp = dispatch_with_session(&req, &session);
+        assert!(resp.error.is_some(), "should fail without active session");
+    }
+
+    #[test]
+    fn tools_call_unknown_tool() {
+        let req = JsonRpcRequest::new(
+            "tools.call",
+            Some(serde_json::json!({"name": "nonexistent"})),
+        );
+        let resp = dispatch(&req);
+        assert!(resp.error.is_some());
+    }
+
+    #[test]
+    fn session_state_without_start_errors() {
+        let session = new_shared_session();
+        let req = JsonRpcRequest::new("session.state", None);
+        let resp = dispatch_with_session(&req, &session);
+        assert!(resp.error.is_some());
+    }
+
+    #[test]
+    fn take_bridge_preserves_bridge_across_sessions() {
+        use crate::ipc::bridge::PrimalBridge;
+        use crate::session::GameSession;
+
+        let session = new_shared_session();
+
+        let bridge = PrimalBridge::standalone();
+        assert_eq!(bridge.connected_count(), 0);
+
+        {
+            let mut guard = session
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
+            let game = GameSession::new("content");
+            if let Ok(mut game) = game {
+                assert!(game.bridge().is_none(), "new() has no bridge");
+                let _ = game.take_bridge();
+                *guard = Some(game);
+            }
+        }
+    }
+}

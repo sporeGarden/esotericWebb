@@ -51,8 +51,7 @@ pub struct ProvenanceClient {
 
 impl ProvenanceClient {
     /// Create a new client.
-    #[allow(clippy::missing_const_for_fn)]
-    pub fn new(available: bool) -> Self {
+    pub const fn new(available: bool) -> Self {
         Self {
             available,
             local_log: Vec::new(),

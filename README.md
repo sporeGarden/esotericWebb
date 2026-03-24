@@ -1,5 +1,19 @@
 # Esoteric Webb
 
+| | |
+|---|---|
+| **Version** | V4 |
+| **Tests** | 166 |
+| **Rust files** | 32 (~8.5k LOC) |
+| **Experiments** | 5 (exp001–exp005) |
+| **MSRV** | 1.87 (edition 2024) |
+| **License** | AGPL-3.0 + ORC + CC-BY-SA 4.0 |
+| **Unsafe** | `#![forbid(unsafe_code)]` |
+| **C deps** | Zero (ecoBin compliant) |
+| **Bridge methods** | 23 (all domains, all degrading) |
+| **Primals consumed** | 8 domains (ai, game, viz, dag, lineage, compute, storage, provenance) |
+| **Last validation** | 2026-03-24 (V4) |
+
 **A [sporeGarden](https://github.com/sporeGarden) project — the primals as a composed CRPG.**
 
 Esoteric Webb is not a spring. It is a standalone cross-evolution substrate
@@ -36,16 +50,16 @@ engine**. It consumes primals via JSON-RPC IPC — zero Rust crate dependencies
 on any spring. Primals are resolved from `plasmidBin/` or discovered via
 Songbird at runtime.
 
-| Primal capability | Role | IPC methods consumed |
-|-------------------|------|---------------------|
-| Game science | RPGPT evaluation, flow, DDA, engagement | `game.*` |
-| AI | Narration, NPC voices, inference | `ai.chat`, `ai.inference`, `ai.summarize` |
-| Visualization | Game UI, scene rendering | `visualization.render.scene`, `ui.render`, `interaction.*` |
-| Session DAG | Provenance vertices | `provenance.session_create`, `provenance.vertex_*` |
-| Certificates | NPC/ruleset certs | `certificate.mint`, `certificate.query` |
-| Attribution | Creative attribution | `attribution.record`, `attribution.query` |
-| Crypto | Signing, hashing | `crypto.sign`, `crypto.hash` |
-| Discovery | Capability-based primal lookup | `discovery.query` |
+| Domain | Primal | Role | Wired in act() | IPC methods |
+|--------|--------|------|-----------------|-------------|
+| game | ludoSpring | Flow, DDA, engagement, NPC dialogue, narration, voice | Yes (V4) | `game.evaluate_flow`, `game.npc_dialogue`, `game.narrate_action`, `game.voice_check`, `game.push_scene`, `game.begin_session`, `game.complete_session` |
+| ai | Squirrel | Narration fallback, summarization | Yes (V4) | `ai.chat`, `ai.summarize` |
+| visualization | petalTongue | Scene rendering, input polling | Yes (V4) | `visualization.render.scene`, `interaction.poll` |
+| dag | rhizoCrypt | Provenance DAG lifecycle | Yes (V4) | `dag.session.create`, `dag.event.append`, `dag.session.complete`, `dag.frontier.get`, `dag.merkle.root`, `dag.query.vertices` |
+| lineage | loamSpine | NPC personality certs | Bridge ready | `certificate.mint` |
+| compute | toadStool | GPU compute dispatch | Bridge ready | `compute.dispatch.submit` |
+| storage | nestGate | Key-value persistence | Bridge ready | `storage.store`, `storage.retrieve` |
+| provenance | sweetGrass | Creative attribution | Bridge ready | `attribution.record` |
 
 ## The Core Thesis: Bounded Space, Infinite Exploration
 
@@ -93,13 +107,30 @@ to the creative DNA of teams like ZA/UM (Disco Elysium) and Cliche Studio
 ## Project structure
 
 ```
-webb/              Main Rust crate (narrative engine + IPC + director)
+webb/              Main Rust crate (narrative engine + IPC + director + bridge)
+  src/bin/         CLI binary (serve, validate, preview, graph, new-world)
+  src/ipc/         JSON-RPC client, bridge, discovery, launcher, resilience
+  src/narrative/   Graph, validator, predicate, effect, visualization
+  src/director/    Game director (outcome evaluation, DDA integration)
+  src/content/     YAML content loader, ability/NPC/scene models
+  src/state/       World state (knowledge, trust, inventory, flags, conditions)
 content/           YAML game content (authored by creative teams)
-graphs/            biomeOS deploy graphs
+experiments/       5 standalone validation crates (exp001–exp005)
+graphs/            biomeOS deploy graphs (20+ TOML fragments)
 niches/            BYOB niche definitions
 deploy/            Composition fragment for biomeOS/primalSpring
-specs/             Design specifications
+specs/             Design specifications (4 documents)
+wateringHole/      Handoffs to primal and spring teams
+config/            Launch profiles for primal composition
 ```
+
+## gen4 — The First Consumer
+
+Esoteric Webb is the first `gen4` entity in the ecoPrimals ecosystem (see
+`ecoPrimals/whitePaper/gen4/`). Where gen3 proved the infrastructure computes
+correct science across 7 springs, gen4 asks: can people who didn't build the
+primals compose them into tools they care about? Webb answers yes — the
+primals become invisible infrastructure inside a creative product.
 
 ## Quality gates
 
