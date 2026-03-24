@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Esoteric Webb — Narrative DAG Viewer</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="https://unpkg.com/@hpcc-js/wasm@2.16.1/dist/graphviz.umd.js"></script>
+<script src="https://unpkg.com/d3-graphviz@5.6.0/build/d3-graphviz.min.js"></script>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --border: #30363d;
+    --text: #c9d1d9;
+    --accent: #58a6ff;
+    --green: #50fa7b;
+    --pink: #ff79c6;
+    --orange: #ffb86c;
+    --muted: #8b949e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+  }
+  header {
+    padding: 1.2rem 2rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+  }
+  header h1 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--accent);
+  }
+  .tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-left: auto;
+  }
+  .tab {
+    padding: 0.5rem 1.2rem;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .tab:hover { border-color: var(--accent); color: var(--text); }
+  .tab.active {
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+  }
+  .tab .dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+  }
+  .tab[data-view="narrative"] .dot { background: var(--accent); }
+  .tab[data-view="played"] .dot { background: var(--green); }
+  .tab[data-view="live"] .dot { background: var(--pink); }
+  .tab.active .dot { background: var(--bg); }
+
+  .view-info {
+    padding: 0.8rem 2rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+    color: var(--muted);
+    display: flex;
+    gap: 2rem;
+    align-items: center;
+  }
+  .view-info .label { color: var(--text); font-weight: 500; }
+  .view-info .stat { color: var(--orange); font-weight: 600; }
+
+  #graph-container {
+    flex: 1;
+    overflow: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  #graph-container svg {
+    max-width: 100%;
+    height: auto;
+  }
+  .legend-bar {
+    padding: 0.6rem 2rem;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    font-size: 0.8rem;
+    color: var(--muted);
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .legend-bar span { display: flex; align-items: center; gap: 4px; }
+  .legend-bar .swatch {
+    display: inline-block;
+    width: 12px; height: 12px;
+    border-radius: 2px;
+  }
+  .path-display {
+    padding: 0.8rem 2rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  .path-display .node { color: var(--green); font-weight: 600; }
+  .path-display .arrow { color: var(--border); margin: 0 0.3rem; }
+  .path-display .ending { color: var(--pink); font-weight: 700; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Esoteric Webb</h1>
+  <span style="color:var(--muted); font-size:0.85rem">Narrative DAG Viewer</span>
+  <div class="tabs">
+    <div class="tab active" data-view="narrative"><span class="dot"></span>Full Narrative</div>
+    <div class="tab" data-view="played"><span class="dot"></span>Played Session</div>
+    <div class="tab" data-view="live"><span class="dot"></span>Live Snapshot</div>
+  </div>
+</header>
+
+<div class="view-info" id="info-bar">
+  <span><span class="label">View:</span> Full Narrative</span>
+  <span><span class="label">Nodes:</span> <span class="stat" id="stat-nodes">—</span></span>
+  <span><span class="label">Edges:</span> <span class="stat" id="stat-edges">—</span></span>
+  <span><span class="label">Endings:</span> <span class="stat" id="stat-endings">—</span></span>
+</div>
+
+<div class="path-display" id="path-bar" style="display:none"></div>
+
+<div id="graph-container"></div>
+
+<div class="legend-bar" id="legend-bar">
+  <span><span class="swatch" style="background:#58a6ff"></span> room</span>
+  <span><span class="swatch" style="background:#50fa7b"></span> visited</span>
+  <span><span class="swatch" style="background:#ff79c6"></span> current</span>
+  <span><span class="swatch" style="background:#ffb86c"></span> available</span>
+  <span><span class="swatch" style="background:#444466"></span> unexplored</span>
+  <span><span class="swatch" style="border:2px solid #ff79c6; background:transparent"></span> ending</span>
+</div>
+
+<script>
+const DOTS = {};
+
+DOTS.narrative = `digraph NarrativeGraph {
+  rankdir=LR;
+  node [shape=box];
+
+  "ending_mercy" [label="Mercy" shape=doublecircle];
+  "vault" [label="vault" shape=box];
+  "library" [label="library" shape=box];
+  "ritual_chamber" [label="ritual_chamber" shape=box];
+  "entrance" [label="entrance" shape=doubleoctagon];
+  "parlor" [label="parlor" shape=box];
+  "study" [label="study" shape=box];
+  "ending_justice" [label="Justice" shape=doublecircle];
+  "ending_transcendence" [label="Transcendence" shape=doublecircle];
+  "backroom" [label="backroom" shape=box];
+  "ending_complicity" [label="Complicity" shape=doublecircle];
+
+  "vault" -> "backroom" [label="Return to backroom"];
+  "library" -> "study" [label="Return to study"];
+  "library" -> "ritual_chamber" [label="Enter the ritual chamber"];
+  "ritual_chamber" -> "library" [label="Return to library"];
+  "ritual_chamber" -> "ending_justice" [label="Pursue justice"];
+  "ritual_chamber" -> "ending_mercy" [label="Show mercy"];
+  "ritual_chamber" -> "ending_complicity" [label="Accept the deal"];
+  "ritual_chamber" -> "ending_transcendence" [label="Speak the true name"];
+  "entrance" -> "parlor" [label="Enter the parlor"];
+  "entrance" -> "study" [label="Go to the study"];
+  "parlor" -> "entrance" [label="Return to entrance"];
+  "parlor" -> "backroom" [label="Slip into the backroom"];
+  "parlor" -> "study" [label="Head to the study"];
+  "study" -> "entrance" [label="Return to entrance"];
+  "study" -> "parlor" [label="Go to the parlor"];
+  "study" -> "library" [label="Find the hidden passage"];
+  "backroom" -> "parlor" [label="Return to parlor"];
+  "backroom" -> "vault" [label="Unlock the vault"];
+}`;
+
+DOTS.played = `digraph NarrativeGraph {
+  rankdir=LR;
+  bgcolor="#1a1a2e";
+  node [shape=box fontname="Helvetica" fontcolor="#e0e0e0" color="#444466" style=filled];
+  edge [fontname="Helvetica" fontsize=9 fontcolor="#888888" color="#444466"];
+
+  subgraph cluster_legend {
+    label="" style=invis;
+    legend [shape=note fillcolor="#1a1a2e" fontcolor="#888888" label=<<b>Legend</b><br/><font color="#50fa7b">■</font> visited  <font color="#ff79c6">■</font> current  <font color="#ffb86c">■</font> available  <font color="#444466">■</font> unexplored  <font color="#6272a4">---</font> gated>];
+  }
+
+  "parlor" [label="parlor" shape=box fillcolor="#2d4a3e" color="#50fa7b"];
+  "entrance" [label="entrance" shape=doubleoctagon fillcolor="#2d4a3e" color="#50fa7b"];
+  "ending_mercy" [label="Mercy" shape=doublecircle fillcolor="#ff79c6" color="#ff79c6"];
+  "ending_justice" [label="Justice" shape=doublecircle fillcolor="#1e1e30" color="#444466"];
+  "ending_complicity" [label="Complicity" shape=doublecircle fillcolor="#1e1e30" color="#444466"];
+  "study" [label="study" shape=box fillcolor="#2d4a3e" color="#50fa7b"];
+  "backroom" [label="backroom" shape=box fillcolor="#2d4a3e" color="#50fa7b"];
+  "ritual_chamber" [label="ritual_chamber" shape=box fillcolor="#2d4a3e" color="#50fa7b"];
+  "vault" [label="vault" shape=box fillcolor="#1e1e30" color="#444466"];
+  "ending_transcendence" [label="Transcendence" shape=doublecircle fillcolor="#1e1e30" color="#444466"];
+  "library" [label="library" shape=box fillcolor="#2d4a3e" color="#50fa7b"];
+
+  "parlor" -> "entrance" [label="Return to entrance" color="#ffb86c" style=solid penwidth=1.0];
+  "parlor" -> "backroom" [label="Slip into the backroom" color="#50fa7b" style=bold penwidth=2.5];
+  "parlor" -> "study" [label="Head to the study" color="#50fa7b" style=bold penwidth=2.5];
+  "entrance" -> "parlor" [label="Enter the parlor" color="#50fa7b" style=bold penwidth=2.5];
+  "entrance" -> "study" [label="Go to the study" color="#ffb86c" style=solid penwidth=1.0];
+  "study" -> "entrance" [label="Return to entrance" color="#ffb86c" style=solid penwidth=1.0];
+  "study" -> "parlor" [label="Go to the parlor" color="#50fa7b" style=bold penwidth=2.5];
+  "study" -> "library" [label="Find the hidden passage" color="#50fa7b" style=bold penwidth=2.5];
+  "backroom" -> "parlor" [label="Return to parlor" color="#50fa7b" style=bold penwidth=2.5];
+  "backroom" -> "vault" [label="Unlock the vault" color="#ffb86c" style=solid penwidth=1.0];
+  "ritual_chamber" -> "library" [label="Return to library" color="#ffb86c" style=solid penwidth=1.0];
+  "ritual_chamber" -> "ending_justice" [label="Pursue justice" color="#ffb86c" style=solid penwidth=1.0];
+  "ritual_chamber" -> "ending_mercy" [label="Show mercy" color="#50fa7b" style=bold penwidth=2.5];
+  "ritual_chamber" -> "ending_complicity" [label="Accept the deal" color="#ffb86c" style=solid penwidth=1.0];
+  "ritual_chamber" -> "ending_transcendence" [label="Speak the true name" color="#ffb86c" style=solid penwidth=1.0];
+  "vault" -> "backroom" [label="Return to backroom" color="#444466" style=dotted penwidth=0.5];
+  "library" -> "study" [label="Return to study" color="#ffb86c" style=solid penwidth=1.0];
+  "library" -> "ritual_chamber" [label="Enter the ritual chamber" color="#50fa7b" style=bold penwidth=2.5];
+}`;
+
+DOTS.live = `digraph NarrativeGraph {
+  rankdir=LR;
+  bgcolor="#1a1a2e";
+  node [shape=box fontname="Helvetica" fontcolor="#e0e0e0" color="#444466" style=filled];
+  edge [fontname="Helvetica" fontsize=9 fontcolor="#888888" color="#444466"];
+
+  subgraph cluster_legend {
+    label="" style=invis;
+    legend [shape=note fillcolor="#1a1a2e" fontcolor="#888888" label=<<b>Legend</b><br/><font color="#50fa7b">■</font> visited  <font color="#ff79c6">■</font> current  <font color="#ffb86c">■</font> available  <font color="#444466">■</font> unexplored  <font color="#6272a4">---</font> gated>];
+  }
+
+  "entrance" [label="entrance" shape=doubleoctagon fillcolor="#ff79c6" color="#ff79c6"];
+  "study" [label="study" shape=box fillcolor="#3d3520" color="#ffb86c"];
+  "ending_justice" [label="Justice" shape=doublecircle fillcolor="#1e1e30" color="#444466"];
+  "parlor" [label="parlor" shape=box fillcolor="#3d3520" color="#ffb86c"];
+  "backroom" [label="backroom" shape=box fillcolor="#1e1e30" color="#444466"];
+  "ending_transcendence" [label="Transcendence" shape=doublecircle fillcolor="#1e1e30" color="#444466"];
+  "ending_mercy" [label="Mercy" shape=doublecircle fillcolor="#1e1e30" color="#444466"];
+  "ending_complicity" [label="Complicity" shape=doublecircle fillcolor="#1e1e30" color="#444466"];
+  "vault" [label="vault" shape=box fillcolor="#1e1e30" color="#444466"];
+  "ritual_chamber" [label="ritual_chamber" shape=box fillcolor="#1e1e30" color="#444466"];
+  "library" [label="library" shape=box fillcolor="#1e1e30" color="#444466"];
+
+  "entrance" -> "parlor" [label="Enter the parlor" color="#ffb86c" style=solid penwidth=1.0];
+  "entrance" -> "study" [label="Go to the study" color="#ffb86c" style=solid penwidth=1.0];
+  "study" -> "entrance" [label="Return to entrance" color="#444466" style=dotted penwidth=0.5];
+  "study" -> "parlor" [label="Go to the parlor" color="#444466" style=dotted penwidth=0.5];
+  "study" -> "library" [label="Find the hidden passage" color="#444466" style=dotted penwidth=0.5];
+  "parlor" -> "entrance" [label="Return to entrance" color="#444466" style=dotted penwidth=0.5];
+  "parlor" -> "backroom" [label="Slip into the backroom" color="#444466" style=dotted penwidth=0.5];
+  "parlor" -> "study" [label="Head to the study" color="#444466" style=dotted penwidth=0.5];
+  "backroom" -> "parlor" [label="Return to parlor" color="#444466" style=dotted penwidth=0.5];
+  "backroom" -> "vault" [label="Unlock the vault" color="#444466" style=dotted penwidth=0.5];
+  "vault" -> "backroom" [label="Return to backroom" color="#444466" style=dotted penwidth=0.5];
+  "ritual_chamber" -> "library" [label="Return to library" color="#444466" style=dotted penwidth=0.5];
+  "ritual_chamber" -> "ending_justice" [label="Pursue justice" color="#444466" style=dotted penwidth=0.5];
+  "ritual_chamber" -> "ending_mercy" [label="Show mercy" color="#444466" style=dotted penwidth=0.5];
+  "ritual_chamber" -> "ending_complicity" [label="Accept the deal" color="#444466" style=dotted penwidth=0.5];
+  "ritual_chamber" -> "ending_transcendence" [label="Speak the true name" color="#444466" style=dotted penwidth=0.5];
+  "library" -> "study" [label="Return to study" color="#444466" style=dotted penwidth=0.5];
+  "library" -> "ritual_chamber" [label="Enter the ritual chamber" color="#444466" style=dotted penwidth=0.5];
+}`;
+
+const INFO = {
+  narrative: {
+    title: 'Full Narrative',
+    desc: 'The complete possibility space — every room and every exit, no state annotations',
+    nodes: 11, edges: 18, endings: 4,
+    path: null,
+  },
+  played: {
+    title: 'Played Session',
+    desc: 'Autoplay reached ending_mercy in 38 turns — green = visited, orange = available but skipped, grey = never reached',
+    nodes: 11, edges: 18, endings: '1/4',
+    path: ['entrance','parlor','backroom','parlor','study','parlor','study','library','ritual_chamber','ending_mercy'],
+  },
+  live: {
+    title: 'Live Snapshot',
+    desc: 'Fresh session at entrance — pink = current position, orange = immediate exits, grey = undiscovered world',
+    nodes: 11, edges: 18, endings: '0/4',
+    path: ['entrance'],
+  },
+};
+
+let currentView = 'narrative';
+
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    currentView = tab.dataset.view;
+    render(currentView);
+  });
+});
+
+function render(view) {
+  const info = INFO[view];
+  document.getElementById('stat-nodes').textContent = info.nodes;
+  document.getElementById('stat-edges').textContent = info.edges;
+  document.getElementById('stat-endings').textContent = info.endings;
+  document.querySelector('#info-bar span:first-child').innerHTML =
+    `<span class="label">View:</span> ${info.title} — <span style="color:var(--muted)">${info.desc}</span>`;
+
+  const pathBar = document.getElementById('path-bar');
+  if (info.path) {
+    pathBar.style.display = 'block';
+    const unique = [...new Set(info.path)];
+    pathBar.innerHTML = unique.map((n, i) => {
+      const cls = n.startsWith('ending_') ? 'ending' : 'node';
+      const arrow = i < unique.length - 1 ? '<span class="arrow">→</span>' : '';
+      return `<span class="${cls}">${n}</span>${arrow}`;
+    }).join('');
+  } else {
+    pathBar.style.display = 'none';
+  }
+
+  const legendBar = document.getElementById('legend-bar');
+  legendBar.style.display = view === 'narrative' ? 'none' : 'flex';
+
+  d3.select('#graph-container').graphviz()
+    .engine('dot')
+    .fade(true)
+    .transition(function () { return d3.transition().duration(400); })
+    .renderDot(DOTS[view]);
+}
+
+render('narrative');
+</script>
+</body>
+</html>

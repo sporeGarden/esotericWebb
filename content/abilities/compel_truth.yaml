@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+id: compel_truth
+name: "Compel Truth"
+description: "Force momentary honesty — the target speaks plainly, but resentfully."
+preconditions:
+  - type: flag_set
+    value: aura_sight
+effects:
+  - type: add_knowledge
+    value: deception_detected
+narration_hint: "Their words twist involuntarily toward truth, and they hate you for it."

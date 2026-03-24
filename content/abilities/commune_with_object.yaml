@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+id: commune_with_object
+name: "Commune with Object"
+description: "Read psychometric impressions from a touched object."
+preconditions: []
+effects:
+  - type: add_knowledge
+    value: object_history
+narration_hint: "Visions flow from the surface — fractured, old, saturated with intent."

@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+id: reconstruct_memory
+name: "Reconstruct Memory"
+description: "See echoes of past events in a location."
+preconditions: []
+effects:
+  - type: add_knowledge
+    value: memory_fragment
+narration_hint: "The room flickers — for a moment you see it as it was, and what happened here."

@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+id: tobias
+name: "Tobias Crane"
+role: antiques appraiser
+knows:
+  - antique_values
+  - financial_records
+trust_initial: 0
+trust_rewards:
+  1:
+    description: "Tobias fidgets, making small talk about the shop's inventory."
+  3:
+    description: "Tobias sighs and admits he owes Maren a great deal of money."
+    grants_knowledge: [financial_records]
+lies_about:
+  his_debts:
+    detection_dc: 12
+  tobias_debt:
+    detection_dc: 12
+arc: "nervous -> confessing -> reformed"

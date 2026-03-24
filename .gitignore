@@ -1,0 +1,26 @@
+# Build artifacts
+target/
+.cargo-build/
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS debris
+.DS_Store
+Thumbs.db
+
+# Rust
+**/*.rs.bk
+
+# Coverage output
+lcov.info
+coverage/
+tarpaulin-report.html
+
+# Environment overrides
+.env
+.env.local

@@ -1,0 +1,209 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Esoteric Webb CRPG Niche — BYOB Definition
+#
+# Per Niche Deployment Standard: defines organisms, interactions, and
+# customization options for biomeOS niche composition.
+#
+# All primal binaries resolved from ecoPrimals/plasmidBin/ — Webb consumes
+# primals, not springs. Primals are identified by capability, not source.
+#
+# Deploy graph: graphs/esotericwebb_full.toml
+
+niche:
+  id: "esoteric-webb"
+  name: "Esoteric Webb CRPG Niche"
+  version: "1.0.0"
+  description: "Cross-evolution CRPG substrate — bounded space, infinite exploration"
+  category: "narrative"
+  difficulty: "beginner"
+  author: "ecoPrimals/esotericWebb"
+  deploy_graph: "graphs/esotericwebb_full.toml"
+
+  features:
+    - "Narrative direction (scene, story state, content bounds)"
+    - "Game science integration (flow, engagement, DDA, dialogue, sessions)"
+    - "AI-assisted narration and inference"
+    - "Visualization and interaction surface (visualization primal)"
+    - "Security and discovery tower (crypto + discovery primals)"
+    - "Optional GPU compute and provenance trio"
+
+organisms:
+  primals:
+    esotericwebb:
+      type: "esotericwebb"
+      required: true
+      role: "director"
+      capabilities:
+        - "webb.health"
+        - "webb.scene.current"
+        - "webb.narrative.status"
+        - "webb.content.list"
+      config:
+        mode: "server"
+        domain: "narrative"
+
+    ludospring:
+      type: "ludospring"
+      required: true
+      role: "science"
+      capabilities:
+        - "game.evaluate_flow"
+        - "game.engagement"
+        - "game.difficulty_adjustment"
+        - "game.npc_dialogue"
+        - "game.narrate_action"
+        - "game.voice_check"
+        - "game.push_scene"
+        - "game.begin_session"
+        - "game.record_action"
+        - "game.complete_session"
+        - "game.query_vertices"
+        - "game.mint_certificate"
+      config:
+        mode: "server"
+        domain: "game"
+
+    squirrel:
+      type: "squirrel"
+      required: true
+      role: "ai"
+      capabilities:
+        - "ai.chat"
+        - "ai.inference"
+        - "ai.summarize"
+
+    petaltongue:
+      type: "petaltongue"
+      required: true
+      role: "ui"
+      capabilities:
+        - "visualization.render.scene"
+        - "ui.render"
+        - "interaction.subscribe"
+        - "interaction.poll"
+
+    beardog:
+      type: "beardog"
+      required: true
+      role: "security"
+      capabilities:
+        - "crypto.sign"
+        - "crypto.encrypt"
+        - "crypto.hash"
+
+    songbird:
+      type: "songbird"
+      required: true
+      role: "discovery"
+      capabilities:
+        - "discovery.query"
+        - "discovery.announce"
+
+    toadstool:
+      type: "toadstool"
+      required: false
+      role: "compute"
+      capabilities:
+        - "compute.execute"
+        - "compute.capabilities"
+
+    rhizocrypt:
+      type: "rhizocrypt"
+      required: false
+      role: "provenance"
+      capabilities:
+        - "provenance.session_create"
+        - "provenance.vertex_append"
+        - "provenance.vertex_query"
+
+    loamspine:
+      type: "loamspine"
+      required: false
+      role: "certificate"
+      capabilities:
+        - "certificate.mint"
+        - "certificate.query"
+        - "certificate.evolve"
+
+    sweetgrass:
+      type: "sweetgrass"
+      required: false
+      role: "attribution"
+      capabilities:
+        - "attribution.record"
+        - "attribution.query"
+
+  chimeras: {}
+
+interactions:
+  - from: "esotericwebb"
+    to: "ludospring"
+    type: "capability_call"
+    config:
+      capabilities:
+        - "game.evaluate_flow"
+        - "game.engagement"
+        - "game.difficulty_adjustment"
+        - "game.npc_dialogue"
+        - "game.narrate_action"
+        - "game.voice_check"
+        - "game.push_scene"
+        - "game.begin_session"
+        - "game.record_action"
+        - "game.complete_session"
+        - "game.query_vertices"
+        - "game.mint_certificate"
+      description: "Game science and session lifecycle for CRPG substrate"
+
+  - from: "esotericwebb"
+    to: "squirrel"
+    type: "capability_call"
+    config:
+      capabilities: ["ai.chat", "ai.inference", "ai.summarize"]
+      description: "AI narration and inference for narrative layer"
+
+  - from: "esotericwebb"
+    to: "petaltongue"
+    type: "capability_call"
+    config:
+      capabilities:
+        - "visualization.render.scene"
+        - "ui.render"
+        - "interaction.subscribe"
+        - "interaction.poll"
+      description: "Scene rendering and player interaction"
+
+  - from: "ludospring"
+    to: "beardog"
+    type: "capability_call"
+    config:
+      capabilities: ["crypto.sign", "crypto.hash"]
+      description: "Session signing and data integrity"
+
+  - from: "ludospring"
+    to: "songbird"
+    type: "capability_call"
+    config:
+      capabilities: ["discovery.query"]
+      description: "Peer primal discovery by capability"
+
+customization:
+  options:
+    ai_model:
+      type: string
+      default: "local"
+      description: "Default AI model routing for Squirrel integration"
+      affects: ["squirrel"]
+
+    provenance_enabled:
+      type: boolean
+      default: true
+      description: "Enable Provenance Trio (rhizoCrypt, loamSpine, sweetGrass)"
+      affects: ["rhizocrypt", "loamspine", "sweetgrass"]
+
+    content_path:
+      type: string
+      default: "content"
+      description: "Content root for bounded narrative assets"
+      affects: ["esotericwebb"]

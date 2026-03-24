@@ -1,0 +1,43 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Webb Provenance Trio — rhizoCrypt + loamSpine + sweetGrass
+#
+# Spawns the provenance trio from plasmidBin in dependency order.
+# rhizoCrypt (DAG engine) is the foundation; loamSpine (lineage)
+# and sweetGrass (attribution) can start independently once rhizoCrypt
+# is healthy.
+#
+# Usage:
+#   esotericwebb serve --content content --launch --graph graphs/webb_provenance_trio.toml
+
+[graph]
+name = "webb_provenance_trio"
+description = "Provenance trio: rhizoCrypt (DAG) → loamSpine (lineage) + sweetGrass (attribution)"
+version = "0.1.0"
+coordination = "sequential"
+
+# ── Phase 1: rhizoCrypt — DAG engine ──
+[[graph.node]]
+name = "rhizocrypt"
+order = 1
+spawn = true
+depends_on = []
+by_capability = "dag"
+port = 9401
+
+# ── Phase 2: loamSpine + sweetGrass (parallel) ──
+[[graph.node]]
+name = "loamspine"
+order = 2
+spawn = true
+depends_on = ["rhizocrypt"]
+by_capability = "lineage"
+port = 9402
+
+[[graph.node]]
+name = "sweetgrass"
+order = 2
+spawn = true
+depends_on = ["rhizocrypt"]
+by_capability = "provenance"
+port = 9403

@@ -1,0 +1,56 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Esoteric Webb — cross-evolution substrate.
+#
+# Not a spring. A standalone composition project that IS the primals working
+# together as a CRPG. Exercises the full ecoPrimals stack via BYOB and feeds
+# gaps back into the springs that need to evolve.
+
+[workspace]
+resolver = "2"
+members = [
+    "webb",
+    "experiments/exp001_narrative_reachability",
+    "experiments/exp002_composition_wiring",
+    "experiments/exp003_state_emergence",
+    "experiments/exp004_provenance_trio_tcp",
+    "experiments/exp005_autoplay_coverage",
+]
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.87"
+license = "AGPL-3.0-or-later"
+repository = "https://github.com/sporeGarden/esotericWebb"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9"
+thiserror = "2"
+uuid = { version = "1", features = ["v7"] }
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+bytes = "1"
+clap = { version = "4", features = ["derive"] }
+toml = "0.8"
+
+[workspace.lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+expect_used = "deny"
+unwrap_used = "deny"
+doc_markdown = "allow"
+module_name_repetitions = "allow"
+must_use_candidate = "allow"
+return_self_not_must_use = "allow"
+missing_errors_doc = "warn"
+missing_panics_doc = "warn"
+cast_possible_truncation = "deny"
+cast_sign_loss = "deny"
+cast_precision_loss = "warn"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "deny"

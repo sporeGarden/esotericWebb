@@ -1,0 +1,34 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+[package]
+name = "esoteric-webb"
+version = "0.1.0"
+description = "Cross-evolution CRPG substrate — bounded space, infinite exploration"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+thiserror = { workspace = true }
+uuid = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+bytes = { workspace = true }
+clap = { workspace = true }
+toml = { workspace = true }
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "esotericwebb"
+path = "src/bin/esotericwebb.rs"
+
+[[bin]]
+name = "validate_all"
+path = "src/bin/validate_all/main.rs"

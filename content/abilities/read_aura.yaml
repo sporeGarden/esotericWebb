@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+id: read_aura
+name: "Read Aura"
+description: "Perceive emotional state and hidden intentions."
+preconditions: []
+effects:
+  - type: set_flag
+    value: aura_sight
+narration_hint: "Colors bloom around people — warm gold for honesty, bruised violet for secrets."

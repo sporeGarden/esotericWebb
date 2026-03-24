@@ -1,0 +1,175 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Webb Full — all atomic tiers + all overlays
+#
+# Tower + Nest + Node + Squirrel + PetalTongue + Provenance Trio + Webb.
+# The maximum composition: encrypted IPC, discovery, persistence, compute,
+# AI narration, visual rendering, and provenance-tracked gameplay.
+#
+# Usage:
+#   biomeos deploy --graph graphs/webb_full.toml
+
+[graph]
+name = "webb_full"
+description = "Full composition: Tower + Nest + Node + AI + Viz + Provenance + Webb"
+version = "0.1.0"
+coordination = "sequential"
+
+# ── Phase 1: Tower Atomic ──
+
+[[graph.node]]
+name = "beardog"
+binary = "beardog_primal"
+order = 1
+required = true
+health_method = "health.liveness"
+by_capability = "security"
+capabilities = [
+    "crypto.encrypt", "crypto.decrypt", "crypto.sign",
+    "crypto.verify", "crypto.keygen", "crypto.identity",
+]
+
+[[graph.node]]
+name = "songbird"
+binary = "songbird_primal"
+order = 2
+required = true
+depends_on = ["beardog"]
+health_method = "health.liveness"
+by_capability = "discovery"
+capabilities = [
+    "discovery.find_primals", "discovery.announce",
+    "network.tls_connect", "network.http_request",
+]
+
+# ── Phase 2: Nest + Node extensions ──
+
+[[graph.node]]
+name = "nestgate"
+binary = "nestgate_primal"
+order = 3
+required = false
+depends_on = ["beardog", "songbird"]
+health_method = "health.liveness"
+by_capability = "storage"
+capabilities = [
+    "storage.store", "storage.retrieve", "storage.list",
+    "model.register", "model.locate",
+]
+
+[[graph.node]]
+name = "toadstool"
+binary = "toadstool_primal"
+order = 4
+required = false
+depends_on = ["beardog", "songbird"]
+health_method = "health.liveness"
+by_capability = "compute"
+capabilities = [
+    "compute.dispatch.submit", "compute.dispatch.status",
+    "compute.dispatch.cancel", "compute.execute",
+]
+
+# ── Phase 3: AI + Visualization overlays ──
+
+[[graph.node]]
+name = "squirrel"
+binary = "squirrel_primal"
+order = 5
+required = false
+depends_on = ["beardog", "songbird"]
+health_method = "health.liveness"
+by_capability = "ai"
+capabilities = [
+    "ai.query", "ai.complete", "ai.chat",
+    "tool.list", "tool.execute",
+    "context.create", "context.update", "context.summarize",
+    "capability.discover",
+]
+
+[[graph.node]]
+name = "petaltongue"
+binary = "petaltongue_primal"
+order = 6
+required = false
+depends_on = ["beardog", "songbird"]
+health_method = "health.liveness"
+by_capability = "visualization"
+capabilities = [
+    "viz.render", "viz.dashboard",
+    "viz.stream", "viz.query",
+]
+
+# ── Phase 4: Provenance Trio ──
+
+[[graph.node]]
+name = "rhizocrypt"
+binary = "rhizocrypt_primal"
+order = 7
+required = false
+depends_on = ["beardog", "nestgate"]
+health_method = "health.liveness"
+by_capability = "dag"
+capabilities = [
+    "dag.session.create", "dag.event.append",
+    "dag.vertex.get", "dag.frontier.get",
+    "dag.merkle.root", "dag.merkle.verify",
+]
+
+[[graph.node]]
+name = "loamspine"
+binary = "loamspine_primal"
+order = 8
+required = false
+depends_on = ["beardog", "rhizocrypt"]
+health_method = "health.liveness"
+by_capability = "lineage"
+capabilities = [
+    "spine.create", "spine.get", "spine.seal",
+    "entry.append", "certificate.mint",
+]
+
+[[graph.node]]
+name = "sweetgrass"
+binary = "sweetgrass_primal"
+order = 9
+required = false
+depends_on = ["beardog", "loamspine"]
+health_method = "health.liveness"
+by_capability = "provenance"
+capabilities = [
+    "braid.create", "braid.commit",
+    "provenance.graph", "attribution.chain",
+]
+
+# ── Phase 5: Esoteric Webb ──
+
+[[graph.node]]
+name = "esotericwebb"
+binary = "esotericwebb"
+order = 10
+required = true
+depends_on = ["beardog", "songbird"]
+health_method = "health.liveness"
+by_capability = "game"
+capabilities = [
+    "webb.health", "webb.liveness", "webb.readiness",
+    "webb.scene.current", "webb.narrative.status", "webb.content.list",
+    "session.start", "session.state", "session.actions",
+    "session.act", "session.history", "session.narrate", "session.graph",
+    "tools.list", "tools.call",
+    "capabilities.list",
+]
+
+# ── Validation ──
+
+[[graph.node]]
+name = "validate_webb_full"
+binary = "primalspring_primal"
+order = 99
+required = false
+spawn = false
+depends_on = ["beardog", "songbird", "esotericwebb"]
+health_method = "health.liveness"
+by_capability = "coordination"
+capabilities = ["composition.webb_full_health"]

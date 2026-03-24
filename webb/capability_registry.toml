@@ -1,0 +1,94 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Esoteric Webb — Capability Registry
+#
+# Source of truth for all JSON-RPC methods Webb exposes.
+# This file is read by `capabilities.list` and validated by primalSpring.
+
+[registry]
+primal = "esotericwebb"
+version = "0.1.0"
+domain = "game"
+
+# ── Health (sourDough compliance) ──
+
+[[capabilities]]
+method = "health.liveness"
+description = "Kubernetes-style liveness probe — process is alive"
+
+[[capabilities]]
+method = "health.readiness"
+description = "Kubernetes-style readiness probe — content loaded, session can start"
+
+[[capabilities]]
+method = "capabilities.list"
+description = "Return this capability registry"
+
+# ── Webb domain methods ──
+
+[[capabilities]]
+method = "webb.health"
+description = "Webb-specific health check"
+
+[[capabilities]]
+method = "webb.liveness"
+description = "Webb liveness check"
+
+[[capabilities]]
+method = "webb.readiness"
+description = "Webb readiness check"
+
+[[capabilities]]
+method = "webb.scene.current"
+description = "Current game scene description and metadata"
+
+[[capabilities]]
+method = "webb.narrative.status"
+description = "Narrative DAG status — node count, edge count, start/end nodes"
+
+[[capabilities]]
+method = "webb.content.list"
+description = "List loaded content (scenes, abilities, NPCs)"
+
+# ── Session methods ──
+
+[[capabilities]]
+method = "session.start"
+description = "Initialize a new game session with content bundle"
+params = "{ content_path: string }"
+
+[[capabilities]]
+method = "session.state"
+description = "Full game state snapshot — node, knowledge, inventory, flags, trust"
+
+[[capabilities]]
+method = "session.actions"
+description = "List available actions from the current game state"
+
+[[capabilities]]
+method = "session.act"
+description = "Perform a player action — returns outcome and narration context"
+params = "{ kind: string, id: string }"
+
+[[capabilities]]
+method = "session.history"
+description = "Full action history for the current session"
+
+[[capabilities]]
+method = "session.narrate"
+description = "Narration context for AI-as-generator"
+
+[[capabilities]]
+method = "session.graph"
+description = "Narrative DAG as DOT with live session overlay"
+
+# ── MCP tools ──
+
+[[capabilities]]
+method = "tools.list"
+description = "MCP tool enumeration for AI agent discovery"
+
+[[capabilities]]
+method = "tools.call"
+description = "MCP tool invocation for AI agent interaction"
+params = "{ name: string, arguments: object }"

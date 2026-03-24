@@ -1,0 +1,90 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Esoteric Webb BYOB niche — cross-evolution CRPG substrate
+#
+# A bounded-narrative text CRPG that consumes primals for AI narration,
+# visual rendering, compute, persistence, and provenance tracking.
+# Validates all three atomic tiers (Tower, Node, Nest) and overlay
+# patterns (AI+Viz, Provenance trio, Full).
+
+name: esotericwebb-game
+description: "Cross-evolution CRPG substrate — primal composition case study"
+version: "0.1.0"
+
+deploy_graphs:
+  tower: "graphs/webb_tower.toml"
+  node: "graphs/webb_node.toml"
+  nest: "graphs/webb_nest.toml"
+  ai_viz: "graphs/webb_ai_viz.toml"
+  provenance: "graphs/webb_provenance.toml"
+  full: "graphs/webb_full.toml"
+
+organisms:
+  - name: beardog
+    role: "Cryptographic identity and encrypted IPC"
+    required: true
+
+  - name: songbird
+    role: "Capability-based primal discovery and mesh networking"
+    required: true
+
+  - name: toadstool
+    role: "GPU/CPU compute for procedural generation and AI inference offload"
+    required: false
+
+  - name: nestgate
+    role: "Content-addressed persistence for save/load game state"
+    required: false
+
+  - name: squirrel
+    role: "AI narration via MCP tool routing and LLM bridging"
+    required: false
+
+  - name: petaltongue
+    role: "Scene rendering and player dashboard visualization"
+    required: false
+
+  - name: rhizocrypt
+    role: "DAG storage for provenance-tracked gameplay sessions"
+    required: false
+
+  - name: loamspine
+    role: "Lineage tracking and certificate minting for sessions"
+    required: false
+
+  - name: sweetgrass
+    role: "Attribution chains and provenance graph export"
+    required: false
+
+  - name: esotericwebb
+    role: "CRPG game engine — narrative DAG, director, session management"
+    required: true
+
+interactions:
+  - type: "session.start"
+    description: "Initialize a new game session with content bundle"
+
+  - type: "session.act"
+    description: "Process player action through game director"
+
+  - type: "session.graph"
+    description: "Live narrative DAG with session overlay"
+
+  - type: "tools.list"
+    description: "MCP tool enumeration for AI agent discovery"
+
+  - type: "tools.call"
+    description: "MCP tool invocation for AI agent interaction"
+
+cost_estimates:
+  session.start: { cpu: "low", memory: "low", latency_ms: 50 }
+  session.act: { cpu: "low", memory: "low", latency_ms: 10 }
+  session.graph: { cpu: "low", memory: "medium", latency_ms: 20 }
+  tools.call: { cpu: "low", memory: "low", latency_ms: 10 }
+
+operation_dependencies:
+  session.act: ["session.start"]
+  session.state: ["session.start"]
+  session.history: ["session.start"]
+  session.narrate: ["session.start"]
+  session.graph: ["session.start"]

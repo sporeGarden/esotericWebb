@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+id: empathic_bridge
+name: "Empathic Bridge"
+description: "Feel an NPC's emotions directly — deepens connection but exposes you."
+preconditions: []
+effects:
+  - type: set_flag
+    value: empathic_link
+narration_hint: "The connection deepens. Their feelings flood into yours."

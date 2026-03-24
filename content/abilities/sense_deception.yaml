@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+id: sense_deception
+name: "Sense Deception"
+description: "Detect active lies — requires aura sight already active."
+preconditions:
+  - type: flag_set
+    value: aura_sight
+effects:
+  - type: add_knowledge
+    value: deception_detected
+narration_hint: "A discordant note — their words and their aura tell different stories."

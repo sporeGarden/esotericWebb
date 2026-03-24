@@ -1,0 +1,325 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# biomeOS deployment graph: Esoteric Webb full BYOB stack
+#
+# All primal binaries resolved from ecoPrimals/plasmidBin/ or via Songbird
+# discovery. No spring source trees are referenced — only deployed primals.
+#
+# Phases:
+#   1 — Tower primals (crypto → discovery)
+#   2 — Game science primal (depends on discovery)
+#   3 — Visualization primal (depends on discovery)
+#   4 — AI primal (depends on discovery + visualization)
+#   5 — Compute primal (optional, fallback=skip)
+#   6 — Provenance trio (optional, fallback=skip)
+#   7 — esotericWebb (narrative director, depends on game + AI + visualization)
+#   8 — validate (health check on full stack)
+#
+# Status: 1.0 — Esoteric Webb CRPG niche full deploy
+
+[graph]
+id = "esotericwebb_full"
+description = "Esoteric Webb: narrative director composing game science, AI, and visualization primals from plasmidBin/ with optional compute and provenance"
+coordination = "Sequential"
+version = "1.0"
+
+# ── Phase 1: Tower Atomic (security + discovery) ──────────────────────────
+
+[[nodes]]
+id = "germinate_beardog"
+output = "beardog_genesis"
+capabilities = ["security", "crypto"]
+
+[nodes.primal]
+by_capability = "security"
+
+[nodes.operation]
+name = "start"
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+[nodes.operation.environment]
+BIOMEOS_SOCKET_DIR = "${XDG_RUNTIME_DIR}/biomeos"
+
+[nodes.constraints]
+timeout_ms = 15000
+
+[nodes.capabilities_provided]
+"crypto.sign_ed25519" = "crypto.sign_ed25519"
+"crypto.verify_ed25519" = "crypto.verify_ed25519"
+"crypto.blake3_hash" = "crypto.blake3_hash"
+
+[[nodes]]
+id = "germinate_songbird"
+depends_on = ["germinate_beardog"]
+output = "songbird_genesis"
+capabilities = ["discovery"]
+
+[nodes.primal]
+by_capability = "discovery"
+
+[nodes.operation]
+name = "start"
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+[nodes.operation.environment]
+BIOMEOS_SOCKET_DIR = "${XDG_RUNTIME_DIR}/biomeos"
+
+[nodes.constraints]
+timeout_ms = 15000
+
+[nodes.capabilities_provided]
+"discovery.register" = "discovery.register"
+"discovery.query" = "discovery.query"
+
+# ── Phase 2: Game science primal ──────────────────────────────────────────
+
+[[nodes]]
+id = "germinate_ludospring"
+depends_on = ["germinate_songbird"]
+output = "ludospring_genesis"
+capabilities = ["game", "ludology"]
+
+[nodes.primal]
+by_capability = "game"
+
+[nodes.operation]
+name = "start"
+[nodes.operation.params]
+mode = "server"
+domain = "game"
+family_id = "${FAMILY_ID}"
+[nodes.operation.environment]
+BIOMEOS_SOCKET_DIR = "${XDG_RUNTIME_DIR}/biomeos"
+
+[nodes.constraints]
+timeout_ms = 15000
+
+[nodes.capabilities_provided]
+"game.evaluate_flow" = "game.evaluate_flow"
+"game.engagement" = "game.engagement"
+"game.difficulty_adjustment" = "game.difficulty_adjustment"
+"game.npc_dialogue" = "game.npc_dialogue"
+"game.narrate_action" = "game.narrate_action"
+"game.voice_check" = "game.voice_check"
+"game.push_scene" = "game.push_scene"
+"game.begin_session" = "game.begin_session"
+"game.record_action" = "game.record_action"
+"game.complete_session" = "game.complete_session"
+"game.query_vertices" = "game.query_vertices"
+"game.mint_certificate" = "game.mint_certificate"
+
+# ── Phase 3: Visualization primal ─────────────────────────────────────────
+
+[[nodes]]
+id = "germinate_petaltongue"
+depends_on = ["germinate_songbird"]
+output = "petaltongue_genesis"
+capabilities = ["visualization", "ui", "interaction"]
+
+[nodes.primal]
+by_capability = "visualization"
+
+[nodes.operation]
+name = "start"
+[nodes.operation.params]
+mode = "server"
+domain = "game"
+family_id = "${FAMILY_ID}"
+[nodes.operation.environment]
+BIOMEOS_SOCKET_DIR = "${XDG_RUNTIME_DIR}/biomeos"
+
+[nodes.constraints]
+timeout_ms = 20000
+
+[nodes.capabilities_provided]
+"visualization.render" = "visualization.render"
+"visualization.render.stream" = "visualization.render.stream"
+"visualization.render.scene" = "visualization.render.scene"
+"visualization.render.dashboard" = "visualization.render.dashboard"
+"visualization.export" = "visualization.export"
+"ui.render" = "ui.render"
+"interaction.subscribe" = "interaction.subscribe"
+"interaction.poll" = "interaction.poll"
+
+# ── Phase 4: AI primal ────────────────────────────────────────────────────
+
+[[nodes]]
+id = "germinate_squirrel"
+depends_on = ["germinate_songbird", "germinate_petaltongue"]
+output = "squirrel_genesis"
+capabilities = ["ai"]
+
+[nodes.primal]
+by_capability = "ai"
+
+[nodes.operation]
+name = "start"
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+[nodes.operation.environment]
+BIOMEOS_SOCKET_DIR = "${XDG_RUNTIME_DIR}/biomeos"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[nodes.capabilities_provided]
+"ai.chat" = "ai.chat"
+"ai.inference" = "ai.inference"
+"ai.summarize" = "context.summarize"
+"ai.list_providers" = "ai.list_providers"
+
+# ── Phase 5: Compute primal (optional) ────────────────────────────────────
+
+[[nodes]]
+id = "germinate_toadstool"
+depends_on = ["germinate_squirrel"]
+output = "toadstool_genesis"
+capabilities = ["compute"]
+fallback = "skip"
+
+[nodes.primal]
+by_capability = "compute"
+
+[nodes.operation]
+name = "start"
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+[nodes.operation.environment]
+BIOMEOS_SOCKET_DIR = "${XDG_RUNTIME_DIR}/biomeos"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[nodes.capabilities_provided]
+"compute.dispatch" = "compute.dispatch"
+
+# ── Phase 6: Provenance Trio (optional) ───────────────────────────────────
+
+[[nodes]]
+id = "germinate_rhizocrypt"
+depends_on = ["germinate_beardog"]
+output = "rhizocrypt_genesis"
+capabilities = ["provenance"]
+fallback = "skip"
+
+[nodes.primal]
+by_capability = "provenance"
+
+[nodes.operation]
+name = "start"
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+[nodes.operation.environment]
+BIOMEOS_SOCKET_DIR = "${XDG_RUNTIME_DIR}/biomeos"
+
+[nodes.constraints]
+timeout_ms = 15000
+
+[nodes.capabilities_provided]
+"provenance.session_create" = "provenance.session_create"
+"provenance.vertex_append" = "provenance.vertex_append"
+"provenance.vertex_query" = "provenance.vertex_query"
+
+[[nodes]]
+id = "germinate_loamspine"
+depends_on = ["germinate_beardog"]
+output = "loamspine_genesis"
+capabilities = ["certificate"]
+fallback = "skip"
+
+[nodes.primal]
+by_capability = "certificate"
+
+[nodes.operation]
+name = "start"
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+[nodes.operation.environment]
+BIOMEOS_SOCKET_DIR = "${XDG_RUNTIME_DIR}/biomeos"
+
+[nodes.constraints]
+timeout_ms = 15000
+
+[nodes.capabilities_provided]
+"certificate.mint" = "certificate.mint"
+"certificate.query" = "certificate.query"
+"certificate.evolve" = "certificate.evolve"
+
+[[nodes]]
+id = "germinate_sweetgrass"
+depends_on = ["germinate_beardog"]
+output = "sweetgrass_genesis"
+capabilities = ["attribution"]
+fallback = "skip"
+
+[nodes.primal]
+by_capability = "attribution"
+
+[nodes.operation]
+name = "start"
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+[nodes.operation.environment]
+BIOMEOS_SOCKET_DIR = "${XDG_RUNTIME_DIR}/biomeos"
+
+[nodes.constraints]
+timeout_ms = 15000
+
+[nodes.capabilities_provided]
+"attribution.record" = "attribution.record"
+"attribution.query" = "attribution.query"
+
+# ── Phase 7: esotericWebb (narrative director) ────────────────────────────
+
+[[nodes]]
+id = "germinate_esotericwebb"
+depends_on = ["germinate_ludospring", "germinate_squirrel", "germinate_petaltongue"]
+output = "esotericwebb_genesis"
+capabilities = ["narrative", "webb"]
+
+[nodes.primal]
+by_capability = "narrative"
+
+[nodes.operation]
+name = "start"
+[nodes.operation.params]
+mode = "server"
+domain = "narrative"
+family_id = "${FAMILY_ID}"
+[nodes.operation.environment]
+BIOMEOS_SOCKET_DIR = "${XDG_RUNTIME_DIR}/biomeos"
+
+[nodes.constraints]
+timeout_ms = 20000
+
+[nodes.capabilities_provided]
+"webb.health" = "webb.health"
+"webb.liveness" = "webb.liveness"
+"webb.readiness" = "webb.readiness"
+"webb.scene.current" = "webb.scene.current"
+"webb.narrative.status" = "webb.narrative.status"
+"webb.content.list" = "webb.content.list"
+"webb.content.validate" = "webb.content.validate"
+"tools.list" = "tools.list"
+"tools.call" = "tools.call"
+
+# ── Phase 8: Validation ───────────────────────────────────────────────────
+
+[[nodes]]
+id = "validate_esotericwebb_stack"
+depends_on = ["germinate_esotericwebb"]
+output = "esotericwebb_stack_healthy"
+
+[nodes.operation]
+name = "health_check"
+[nodes.operation.params]
+targets = ["esotericwebb", "ludospring", "squirrel", "petaltongue"]
+
+[nodes.constraints]
+timeout_ms = 10000

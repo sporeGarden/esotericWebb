@@ -1,0 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+id: parlor
+description: "The main parlor is a maze of display cases and shelving. Maren Ashworth arranges items behind the counter with practiced efficiency. Tobias Crane examines a pocket watch through a jeweler's loupe at a side table, his hands not quite steady."
+npcs: [maren, tobias]

@@ -1,0 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+id: entrance
+description: "The door to The Weaver's Parlor stands before you — oak and iron, older than the building around it. Through the glass, antique curiosities crowd every surface. A bell chimes as you enter. The air smells of beeswax, old paper, and something else — something metallic. Inspector Vale stands near the counter, notebook in hand."
+npcs:
+  - vale

@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+id: vale
+name: "Inspector Vale"
+role: police detective
+knows:
+  - murder_weapon
+  - crime_scene_details
+trust_initial: 2
+trust_rewards:
+  3:
+    description: "Vale flips open their notebook and walks you through the crime scene."
+    grants_knowledge: [crime_scene_details]
+  5:
+    description: "Vale hesitates, then reveals the murder weapon's identity."
+    grants_knowledge: [murder_weapon]
+lies_about: {}
+arc: "skeptical -> intrigued -> believer"

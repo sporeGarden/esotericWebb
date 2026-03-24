@@ -1,0 +1,137 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Webb Provenance — Nest + Provenance Trio + Webb
+#
+# Adds the RootPulse provenance trio (rhizoCrypt + loamSpine + sweetGrass)
+# on top of the Nest Atomic tier. Every gameplay action is tracked in a
+# content-addressed DAG with lineage and attribution.
+#
+# Usage:
+#   biomeos deploy --graph graphs/webb_provenance.toml
+
+[graph]
+name = "webb_provenance"
+description = "Nest + Provenance Trio + Esoteric Webb (tracked CRPG sessions)"
+version = "0.1.0"
+coordination = "sequential"
+
+# ── Phase 1: Tower Atomic ──
+
+[[graph.node]]
+name = "beardog"
+binary = "beardog_primal"
+order = 1
+required = true
+health_method = "health.liveness"
+by_capability = "security"
+capabilities = [
+    "crypto.encrypt", "crypto.decrypt", "crypto.sign",
+    "crypto.verify", "crypto.keygen", "crypto.identity",
+]
+
+[[graph.node]]
+name = "songbird"
+binary = "songbird_primal"
+order = 2
+required = true
+depends_on = ["beardog"]
+health_method = "health.liveness"
+by_capability = "discovery"
+capabilities = [
+    "discovery.find_primals", "discovery.announce",
+    "network.tls_connect", "network.http_request",
+]
+
+# ── Phase 2: Nest Atomic (persistence) ──
+
+[[graph.node]]
+name = "nestgate"
+binary = "nestgate_primal"
+order = 3
+required = true
+depends_on = ["beardog", "songbird"]
+health_method = "health.liveness"
+by_capability = "storage"
+capabilities = [
+    "storage.store", "storage.retrieve", "storage.list",
+    "model.register", "model.locate",
+]
+
+# ── Phase 3: Provenance Trio ──
+
+[[graph.node]]
+name = "rhizocrypt"
+binary = "rhizocrypt_primal"
+order = 4
+required = false
+depends_on = ["beardog", "nestgate"]
+health_method = "health.liveness"
+by_capability = "dag"
+capabilities = [
+    "dag.session.create", "dag.session.get", "dag.session.list",
+    "dag.event.append", "dag.vertex.get", "dag.frontier.get",
+    "dag.merkle.root", "dag.merkle.proof", "dag.merkle.verify",
+    "dag.slice.checkout", "dag.slice.get",
+]
+
+[[graph.node]]
+name = "loamspine"
+binary = "loamspine_primal"
+order = 5
+required = false
+depends_on = ["beardog", "rhizocrypt"]
+health_method = "health.liveness"
+by_capability = "lineage"
+capabilities = [
+    "spine.create", "spine.get", "spine.seal",
+    "entry.append", "entry.get",
+    "certificate.mint", "certificate.transfer",
+    "session.commit", "braid.commit",
+]
+
+[[graph.node]]
+name = "sweetgrass"
+binary = "sweetgrass_primal"
+order = 6
+required = false
+depends_on = ["beardog", "loamspine"]
+health_method = "health.liveness"
+by_capability = "provenance"
+capabilities = [
+    "braid.create", "braid.get", "braid.commit",
+    "anchoring.anchor", "anchoring.verify",
+    "provenance.graph", "provenance.export_provo",
+    "attribution.chain", "attribution.calculate_rewards",
+]
+
+# ── Phase 4: Esoteric Webb ──
+
+[[graph.node]]
+name = "esotericwebb"
+binary = "esotericwebb"
+order = 10
+required = true
+depends_on = ["beardog", "songbird", "nestgate"]
+health_method = "health.liveness"
+by_capability = "game"
+capabilities = [
+    "webb.health", "webb.liveness", "webb.readiness",
+    "webb.scene.current", "webb.narrative.status", "webb.content.list",
+    "session.start", "session.state", "session.actions",
+    "session.act", "session.history", "session.narrate", "session.graph",
+    "tools.list", "tools.call",
+    "capabilities.list",
+]
+
+# ── Validation ──
+
+[[graph.node]]
+name = "validate_webb_provenance"
+binary = "primalspring_primal"
+order = 99
+required = false
+spawn = false
+depends_on = ["beardog", "songbird", "nestgate", "rhizocrypt", "loamspine", "sweetgrass", "esotericwebb"]
+health_method = "health.liveness"
+by_capability = "coordination"
+capabilities = ["composition.webb_provenance_health"]

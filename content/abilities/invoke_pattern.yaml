@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+id: invoke_pattern
+name: "Invoke Pattern"
+description: "Reveal hidden connections between objects, people, and events."
+preconditions:
+  - type: has_knowledge
+    value: ritual_history
+effects:
+  - type: add_knowledge
+    value: pattern_revealed
+  - type: set_flag
+    value: pattern_active
+narration_hint: "Lines of light trace between disparate things — the pattern was always there."

@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+id: elara
+name: "Elara Voss"
+role: occult researcher
+knows:
+  - ritual_history
+  - ritual_purpose
+  - true_name
+  - sigil_meanings
+trust_initial: 0
+trust_rewards:
+  1:
+    description: "Elara studies you warily but begins to explain the ritual's purpose."
+    grants_knowledge: [ritual_purpose]
+  2:
+    description: "Elara traces the sigils on the floor and explains their meanings."
+    grants_knowledge: [sigil_meanings]
+  3:
+    description: "Elara offers a deal — silence for shared power. You accept the terms."
+    sets_flags: [accepted_deal]
+  4:
+    description: "Elara, trusting you at last, whispers the true name that binds the Presence."
+    grants_knowledge: [true_name]
+lies_about:
+  her_involvement:
+    detection_dc: 18
+arc: "hidden -> revealed -> bargaining -> resolved"

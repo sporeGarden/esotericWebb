@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+id: break_ward
+name: "Break Ward"
+description: "Dispel protective magic by reading and breaking its sigil structure."
+preconditions:
+  - type: has_knowledge
+    value: sigil_meanings
+  - type: has_item
+    value: obsidian_lens
+effects:
+  - type: set_flag
+    value: ward_broken
+  - type: add_knowledge
+    value: true_name
+narration_hint: "The sigil cracks. Light pours through the fracture. A name surfaces."

@@ -1,0 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+id: ritual_chamber
+description: "The deepest room. A circle is inscribed on the floor — not paint, but something scored into the stone itself. Elara Voss stands at its edge, her expression unreadable. The air hums."
+npcs: [elara]

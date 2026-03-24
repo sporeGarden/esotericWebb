@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+id: maren
+name: "Maren Ashworth"
+role: proprietor
+knows:
+  - shop_layout
+  - hidden_passage
+  - financial_records
+  - tobias_debt
+trust_initial: 1
+trust_rewards:
+  2:
+    description: "Maren relaxes slightly and shares a rumor about Tobias."
+    grants_knowledge: [tobias_debt]
+  4:
+    description: "Maren leans close and whispers about a passage behind the study bookshelf."
+    grants_knowledge: [hidden_passage]
+  6:
+    description: "Maren presses a heavy iron key into your hand."
+    grants_items: [master_key]
+lies_about:
+  murder_weapon:
+    detection_dc: 15
+arc: "guarded -> suspicious -> cooperative -> ally"

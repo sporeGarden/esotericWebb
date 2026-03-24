@@ -1,0 +1,89 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Webb Node Atomic — Tower + ToadStool (compute) + Webb
+#
+# Adds GPU/CPU compute dispatch for procedural generation,
+# AI inference offload, and heavy batch processing.
+#
+# Usage:
+#   biomeos deploy --graph graphs/webb_node.toml
+
+[graph]
+name = "webb_node"
+description = "Node Atomic + Esoteric Webb (compute-assisted CRPG)"
+version = "0.1.0"
+coordination = "sequential"
+
+# ── Phase 1: Tower Atomic ──
+
+[[graph.node]]
+name = "beardog"
+binary = "beardog_primal"
+order = 1
+required = true
+health_method = "health.liveness"
+by_capability = "security"
+capabilities = [
+    "crypto.encrypt", "crypto.decrypt", "crypto.sign",
+    "crypto.verify", "crypto.keygen", "crypto.identity",
+]
+
+[[graph.node]]
+name = "songbird"
+binary = "songbird_primal"
+order = 2
+required = true
+depends_on = ["beardog"]
+health_method = "health.liveness"
+by_capability = "discovery"
+capabilities = [
+    "discovery.find_primals", "discovery.announce",
+    "network.tls_connect", "network.http_request",
+]
+
+# ── Phase 2: ToadStool (compute) ──
+
+[[graph.node]]
+name = "toadstool"
+binary = "toadstool_primal"
+order = 3
+required = true
+depends_on = ["beardog", "songbird"]
+health_method = "health.liveness"
+by_capability = "compute"
+capabilities = [
+    "compute.dispatch.submit", "compute.dispatch.status",
+    "compute.dispatch.cancel", "compute.execute",
+]
+
+# ── Phase 3: Esoteric Webb ──
+
+[[graph.node]]
+name = "esotericwebb"
+binary = "esotericwebb"
+order = 10
+required = true
+depends_on = ["beardog", "songbird", "toadstool"]
+health_method = "health.liveness"
+by_capability = "game"
+capabilities = [
+    "webb.health", "webb.liveness", "webb.readiness",
+    "webb.scene.current", "webb.narrative.status", "webb.content.list",
+    "session.start", "session.state", "session.actions",
+    "session.act", "session.history", "session.narrate", "session.graph",
+    "tools.list", "tools.call",
+    "capabilities.list",
+]
+
+# ── Validation ──
+
+[[graph.node]]
+name = "validate_webb_node"
+binary = "primalspring_primal"
+order = 99
+required = false
+spawn = false
+depends_on = ["beardog", "songbird", "toadstool", "esotericwebb"]
+health_method = "health.liveness"
+by_capability = "coordination"
+capabilities = ["composition.webb_node_health"]

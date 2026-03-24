@@ -1,0 +1,60 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Primal launch profiles for Esoteric Webb.
+#
+# Per-primal configuration for the PrimalLauncher. Profiles control
+# how each binary is invoked (subcommand, port flag, environment, etc.).
+#
+# Webb's launcher reads these when spawning primals from plasmidBin/.
+# Profiles are optional — sensible defaults apply if absent.
+
+[defaults]
+subcommand = "server"
+port_flag = "--port"
+health_method = "health.check"
+readiness_timeout_secs = 10
+readiness_poll_ms = 100
+
+# ── Provenance trio ──────────────────────────────────
+
+[profiles.rhizocrypt]
+domain = "dag"
+default_port = 9401
+health_method = "health.check"
+
+[profiles.loamspine]
+domain = "lineage"
+default_port = 9402
+health_method = "health.check"
+
+[profiles.sweetgrass]
+domain = "provenance"
+default_port = 9403
+health_method = "health.check"
+
+# ── Core primals (when available) ────────────────────
+
+[profiles.squirrel]
+domain = "ai"
+default_port = 9410
+health_method = "health.liveness"
+
+[profiles.petaltongue]
+domain = "visualization"
+default_port = 9411
+health_method = "health.liveness"
+
+[profiles.toadstool]
+domain = "compute"
+default_port = 9412
+health_method = "health.liveness"
+
+[profiles.nestgate]
+domain = "storage"
+default_port = 9413
+health_method = "health.liveness"
+
+[profiles.ludospring]
+domain = "game"
+default_port = 9420
+health_method = "health.liveness"

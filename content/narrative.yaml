@@ -1,0 +1,156 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# The Weaver's Parlor — Narrative Graph
+# Matches NarrativeGraph { nodes: HashMap<String, NarrativeNode> }
+nodes:
+  entrance:
+    id: entrance
+    scene_type: exploration
+    content_ref: entrance
+    is_start: true
+    effects:
+      - type: add_knowledge
+        value: arrived_at_parlor
+    exits:
+      - target: parlor
+        label: "Enter the parlor"
+      - target: study
+        label: "Go to the study"
+
+  parlor:
+    id: parlor
+    scene_type: dialogue
+    content_ref: parlor
+    effects:
+      - type: add_knowledge
+        value: shop_layout
+    exits:
+      - target: entrance
+        label: "Return to entrance"
+      - target: backroom
+        label: "Slip into the backroom"
+      - target: study
+        label: "Head to the study"
+
+  study:
+    id: study
+    scene_type: investigation
+    content_ref: study
+    exits:
+      - target: entrance
+        label: "Return to entrance"
+      - target: parlor
+        label: "Go to the parlor"
+      - target: library
+        label: "Find the hidden passage"
+        conditions:
+          - type: has_knowledge
+            value: hidden_passage
+
+  backroom:
+    id: backroom
+    scene_type: exploration
+    content_ref: backroom
+    exits:
+      - target: parlor
+        label: "Return to parlor"
+      - target: vault
+        label: "Unlock the vault"
+        conditions:
+          - type: has_item
+            value: master_key
+
+  library:
+    id: library
+    scene_type: investigation
+    content_ref: library
+    effects:
+      - type: add_knowledge
+        value: ritual_history
+    exits:
+      - target: study
+        label: "Return to study"
+      - target: ritual_chamber
+        label: "Enter the ritual chamber"
+
+  vault:
+    id: vault
+    scene_type: investigation
+    content_ref: vault
+    effects:
+      - type: add_item
+        value: obsidian_lens
+      - type: add_knowledge
+        value: financial_records
+    exits:
+      - target: backroom
+        label: "Return to backroom"
+
+  ritual_chamber:
+    id: ritual_chamber
+    scene_type: dialogue
+    content_ref: ritual_chamber
+    exits:
+      - target: library
+        label: "Return to library"
+      - target: ending_justice
+        label: "Pursue justice"
+        conditions:
+          - type: all
+            value:
+              - type: trust_above
+                value: [maren, 4]
+              - type: has_knowledge
+                value: murder_weapon
+      - target: ending_mercy
+        label: "Show mercy"
+        conditions:
+          - type: all
+            value:
+              - type: trust_above
+                value: [elara, 3]
+              - type: has_knowledge
+                value: ritual_history
+      - target: ending_complicity
+        label: "Accept the deal"
+        conditions:
+          - type: flag_set
+            value: accepted_deal
+      - target: ending_transcendence
+        label: "Speak the true name"
+        conditions:
+          - type: all
+            value:
+              - type: has_knowledge
+                value: true_name
+              - type: has_knowledge
+                value: ritual_history
+              - type: has_item
+                value: obsidian_lens
+
+  ending_justice:
+    id: ending_justice
+    scene_type: ending
+    content_ref: ending_justice
+    is_ending: true
+    label: "Justice"
+
+  ending_mercy:
+    id: ending_mercy
+    scene_type: ending
+    content_ref: ending_mercy
+    is_ending: true
+    label: "Mercy"
+
+  ending_complicity:
+    id: ending_complicity
+    scene_type: ending
+    content_ref: ending_complicity
+    is_ending: true
+    label: "Complicity"
+
+  ending_transcendence:
+    id: ending_transcendence
+    scene_type: ending
+    content_ref: ending_transcendence
+    is_ending: true
+    label: "Transcendence"
