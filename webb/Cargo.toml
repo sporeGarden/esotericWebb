@@ -18,6 +18,7 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 clap = { workspace = true }
 toml = { workspace = true }
+signal-hook = { workspace = true }
 
 [lints]
 workspace = true
@@ -25,7 +26,3 @@ workspace = true
 [[bin]]
 name = "esotericwebb"
 path = "src/bin/esotericwebb.rs"
-
-[[bin]]
-name = "validate_all"
-path = "src/bin/validate_all/main.rs"

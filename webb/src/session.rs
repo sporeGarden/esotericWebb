@@ -37,11 +37,53 @@ pub struct ActionRecord {
     pub node_after: String,
 }
 
+/// The kind of action a player can take.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ActionKind {
+    /// Traverse an exit edge to another narrative node.
+    Exit,
+    /// Talk to an NPC in the current scene.
+    Talk,
+    /// Use a named ability.
+    Ability,
+    /// Examine the current scene.
+    Examine,
+}
+
+impl ActionKind {
+    /// Parse an action kind from a string (JSON-RPC boundary).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the string is not a recognised action kind.
+    pub fn parse(s: &str) -> Result<Self, String> {
+        match s {
+            "exit" => Ok(Self::Exit),
+            "talk" => Ok(Self::Talk),
+            "ability" => Ok(Self::Ability),
+            "examine" => Ok(Self::Examine),
+            _ => Err(format!("unknown action kind: {s}")),
+        }
+    }
+}
+
+impl std::fmt::Display for ActionKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Exit => f.write_str("exit"),
+            Self::Talk => f.write_str("talk"),
+            Self::Ability => f.write_str("ability"),
+            Self::Examine => f.write_str("examine"),
+        }
+    }
+}
+
 /// A possible action the player (human or AI) can take.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AvailableAction {
-    /// Action category: `exit`, `talk`, `ability`, or `examine`.
-    pub kind: String,
+    /// Action category.
+    pub kind: ActionKind,
     /// Target identifier (node id, NPC id, ability id, etc.).
     pub id: String,
     /// Short label shown in the UI or action list.
@@ -149,7 +191,7 @@ impl GameSession {
     /// Create a new session with an optional primal bridge.
     ///
     /// When a bridge is provided and primals are connected, the session
-    /// can use Squirrel for AI narration and PetalTongue for rendering.
+    /// can use Squirrel for AI narration and `PetalTongue` for rendering.
     ///
     /// # Errors
     ///
@@ -176,6 +218,7 @@ impl GameSession {
     }
 
     /// Build a session from pre-constructed parts (for testing and composition).
+    #[must_use]
     pub const fn from_parts(
         bundle: ContentBundle,
         director: GameDirector,
@@ -193,6 +236,7 @@ impl GameSession {
     }
 
     /// Get a reference to the primal bridge, if connected.
+    #[must_use]
     pub const fn bridge(&self) -> Option<&PrimalBridge> {
         self.bridge.as_ref()
     }
@@ -244,18 +288,23 @@ impl GameSession {
     ///
     /// Calls AI and game science primals to enrich the mechanical action
     /// outcome. All calls degrade silently — gameplay is never blocked.
-    fn enrich_action(&mut self, kind: &str, id: &str, outcome_text: &str) -> PrimalEnrichment {
+    fn enrich_action(
+        &mut self,
+        kind: ActionKind,
+        id: &str,
+        outcome_text: &str,
+    ) -> PrimalEnrichment {
         let mut enrichment = PrimalEnrichment::default();
         let turn = self.turn;
+        let action_str = format!("{kind}:{id}");
 
         let Some(bridge) = self.bridge.as_mut() else {
             return enrichment;
         };
 
-        // Narrate action via ludoSpring (game-science-enriched → Squirrel)
         if bridge.has(crate::ipc::DOMAIN_GAME) {
             let params = serde_json::json!({
-                "action": format!("{kind}:{id}"),
+                "action": action_str,
                 "outcome": outcome_text,
                 "turn": turn,
             });
@@ -266,10 +315,9 @@ impl GameSession {
             }
         }
 
-        // Fall back to direct Squirrel narration if game science didn't provide one
         if enrichment.ai_narration.is_none() && bridge.has(crate::ipc::DOMAIN_AI) {
             let prompt =
-                format!("Narrate this RPG moment. Action: {kind}:{id}. Outcome: {outcome_text}");
+                format!("Narrate this RPG moment. Action: {action_str}. Outcome: {outcome_text}");
             if let Ok(chat) = bridge.ai_narrate(&prompt) {
                 if chat.model != "none" {
                     enrichment.ai_narration = Some(chat.text);
@@ -277,15 +325,14 @@ impl GameSession {
             }
         }
 
-        // NPC dialogue for talk actions (via ludoSpring → Squirrel)
-        if kind == "talk" && bridge.has(crate::ipc::DOMAIN_GAME) {
+        if kind == ActionKind::Talk && bridge.has(crate::ipc::DOMAIN_GAME) {
             let params = serde_json::json!({
                 "npc_id": id,
                 "context": outcome_text,
                 "turn": turn,
             });
             if let Ok(dialogue) = bridge.npc_dialogue(&params) {
-                if !dialogue.text.contains("degraded") {
+                if !dialogue.degraded {
                     enrichment.npc_dialogue = Some(dialogue.text);
                 }
                 enrichment.voice_notes = dialogue
@@ -299,9 +346,8 @@ impl GameSession {
             }
         }
 
-        // Flow evaluation via ludoSpring
         if bridge.has(crate::ipc::DOMAIN_GAME) {
-            let params = serde_json::json!({ "turn": turn, "action_kind": kind });
+            let params = serde_json::json!({ "turn": turn, "action_kind": kind.to_string() });
             if let Ok(flow) = bridge.evaluate_flow(&params) {
                 enrichment.flow_score = Some(flow.flow_score);
                 enrichment.in_flow = Some(flow.in_flow);
@@ -364,6 +410,7 @@ impl GameSession {
     }
 
     /// Get the full game state snapshot.
+    #[must_use]
     pub fn snapshot(&self) -> GameStateSnapshot {
         let mut knowledge: Vec<String> = self.state.knowledge.iter().cloned().collect();
         knowledge.sort();
@@ -388,12 +435,13 @@ impl GameSession {
     }
 
     /// List all available actions from the current state.
+    #[must_use]
     pub fn available_actions(&self) -> Vec<AvailableAction> {
         let mut actions = Vec::new();
 
         for edge in self.director.available_exits(&self.bundle, &self.state) {
             actions.push(AvailableAction {
-                kind: "exit".to_owned(),
+                kind: ActionKind::Exit,
                 id: edge.target.clone(),
                 label: edge.label.as_deref().unwrap_or(&edge.target).to_owned(),
                 detail: None,
@@ -402,7 +450,7 @@ impl GameSession {
 
         for npc_id in &self.current_scene_npcs() {
             actions.push(AvailableAction {
-                kind: "talk".to_owned(),
+                kind: ActionKind::Talk,
                 id: npc_id.clone(),
                 label: format!("Talk to {npc_id}"),
                 detail: None,
@@ -412,7 +460,7 @@ impl GameSession {
         for ability in self.bundle.abilities.values() {
             let can_use = ability.preconditions.iter().all(|p| self.state.evaluate(p));
             actions.push(AvailableAction {
-                kind: "ability".to_owned(),
+                kind: ActionKind::Ability,
                 id: ability.id.clone(),
                 label: ability.name.clone(),
                 detail: Some(if can_use {
@@ -424,7 +472,7 @@ impl GameSession {
         }
 
         actions.push(AvailableAction {
-            kind: "examine".to_owned(),
+            kind: ActionKind::Examine,
             id: "examine".to_owned(),
             label: "Examine surroundings".to_owned(),
             detail: None,
@@ -439,7 +487,7 @@ impl GameSession {
     /// 1. AI narration enrichment (ludoSpring → Squirrel, or direct Squirrel)
     /// 2. NPC dialogue for talk actions (ludoSpring → Squirrel)
     /// 3. Flow evaluation (ludoSpring game science)
-    /// 4. Scene push to UI (petalTongue via render_scene)
+    /// 4. Scene push to UI (`petalTongue` via `render_scene`)
     /// 5. Provenance vertex append (rhizoCrypt DAG)
     /// 6. Session completion check (DAG close on ending)
     ///
@@ -447,14 +495,17 @@ impl GameSession {
     ///
     /// # Errors
     ///
-    /// Returns an error if `kind` is not a recognized action kind.
-    pub fn act(&mut self, kind: &str, id: &str) -> Result<(String, NarrationContext), String> {
+    /// Returns an error if the action fails mechanically (e.g. invalid exit).
+    pub fn act(
+        &mut self,
+        kind: ActionKind,
+        id: &str,
+    ) -> Result<(String, NarrationContext), String> {
         let input = match kind {
-            "exit" => PlayerInput::ChooseExit(id.to_owned()),
-            "talk" => PlayerInput::Talk(id.to_owned()),
-            "ability" => PlayerInput::UseAbility(id.to_owned()),
-            "examine" => PlayerInput::Examine,
-            _ => return Err(format!("unknown action kind: {kind}")),
+            ActionKind::Exit => PlayerInput::ChooseExit(id.to_owned()),
+            ActionKind::Talk => PlayerInput::Talk(id.to_owned()),
+            ActionKind::Ability => PlayerInput::UseAbility(id.to_owned()),
+            ActionKind::Examine => PlayerInput::Examine,
         };
 
         let scene_before = self.director.current_scene_description(&self.bundle);
@@ -478,7 +529,6 @@ impl GameSession {
             node_after: node_after.clone(),
         });
 
-        // Primal composition pipeline (all best-effort)
         let mut enrichment = self.enrich_action(kind, id, &outcome_text);
         enrichment.scene_pushed = self.push_scene_to_ui();
         self.record_provenance_vertex(&action_desc, &node_after);
@@ -546,11 +596,13 @@ impl GameSession {
     }
 
     /// Get the session history.
+    #[must_use]
     pub fn history(&self) -> &[ActionRecord] {
         &self.history
     }
 
     /// Whether the game has reached an ending.
+    #[must_use]
     pub fn is_ended(&self) -> bool {
         self.director.is_at_ending(&self.bundle)
     }
@@ -559,6 +611,7 @@ impl GameSession {
     ///
     /// This gives an AI narrator everything it needs to produce rich,
     /// contextual prose without knowing the engine internals.
+    #[must_use]
     pub fn narration_context(&self) -> NarrationContext {
         let mut knowledge: Vec<String> = self.state.knowledge.iter().cloned().collect();
         knowledge.sort();
@@ -646,11 +699,13 @@ impl GameSession {
     }
 
     /// Render the narrative DAG as DOT with the current session state overlaid.
+    #[must_use]
     pub fn to_dot(&self) -> String {
         self.bundle.narrative.to_dot_overlay(&self.dag_overlay())
     }
 
     /// Get the content bundle (for external inspection).
+    #[must_use]
     pub const fn bundle(&self) -> &ContentBundle {
         &self.bundle
     }
@@ -846,9 +901,18 @@ mod tests {
     fn available_actions_include_exits_and_abilities() {
         let s = session_from_bundle(test_bundle());
         let actions = s.available_actions();
-        let exit_count = actions.iter().filter(|a| a.kind == "exit").count();
-        let ability_count = actions.iter().filter(|a| a.kind == "ability").count();
-        let examine_count = actions.iter().filter(|a| a.kind == "examine").count();
+        let exit_count = actions
+            .iter()
+            .filter(|a| a.kind == ActionKind::Exit)
+            .count();
+        let ability_count = actions
+            .iter()
+            .filter(|a| a.kind == ActionKind::Ability)
+            .count();
+        let examine_count = actions
+            .iter()
+            .filter(|a| a.kind == ActionKind::Examine)
+            .count();
         assert_eq!(exit_count, 1); // only room is accessible (ending gated)
         assert_eq!(ability_count, 1);
         assert_eq!(examine_count, 1);
@@ -857,7 +921,7 @@ mod tests {
     #[test]
     fn act_exit_transitions_scene() {
         let mut s = session_from_bundle(test_bundle());
-        let (text, ctx) = s.act("exit", "room").unwrap();
+        let (text, ctx) = s.act(ActionKind::Exit, "room").unwrap();
         assert!(!text.is_empty());
         assert_eq!(ctx.turn, 1);
         assert_eq!(s.snapshot().current_node, "room");
@@ -866,16 +930,16 @@ mod tests {
     #[test]
     fn act_ability_applies_effects() {
         let mut s = session_from_bundle(test_bundle());
-        let (_, _) = s.act("ability", "insight").unwrap();
+        let (_, _) = s.act(ActionKind::Ability, "insight").unwrap();
         assert!(s.snapshot().flags.contains(&"seen".to_owned()));
     }
 
     #[test]
     fn full_playthrough_to_ending() {
         let mut s = session_from_bundle(test_bundle());
-        s.act("exit", "room").unwrap();
-        s.act("exit", "start").unwrap();
-        s.act("exit", "ending").unwrap();
+        s.act(ActionKind::Exit, "room").unwrap();
+        s.act(ActionKind::Exit, "start").unwrap();
+        s.act(ActionKind::Exit, "ending").unwrap();
         assert!(s.is_ended());
         assert_eq!(s.history().len(), 3);
     }
@@ -883,7 +947,7 @@ mod tests {
     #[test]
     fn narration_context_includes_hints() {
         let mut s = session_from_bundle(test_bundle());
-        let (_, ctx) = s.act("ability", "insight").unwrap();
+        let (_, ctx) = s.act(ActionKind::Ability, "insight").unwrap();
         assert!(!ctx.narration_hints.is_empty());
         assert!(ctx.narration_hints.iter().any(|h| h.contains("Eyes")));
     }
@@ -899,7 +963,7 @@ mod tests {
     #[test]
     fn act_returns_default_enrichment_without_bridge() {
         let mut s = session_from_bundle(test_bundle());
-        let (_, ctx) = s.act("exit", "room").unwrap();
+        let (_, ctx) = s.act(ActionKind::Exit, "room").unwrap();
         assert!(ctx.enrichment.ai_narration.is_none());
         assert!(ctx.enrichment.npc_dialogue.is_none());
         assert!(ctx.enrichment.voice_notes.is_empty());
@@ -910,7 +974,7 @@ mod tests {
     #[test]
     fn act_enrichment_serializes_to_json() {
         let mut s = session_from_bundle(test_bundle());
-        let (_, ctx) = s.act("exit", "room").unwrap();
+        let (_, ctx) = s.act(ActionKind::Exit, "room").unwrap();
         let json = serde_json::to_string(&ctx).unwrap();
         assert!(json.contains("enrichment"));
     }
@@ -934,5 +998,195 @@ mod tests {
         let mut s = session_from_bundle(test_bundle());
         s.initialize_provenance();
         assert!(s.snapshot().trust.is_empty());
+    }
+
+    #[test]
+    fn act_talk_returns_narration() {
+        let mut s = session_from_bundle(test_bundle());
+        s.act(ActionKind::Exit, "room").unwrap();
+        let (text, ctx) = s.act(ActionKind::Talk, "npc_a").unwrap();
+        assert!(!text.is_empty());
+        assert_eq!(ctx.turn, 2);
+        assert!(ctx.player_action.contains("talk"));
+    }
+
+    #[test]
+    fn act_examine_returns_scene_description() {
+        let mut s = session_from_bundle(test_bundle());
+        let (text, ctx) = s.act(ActionKind::Examine, "examine").unwrap();
+        assert!(!text.is_empty());
+        assert_eq!(ctx.turn, 1);
+        assert!(ctx.player_action.contains("examine"));
+    }
+
+    #[test]
+    fn from_parts_creates_valid_session() {
+        let bundle = test_bundle();
+        let director = GameDirector::new(&bundle).unwrap();
+        let state = WorldState::new();
+        let s = GameSession::from_parts(bundle, director, state, None);
+        assert_eq!(s.snapshot().current_node, "start");
+        assert!(s.bridge().is_none());
+    }
+
+    #[test]
+    fn dag_overlay_initial_state() {
+        let s = session_from_bundle(test_bundle());
+        let overlay = s.dag_overlay();
+        assert!(overlay.visited.contains("start"));
+        assert_eq!(overlay.current_node.as_deref(), Some("start"));
+        assert!(overlay.edges_taken.is_empty());
+        assert!(!overlay.available_targets.is_empty());
+    }
+
+    #[test]
+    fn dag_overlay_tracks_movement() {
+        let mut s = session_from_bundle(test_bundle());
+        s.act(ActionKind::Exit, "room").unwrap();
+        let overlay = s.dag_overlay();
+        assert!(overlay.visited.contains("start"));
+        assert!(overlay.visited.contains("room"));
+        assert!(
+            overlay
+                .edges_taken
+                .contains(&("start".to_owned(), "room".to_owned()))
+        );
+        assert_eq!(overlay.current_node.as_deref(), Some("room"));
+    }
+
+    #[test]
+    fn dag_overlay_shows_gated_paths() {
+        let s = session_from_bundle(test_bundle());
+        let overlay = s.dag_overlay();
+        assert!(
+            overlay
+                .gated_targets
+                .contains(&("start".to_owned(), "ending".to_owned()))
+        );
+    }
+
+    #[test]
+    fn to_dot_produces_valid_output() {
+        let s = session_from_bundle(test_bundle());
+        let dot = s.to_dot();
+        assert!(dot.contains("digraph"));
+        assert!(dot.contains("start"));
+    }
+
+    #[test]
+    fn narration_context_at_session_start() {
+        let s = session_from_bundle(test_bundle());
+        let ctx = s.narration_context();
+        assert!(ctx.player_action.contains("session start"));
+        assert!(ctx.outcome_text.is_empty());
+        assert_eq!(ctx.turn, 0);
+    }
+
+    #[test]
+    fn narration_context_after_action() {
+        let mut s = session_from_bundle(test_bundle());
+        s.act(ActionKind::Exit, "room").unwrap();
+        let ctx = s.narration_context();
+        assert!(ctx.player_action.contains("exit:room"));
+        assert!(!ctx.outcome_text.is_empty());
+        assert_eq!(ctx.turn, 1);
+    }
+
+    #[test]
+    fn with_standalone_bridge_enrichment_degrades() {
+        let bundle = test_bundle();
+        let director = GameDirector::new(&bundle).unwrap();
+        let bridge = crate::ipc::bridge::PrimalBridge::standalone();
+        let mut s = GameSession::from_parts(bundle, director, WorldState::new(), Some(bridge));
+        let (_, ctx) = s.act(ActionKind::Exit, "room").unwrap();
+        assert!(ctx.enrichment.ai_narration.is_none());
+        assert!(ctx.enrichment.npc_dialogue.is_none());
+        assert!(ctx.enrichment.voice_notes.is_empty());
+        assert!(ctx.enrichment.flow_score.is_none());
+    }
+
+    #[test]
+    fn action_kind_display() {
+        assert_eq!(ActionKind::Exit.to_string(), "exit");
+        assert_eq!(ActionKind::Talk.to_string(), "talk");
+        assert_eq!(ActionKind::Ability.to_string(), "ability");
+        assert_eq!(ActionKind::Examine.to_string(), "examine");
+    }
+
+    #[test]
+    fn action_kind_parse_round_trip() {
+        for kind in [
+            ActionKind::Exit,
+            ActionKind::Talk,
+            ActionKind::Ability,
+            ActionKind::Examine,
+        ] {
+            let parsed = ActionKind::parse(&kind.to_string()).unwrap();
+            assert_eq!(parsed, kind);
+        }
+    }
+
+    #[test]
+    fn action_kind_parse_unknown_errors() {
+        assert!(ActionKind::parse("fly").is_err());
+        assert!(ActionKind::parse("").is_err());
+    }
+
+    #[test]
+    fn action_kind_serde_round_trip() {
+        let action = AvailableAction {
+            kind: ActionKind::Talk,
+            id: "npc_a".to_owned(),
+            label: "Talk to A".to_owned(),
+            detail: Some("details".to_owned()),
+        };
+        let json = serde_json::to_string(&action).unwrap();
+        let back: AvailableAction = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.kind, ActionKind::Talk);
+        assert_eq!(back.id, "npc_a");
+    }
+
+    #[test]
+    fn history_is_empty_initially() {
+        let s = session_from_bundle(test_bundle());
+        assert!(s.history().is_empty());
+    }
+
+    #[test]
+    fn history_grows_with_actions() {
+        let mut s = session_from_bundle(test_bundle());
+        s.act(ActionKind::Exit, "room").unwrap();
+        s.act(ActionKind::Examine, "examine").unwrap();
+        assert_eq!(s.history().len(), 2);
+        assert_eq!(s.history()[0].turn, 1);
+        assert_eq!(s.history()[1].turn, 2);
+    }
+
+    #[test]
+    fn is_ended_false_initially() {
+        let s = session_from_bundle(test_bundle());
+        assert!(!s.is_ended());
+    }
+
+    #[test]
+    fn push_scene_returns_false_without_bridge() {
+        let mut s = session_from_bundle(test_bundle());
+        assert!(!s.push_scene_to_ui());
+    }
+
+    #[test]
+    fn complete_provenance_noop_without_bridge() {
+        let mut s = session_from_bundle(test_bundle());
+        s.act(ActionKind::Exit, "room").unwrap();
+        s.act(ActionKind::Exit, "start").unwrap();
+        s.act(ActionKind::Exit, "ending").unwrap();
+        assert!(s.is_ended());
+        s.complete_provenance_if_ended();
+    }
+
+    #[test]
+    fn record_provenance_noop_without_bridge() {
+        let mut s = session_from_bundle(test_bundle());
+        s.record_provenance_vertex("test", "room");
     }
 }

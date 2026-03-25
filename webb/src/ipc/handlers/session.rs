@@ -4,7 +4,7 @@
 use serde_json::Value;
 
 use crate::ipc::envelope::JsonRpcError;
-use crate::session::GameSession;
+use crate::session::{ActionKind, GameSession};
 
 use super::SharedSession;
 
@@ -89,7 +89,13 @@ pub(super) fn handle_session_act(
             data: None,
         })?;
 
-        let (outcome_text, narration_ctx) = s.act(kind, id).map_err(|e| JsonRpcError {
+        let action_kind = ActionKind::parse(kind).map_err(|e| JsonRpcError {
+            code: -32602,
+            message: e,
+            data: None,
+        })?;
+
+        let (outcome_text, narration_ctx) = s.act(action_kind, id).map_err(|e| JsonRpcError {
             code: -32000,
             message: e,
             data: None,
@@ -144,4 +150,89 @@ where
         },
         f,
     )
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+
+    fn empty_session() -> SharedSession {
+        std::sync::Arc::new(std::sync::Mutex::new(None))
+    }
+
+    #[test]
+    fn session_state_without_session_errors() {
+        let result = handle_session_state(&empty_session());
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert_eq!(err.code, -32000);
+        assert!(err.message.contains("no active session"));
+    }
+
+    #[test]
+    fn session_actions_without_session_errors() {
+        let result = handle_session_actions(&empty_session());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn session_act_missing_kind_errors() {
+        let session = empty_session();
+        {
+            let mut guard = session.lock().unwrap();
+            *guard = None;
+        }
+        let params = serde_json::json!({"id": "room"});
+        let result = handle_session_act(Some(&params), &session);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert_eq!(err.code, -32602);
+        assert!(err.message.contains("kind"));
+    }
+
+    #[test]
+    fn session_act_missing_id_errors() {
+        let params = serde_json::json!({"kind": "exit"});
+        let result = handle_session_act(Some(&params), &empty_session());
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert_eq!(err.code, -32602);
+        assert!(err.message.contains("id"));
+    }
+
+    #[test]
+    fn session_act_invalid_kind_errors() {
+        let session = empty_session();
+        {
+            let mut guard = session.lock().unwrap();
+            let game = crate::session::GameSession::new("content");
+            if let Ok(g) = game {
+                *guard = Some(g);
+            }
+        }
+        let params = serde_json::json!({"kind": "invalid_kind", "id": "room"});
+        let result = handle_session_act(Some(&params), &session);
+        if session.lock().unwrap().is_some() {
+            assert!(result.is_err());
+        }
+    }
+
+    #[test]
+    fn session_history_without_session_errors() {
+        let result = handle_session_history(&empty_session());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn session_narrate_without_session_errors() {
+        let result = handle_session_narrate(&empty_session());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn session_graph_without_session_errors() {
+        let result = handle_session_graph(&empty_session());
+        assert!(result.is_err());
+    }
 }

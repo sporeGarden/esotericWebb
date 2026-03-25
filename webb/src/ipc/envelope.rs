@@ -77,6 +77,7 @@ pub enum IpcError {
 
 impl JsonRpcRequest {
     /// Create a new request with the given method and params.
+    #[must_use]
     pub fn new(method: &str, params: Option<serde_json::Value>) -> Self {
         Self {
             jsonrpc: "2.0".to_owned(),

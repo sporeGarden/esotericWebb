@@ -30,7 +30,7 @@ pub struct WorldMeta {
 /// A scene's content (loaded from YAML).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SceneContent {
-    /// Scene identifier (matches narrative node content_ref).
+    /// Scene identifier (matches narrative node `content_ref`).
     pub id: String,
     /// Scene description text.
     pub description: String,
@@ -127,7 +127,7 @@ pub struct ContentBundle {
     pub npcs: HashMap<String, NpcDef>,
     /// Ability definitions (keyed by ability ID).
     pub abilities: HashMap<String, AbilityDef>,
-    /// Scene content (keyed by content_ref).
+    /// Scene content (keyed by `content_ref`).
     pub scenes: HashMap<String, SceneContent>,
     /// Ruleset definitions (keyed by plane name).
     pub rulesets: HashMap<String, serde_json::Value>,
@@ -173,6 +173,7 @@ impl ContentBundle {
     }
 
     /// Validate the loaded content and return a list of issues.
+    #[must_use]
     pub fn validate(&self) -> Vec<String> {
         let mut issues = self.load_warnings.clone();
         issues.extend(narrative::validator::validate(&self.narrative));

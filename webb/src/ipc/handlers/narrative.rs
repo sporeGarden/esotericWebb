@@ -81,3 +81,42 @@ pub(super) fn handle_content_list(session: &SharedSession) -> Value {
         },
     )
 }
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+
+    fn empty_session() -> SharedSession {
+        std::sync::Arc::new(std::sync::Mutex::new(None))
+    }
+
+    #[test]
+    fn scene_current_without_session() {
+        let val = handle_scene_current(&empty_session());
+        assert!(val.get("scene").unwrap().is_null());
+        assert!(
+            val.get("note")
+                .unwrap()
+                .as_str()
+                .unwrap()
+                .contains("no active session")
+        );
+    }
+
+    #[test]
+    fn narrative_status_without_session() {
+        let val = handle_narrative_status(&empty_session());
+        assert!(val.get("current_node").unwrap().is_null());
+        assert_eq!(val.get("vertex_count").unwrap().as_u64(), Some(0));
+    }
+
+    #[test]
+    fn content_list_without_session() {
+        let val = handle_content_list(&empty_session());
+        assert!(val.get("worlds").unwrap().as_array().unwrap().is_empty());
+        assert!(val.get("npcs").unwrap().as_array().unwrap().is_empty());
+        assert!(val.get("abilities").unwrap().as_array().unwrap().is_empty());
+        assert!(val.get("scenes").unwrap().as_array().unwrap().is_empty());
+    }
+}

@@ -110,6 +110,7 @@ impl Default for PrimalLauncher {
 
 impl PrimalLauncher {
     /// Create an empty launcher.
+    #[must_use]
     pub const fn new() -> Self {
         Self {
             children: Vec::new(),
@@ -202,6 +203,7 @@ impl PrimalLauncher {
     }
 
     /// All spawned primals so far.
+    #[must_use]
     pub fn spawned(&self) -> &[SpawnedPrimal] {
         &self.spawned
     }

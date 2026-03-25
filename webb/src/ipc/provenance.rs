@@ -34,7 +34,7 @@ pub struct ProvenanceVertex {
     pub id: String,
     /// Parent vertex IDs (DAG edges).
     pub parents: Vec<String>,
-    /// Event type (e.g. "player_action", "npc_response", "state_change").
+    /// Event type (e.g. `player_action`, `npc_response`, `state_change`).
     pub event_type: String,
     /// Event payload.
     pub data: serde_json::Value,
@@ -51,6 +51,7 @@ pub struct ProvenanceClient {
 
 impl ProvenanceClient {
     /// Create a new client.
+    #[must_use]
     pub const fn new(available: bool) -> Self {
         Self {
             available,
@@ -59,6 +60,7 @@ impl ProvenanceClient {
     }
 
     /// Whether the provenance trio was discovered.
+    #[must_use]
     pub const fn is_available(&self) -> bool {
         self.available
     }
@@ -89,11 +91,13 @@ impl ProvenanceClient {
     }
 
     /// Get the local vertex log (for export when provenance is unavailable).
+    #[must_use]
     pub fn local_log(&self) -> &[ProvenanceVertex] {
         &self.local_log
     }
 
     /// Number of vertices recorded.
+    #[must_use]
     pub const fn vertex_count(&self) -> usize {
         self.local_log.len()
     }

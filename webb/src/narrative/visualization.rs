@@ -93,6 +93,7 @@ impl DagOverlay {
 
 impl NarrativeGraph {
     /// Generate DOT format for graph visualization.
+    #[must_use]
     pub fn to_dot(&self) -> String {
         use std::fmt::Write;
 
@@ -145,6 +146,7 @@ impl NarrativeGraph {
     /// Export the graph as structured JSON with BFS depth layers and edge
     /// classification.  When an overlay is provided, each node and edge
     /// carries session state (visited, taken, current, available).
+    #[must_use]
     pub fn to_graph_json(&self, overlay: Option<&DagOverlay>) -> serde_json::Value {
         let depths = self.bfs_depths();
         let max_depth = depths.values().copied().max().unwrap_or(0);
@@ -209,6 +211,7 @@ impl NarrativeGraph {
 
     /// Generate DOT with a session overlay — visited nodes, edges taken,
     /// current position, gated edges, and unexplored paths.
+    #[must_use]
     pub fn to_dot_overlay(&self, overlay: &DagOverlay) -> String {
         use std::fmt::Write;
 

@@ -41,11 +41,13 @@ pub struct PetalTongueClient {
 
 impl PetalTongueClient {
     /// Create a new client.
+    #[must_use]
     pub const fn new(available: bool) -> Self {
         Self { available }
     }
 
     /// Whether the visualization primal was discovered and is healthy.
+    #[must_use]
     pub const fn is_available(&self) -> bool {
         self.available
     }

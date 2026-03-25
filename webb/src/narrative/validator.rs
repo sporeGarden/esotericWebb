@@ -9,6 +9,7 @@ use std::collections::{HashSet, VecDeque};
 use super::NarrativeGraph;
 
 /// Validate the narrative graph and return a list of issues.
+#[must_use]
 pub fn validate(graph: &NarrativeGraph) -> Vec<String> {
     let mut issues = Vec::new();
 

@@ -2,7 +2,7 @@
 //! IPC resilience primitives (neuralSpring / groundSpring pattern).
 //!
 //! Transport-agnostic [`RetryPolicy`] (exponential backoff) and
-//! [`CircuitBreaker`] (Closed / Open / HalfOpen) for primal IPC calls.
+//! [`CircuitBreaker`] (Closed / Open / `HalfOpen`) for primal IPC calls.
 
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -166,6 +166,7 @@ impl CircuitBreaker {
 
 /// Whether an [`IpcError`](super::envelope::IpcError) is transient and
 /// worth retrying.
+#[must_use]
 pub const fn is_recoverable(err: &super::envelope::IpcError) -> bool {
     use super::envelope::IpcError;
     matches!(

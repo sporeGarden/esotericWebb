@@ -2,18 +2,20 @@
 //! Unix domain socket listener for Webb's JSON-RPC server.
 //!
 //! Accepts connections, reads newline-delimited JSON-RPC requests,
-//! dispatches them through [`super::server::dispatch_with_session`],
+//! dispatches them through [`super::handlers::dispatch_with_session`],
 //! and writes back newline-delimited JSON-RPC responses.
 
 use std::io::{BufRead, BufReader, Write};
 use std::os::unix::net::UnixListener;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use super::envelope::JsonRpcRequest;
-use super::server::{SharedSession, dispatch_with_session};
+use super::handlers::{SharedSession, dispatch_with_session};
 
 /// Resolve the XDG-compliant socket path for Webb.
+#[must_use]
 pub fn socket_path() -> PathBuf {
     let runtime_dir = std::env::var("XDG_RUNTIME_DIR").unwrap_or_else(|_| "/tmp".to_owned());
     Path::new(&runtime_dir)
@@ -41,13 +43,29 @@ pub fn serve(path: &Path, session: &SharedSession) -> Result<(), String> {
     let listener =
         UnixListener::bind(path).map_err(|e| format!("bind socket {}: {e}", path.display()))?;
 
+    listener
+        .set_nonblocking(true)
+        .map_err(|e| format!("set non-blocking: {e}"))?;
+
+    let shutdown = Arc::new(AtomicBool::new(false));
+
+    signal_hook::flag::register(signal_hook::consts::SIGINT, Arc::clone(&shutdown))
+        .map_err(|e| format!("register SIGINT handler: {e}"))?;
+    signal_hook::flag::register(signal_hook::consts::SIGTERM, Arc::clone(&shutdown))
+        .map_err(|e| format!("register SIGTERM handler: {e}"))?;
+
+    let owned_path = path.to_owned();
     eprintln!("Webb IPC listening on {}", path.display());
 
-    for stream in listener.incoming() {
-        match stream {
-            Ok(stream) => {
+    while !shutdown.load(Ordering::Relaxed) {
+        match listener.accept() {
+            Ok((stream, _addr)) => {
+                let _ = stream.set_nonblocking(false);
                 let sess = Arc::clone(session);
                 std::thread::spawn(move || handle_connection(stream, &sess));
+            }
+            Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                std::thread::sleep(std::time::Duration::from_millis(50));
             }
             Err(e) => {
                 eprintln!("accept error: {e}");
@@ -55,6 +73,8 @@ pub fn serve(path: &Path, session: &SharedSession) -> Result<(), String> {
         }
     }
 
+    eprintln!("Shutting down Webb IPC server...");
+    let _ = std::fs::remove_file(&owned_path);
     Ok(())
 }
 
@@ -117,7 +137,7 @@ mod tests {
 
     #[test]
     fn handle_connection_returns_parse_error_for_garbage() {
-        let session = super::super::server::new_shared_session();
+        let session = super::super::handlers::new_shared_session();
         let sock_dir = std::env::temp_dir().join("esotericwebb_listener_test");
         let _ = std::fs::create_dir_all(&sock_dir);
         let sock_path = sock_dir.join("test.sock");

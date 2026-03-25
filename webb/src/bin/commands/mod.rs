@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! UniBin subcommand implementations.
+//! `UniBin` subcommand implementations.
 
 use std::io::Write;
 
@@ -79,7 +79,7 @@ pub fn cmd_serve(content_path: &str, launch: bool, graph_path: &str) -> Result<(
         b.narrative.nodes.len(),
     );
 
-    let shared = esoteric_webb::ipc::server::new_shared_session();
+    let shared = esoteric_webb::ipc::handlers::new_shared_session();
     {
         let mut guard = shared
             .lock()
@@ -384,6 +384,61 @@ pub fn cmd_autoplay(content_path: &str, max_turns: u32, json_output: bool) -> Re
 /// Scaffold a new content directory with template YAML.
 pub fn cmd_new_world(output_path: &str) -> Result<(), String> {
     esoteric_webb::content::scaffold(output_path).map_err(|e| format!("scaffold: {e}"))
+}
+
+/// Run all experiment validation suites (meta-runner).
+pub fn cmd_validate_all() -> Result<(), String> {
+    const EXPERIMENTS: &[&str] = &[
+        "esotericwebb-exp001",
+        "esotericwebb-exp002",
+        "esotericwebb-exp003",
+        "esotericwebb-exp004",
+        "esotericwebb-exp005",
+    ];
+
+    println!("=== Esoteric Webb — validate --all ===\n");
+
+    let json_mode = std::env::var("ESOTERICWEBB_JSON")
+        .ok()
+        .is_some_and(|v| v == "1" || v == "true");
+
+    let mut passed = 0u32;
+    let mut failed = 0u32;
+
+    for &pkg in EXPERIMENTS {
+        println!("--- {pkg} ---");
+        let mut cmd = std::process::Command::new("cargo");
+        cmd.args(["run", "--release", "-p", pkg]);
+        if json_mode {
+            cmd.env("ESOTERICWEBB_JSON", "1");
+        }
+        match cmd.status() {
+            Ok(status) if status.success() => {
+                passed += 1;
+                println!("  -> PASS");
+            }
+            Ok(status) => {
+                failed += 1;
+                let code = status.code().unwrap_or(-1);
+                println!("  -> FAIL (exit {code})");
+            }
+            Err(e) => {
+                failed += 1;
+                println!("  -> ERROR: {e}");
+            }
+        }
+        println!();
+    }
+
+    let total = EXPERIMENTS.len();
+    println!("=== SUMMARY ===");
+    println!("  {passed}/{total} passed, {failed} failed");
+
+    if failed > 0 {
+        Err(format!("{failed} experiment(s) failed"))
+    } else {
+        Ok(())
+    }
 }
 
 fn print_load_warnings(bundle: &ContentBundle) {

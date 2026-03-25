@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! GameDirector — the runtime coordinator for Esoteric Webb.
+//! `GameDirector` — the runtime coordinator for Esoteric Webb.
 //!
 //! Processes the game loop:
 //! 1. Receive player input (visualization primal poll or text-mode stdin)
@@ -67,11 +67,13 @@ impl GameDirector {
     }
 
     /// Get the current narrative node ID.
+    #[must_use]
     pub fn current_node_id(&self) -> &str {
         &self.current_node
     }
 
     /// Get the available exits from the current node given the state.
+    #[must_use]
     pub fn available_exits<'a>(
         &self,
         bundle: &'a ContentBundle,
@@ -83,6 +85,7 @@ impl GameDirector {
     }
 
     /// Check if the current node is an ending.
+    #[must_use]
     pub fn is_at_ending(&self, bundle: &ContentBundle) -> bool {
         bundle
             .narrative
@@ -91,6 +94,7 @@ impl GameDirector {
     }
 
     /// Get the description for the current scene.
+    #[must_use]
     pub fn current_scene_description(&self, bundle: &ContentBundle) -> String {
         let content_ref = bundle
             .narrative

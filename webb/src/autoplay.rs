@@ -11,7 +11,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use crate::session::{AvailableAction, GameSession};
+use crate::session::{ActionKind, AvailableAction, GameSession};
 
 /// Configuration for autoplay behavior — replaces magic numbers.
 #[derive(Debug, Clone)]
@@ -62,13 +62,12 @@ pub struct HeuristicTracker {
 
 impl HeuristicTracker {
     /// Record whether a turn produced novel state, for stale detection.
-    pub fn record_novelty(&mut self, kind: &str, id: &str, knowledge_now: usize) {
+    pub fn record_novelty(&mut self, kind: ActionKind, id: &str, knowledge_now: usize) {
         let novel = match kind {
-            "ability" => self.used_abilities.insert(id.to_owned()),
-            "talk" => knowledge_now > self.last_knowledge_count,
-            "examine" => self.examined_at.insert(id.to_owned()),
-            "exit" => !self.visited.contains(id),
-            _ => false,
+            ActionKind::Ability => self.used_abilities.insert(id.to_owned()),
+            ActionKind::Talk => knowledge_now > self.last_knowledge_count,
+            ActionKind::Examine => self.examined_at.insert(id.to_owned()),
+            ActionKind::Exit => !self.visited.contains(id),
         };
         self.last_knowledge_count = knowledge_now;
         if novel {
@@ -89,47 +88,51 @@ impl HeuristicTracker {
         actions: &[AvailableAction],
         current_node: &str,
         config: &AutoplayConfig,
-    ) -> Option<(String, String)> {
+    ) -> Option<(ActionKind, String)> {
         if self.stale_count > config.stale_limit {
             return None;
         }
         for a in actions {
-            if a.kind == "exit" && !self.visited.contains(&a.id) {
-                return Some((a.kind.clone(), a.id.clone()));
+            if a.kind == ActionKind::Exit && !self.visited.contains(&a.id) {
+                return Some((a.kind, a.id.clone()));
             }
         }
         for a in actions {
-            if a.kind == "ability"
+            if a.kind == ActionKind::Ability
                 && !self.used_abilities.contains(&a.id)
                 && !a.detail.as_deref().unwrap_or("").starts_with("[blocked]")
             {
-                return Some((a.kind.clone(), a.id.clone()));
+                return Some((a.kind, a.id.clone()));
             }
         }
         for a in actions {
-            if a.kind == "talk" {
+            if a.kind == ActionKind::Talk {
                 let count = self.talk_count.get(&a.id).copied().unwrap_or(0);
                 if count < config.max_talks_per_npc {
                     *self.talk_count.entry(a.id.clone()).or_insert(0) += 1;
-                    return Some((a.kind.clone(), a.id.clone()));
+                    return Some((a.kind, a.id.clone()));
                 }
             }
         }
         if !self.examined_at.contains(current_node) {
             self.examined_at.insert(current_node.to_owned());
-            return Some(("examine".to_owned(), "examine".to_owned()));
+            return Some((ActionKind::Examine, "examine".to_owned()));
         }
-        let exits: Vec<_> = actions.iter().filter(|a| a.kind == "exit").collect();
+        let exits: Vec<_> = actions
+            .iter()
+            .filter(|a| a.kind == ActionKind::Exit)
+            .collect();
         if !exits.is_empty() {
             let idx = self.exit_rotation % exits.len();
             self.exit_rotation += 1;
             let a = &exits[idx];
-            return Some((a.kind.clone(), a.id.clone()));
+            return Some((a.kind, a.id.clone()));
         }
         None
     }
 
     /// Whether the autoplay has stalled.
+    #[must_use]
     pub const fn is_stale(&self, config: &AutoplayConfig) -> bool {
         self.stale_count > config.stale_limit
     }
@@ -157,11 +160,11 @@ pub fn run(session: &mut GameSession, config: &AutoplayConfig) -> Result<Autopla
             break;
         };
 
-        let (_outcome_text, _ctx) = session.act(&kind, &id).map_err(|e| format!("act: {e}"))?;
+        let (_outcome_text, _ctx) = session.act(kind, &id).map_err(|e| format!("act: {e}"))?;
         let snap_after = session.snapshot();
         let knowledge_count =
             snap_after.knowledge.len() + snap_after.flags.len() + snap_after.inventory.len();
-        tracker.record_novelty(&kind, &id, knowledge_count);
+        tracker.record_novelty(kind, &id, knowledge_count);
         tracker.visited.insert(snap_after.current_node.clone());
     }
 
@@ -329,17 +332,18 @@ mod tests {
 
     #[test]
     fn heuristic_prefers_unexplored_exits() {
+        use crate::session::ActionKind;
         let mut tracker = HeuristicTracker::default();
         let config = AutoplayConfig::default();
         let actions = vec![
             AvailableAction {
-                kind: "exit".to_owned(),
+                kind: ActionKind::Exit,
                 id: "known".to_owned(),
                 label: "Known".to_owned(),
                 detail: None,
             },
             AvailableAction {
-                kind: "exit".to_owned(),
+                kind: ActionKind::Exit,
                 id: "new".to_owned(),
                 label: "New".to_owned(),
                 detail: None,
@@ -347,11 +351,12 @@ mod tests {
         ];
         tracker.visited.insert("known".to_owned());
         let choice = tracker.pick(&actions, "here", &config);
-        assert_eq!(choice, Some(("exit".to_owned(), "new".to_owned())));
+        assert_eq!(choice, Some((ActionKind::Exit, "new".to_owned())));
     }
 
     #[test]
     fn stale_detection_halts_autoplay() {
+        use crate::session::ActionKind;
         let config = AutoplayConfig {
             stale_limit: 2,
             ..AutoplayConfig::default()
@@ -362,7 +367,7 @@ mod tests {
         };
         assert!(tracker.is_stale(&config));
         let actions = vec![AvailableAction {
-            kind: "examine".to_owned(),
+            kind: ActionKind::Examine,
             id: "examine".to_owned(),
             label: "Examine".to_owned(),
             detail: None,
@@ -372,11 +377,12 @@ mod tests {
 
     #[test]
     fn novelty_resets_stale_counter() {
+        use crate::session::ActionKind;
         let mut tracker = HeuristicTracker {
             stale_count: 5,
             ..HeuristicTracker::default()
         };
-        tracker.record_novelty("ability", "new_ability", 0);
+        tracker.record_novelty(ActionKind::Ability, "new_ability", 0);
         assert_eq!(tracker.stale_count, 0);
     }
 }

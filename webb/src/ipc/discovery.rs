@@ -11,7 +11,7 @@
 //!
 //! Discovery strategy:
 //!
-//! **UDS** (5-tier, per wateringHole UNIVERSAL_IPC_STANDARD_V3):
+//! **UDS** (5-tier, per wateringHole `UNIVERSAL_IPC_STANDARD_V3`):
 //! 1. `$BIOMEOS_SOCKET_DIR/<domain>.sock`
 //! 2. `$XDG_RUNTIME_DIR/biomeos/<domain>.sock`
 //! 3. `/run/user/<uid>/biomeos/<domain>.sock`
@@ -66,6 +66,7 @@ const KNOWN_PRIMALS: &[(&str, &str)] = &[
 
 impl PrimalRegistry {
     /// Discover primals from TCP env vars, `plasmidBin/` metadata, and UDS socket directories.
+    #[must_use]
     pub fn discover() -> Self {
         let mut registry = Self::default();
 
@@ -87,6 +88,7 @@ impl PrimalRegistry {
     }
 
     /// Find the endpoint that provides a given capability.
+    #[must_use]
     pub fn find_by_capability(&self, capability: &str) -> Option<&PrimalEndpoint> {
         self.capability_index
             .get(capability)

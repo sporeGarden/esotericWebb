@@ -39,11 +39,13 @@ pub struct SquirrelClient {
 
 impl SquirrelClient {
     /// Create a new client.
+    #[must_use]
     pub const fn new(available: bool) -> Self {
         Self { available }
     }
 
     /// Whether the AI primal was discovered and is healthy.
+    #[must_use]
     pub const fn is_available(&self) -> bool {
         self.available
     }

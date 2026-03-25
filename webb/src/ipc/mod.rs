@@ -17,6 +17,19 @@
 //! TCP (preferred for platform portability — containers, Graphene) and
 //! Unix domain sockets (XDG-compliant path resolution).
 //! Protocol: newline-delimited JSON-RPC 2.0.
+//!
+//! ## Why JSON-RPC only (no tarpc)
+//!
+//! The wateringHole `PRIMAL_IPC_PROTOCOL.md` defines a dual-protocol
+//! standard: JSON-RPC 2.0 (mandatory) + tarpc (optional, for high-
+//! throughput intra-host calls). Webb is a **composition substrate** —
+//! it consumes primals at human-interaction speed (one action per
+//! second). JSON-RPC over TCP/UDS provides platform-agnostic, debuggable
+//! IPC with negligible overhead at this cadence. tarpc would add a Rust
+//! crate dependency and compile-time coupling for zero measurable gain.
+//! If a future primal requires sub-millisecond RPC (e.g. real-time
+//! rendering pipeline), tarpc can be added per-domain without changing
+//! the bridge architecture.
 
 pub mod bridge;
 pub mod client;
@@ -29,7 +42,6 @@ pub mod ludospring;
 pub mod petaltongue;
 pub mod provenance;
 pub mod resilience;
-pub mod server;
 pub mod squirrel;
 
 pub use envelope::{JsonRpcError, JsonRpcRequest, JsonRpcResponse};

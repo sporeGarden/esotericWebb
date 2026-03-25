@@ -27,6 +27,7 @@ pub mod session;
 pub type SharedSession = Arc<Mutex<Option<GameSession>>>;
 
 /// Create a new shared session handle (initially empty).
+#[must_use]
 pub fn new_shared_session() -> SharedSession {
     Arc::new(Mutex::new(None))
 }
@@ -47,6 +48,7 @@ pub const METHOD_SESSION_NARRATE: &str = "session.narrate";
 pub const METHOD_SESSION_GRAPH: &str = "session.graph";
 
 /// Dispatch a JSON-RPC request to the appropriate handler.
+#[must_use]
 pub fn dispatch(request: &JsonRpcRequest) -> JsonRpcResponse {
     dispatch_with_session(request, &new_shared_session())
 }
@@ -221,5 +223,140 @@ mod tests {
                 *guard = Some(game);
             }
         }
+    }
+
+    #[test]
+    fn liveness_returns_ok() {
+        let req = JsonRpcRequest::new("webb.liveness", None);
+        let resp = dispatch(&req);
+        assert!(resp.error.is_none());
+    }
+
+    #[test]
+    fn readiness_returns_ok() {
+        let req = JsonRpcRequest::new("webb.readiness", None);
+        let resp = dispatch(&req);
+        assert!(resp.error.is_none());
+    }
+
+    #[test]
+    fn health_liveness_returns_ok() {
+        let req = JsonRpcRequest::new("health.liveness", None);
+        let resp = dispatch(&req);
+        assert!(resp.error.is_none());
+    }
+
+    #[test]
+    fn health_readiness_returns_ok() {
+        let session = new_shared_session();
+        let req = JsonRpcRequest::new("health.readiness", None);
+        let resp = dispatch_with_session(&req, &session);
+        assert!(resp.error.is_none());
+        let ready = resp
+            .result
+            .as_ref()
+            .and_then(|r| r.get("ready"))
+            .and_then(Value::as_bool);
+        assert!(ready.is_some());
+    }
+
+    #[test]
+    fn health_check_returns_ok() {
+        let req = JsonRpcRequest::new("health.check", None);
+        let resp = dispatch(&req);
+        assert!(resp.error.is_none());
+    }
+
+    #[test]
+    fn capabilities_list_returns_array() {
+        let req = JsonRpcRequest::new("capabilities.list", None);
+        let resp = dispatch(&req);
+        assert!(resp.error.is_none());
+        let caps = resp
+            .result
+            .as_ref()
+            .and_then(|r| r.get("capabilities"))
+            .and_then(Value::as_array);
+        assert!(caps.is_some());
+        assert!(!caps.unwrap().is_empty());
+    }
+
+    #[test]
+    fn scene_current_without_session() {
+        let session = new_shared_session();
+        let req = JsonRpcRequest::new("webb.scene.current", None);
+        let resp = dispatch_with_session(&req, &session);
+        assert!(resp.error.is_none());
+        let scene = resp.result.as_ref().and_then(|r| r.get("scene"));
+        assert!(scene.is_some());
+    }
+
+    #[test]
+    fn narrative_status_without_session() {
+        let session = new_shared_session();
+        let req = JsonRpcRequest::new("webb.narrative.status", None);
+        let resp = dispatch_with_session(&req, &session);
+        assert!(resp.error.is_none());
+    }
+
+    #[test]
+    fn content_list_without_session() {
+        let session = new_shared_session();
+        let req = JsonRpcRequest::new("webb.content.list", None);
+        let resp = dispatch_with_session(&req, &session);
+        assert!(resp.error.is_none());
+    }
+
+    #[test]
+    fn session_actions_without_start_errors() {
+        let session = new_shared_session();
+        let req = JsonRpcRequest::new("session.actions", None);
+        let resp = dispatch_with_session(&req, &session);
+        assert!(resp.error.is_some());
+    }
+
+    #[test]
+    fn session_history_without_start_errors() {
+        let session = new_shared_session();
+        let req = JsonRpcRequest::new("session.history", None);
+        let resp = dispatch_with_session(&req, &session);
+        assert!(resp.error.is_some());
+    }
+
+    #[test]
+    fn session_narrate_without_start_errors() {
+        let session = new_shared_session();
+        let req = JsonRpcRequest::new("session.narrate", None);
+        let resp = dispatch_with_session(&req, &session);
+        assert!(resp.error.is_some());
+    }
+
+    #[test]
+    fn session_graph_without_start_errors() {
+        let session = new_shared_session();
+        let req = JsonRpcRequest::new("session.graph", None);
+        let resp = dispatch_with_session(&req, &session);
+        assert!(resp.error.is_some());
+    }
+
+    #[test]
+    fn dispatch_preserves_request_id() {
+        let mut req = JsonRpcRequest::new("webb.health", None);
+        req.id = serde_json::json!(42);
+        let resp = dispatch(&req);
+        assert_eq!(resp.id, serde_json::json!(42));
+    }
+
+    #[test]
+    fn dispatch_returns_jsonrpc_2_0() {
+        let req = JsonRpcRequest::new("webb.health", None);
+        let resp = dispatch(&req);
+        assert_eq!(resp.jsonrpc, "2.0");
+    }
+
+    #[test]
+    fn new_shared_session_is_none() {
+        let session = new_shared_session();
+        assert!(session.lock().unwrap().is_none());
     }
 }

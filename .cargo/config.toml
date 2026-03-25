@@ -1,4 +1,6 @@
 [build]
+# Per-gate build directory — override via $CARGO_TARGET_DIR for your gate.
+# Required when the workspace lives on a mount with restricted execute permissions.
 target-dir = "/home/southgate/.cargo-build/esotericWebb/target"
 
 [alias]

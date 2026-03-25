@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! NarrativeGraph engine — bounded space, infinite exploration.
+//! `NarrativeGraph` engine — bounded space, infinite exploration.
 //!
 //! The core architecture: finite authored topology (DAG of scenes, beats,
 //! transitions) combined with combinatorial state space (knowledge, trust,
@@ -111,16 +111,19 @@ pub struct NarrativeGraph {
 
 impl NarrativeGraph {
     /// Find the start node (the node with `is_start = true`).
+    #[must_use]
     pub fn start_node(&self) -> Option<&NarrativeNode> {
         self.nodes.values().find(|n| n.is_start)
     }
 
     /// Find all ending nodes.
+    #[must_use]
     pub fn endings(&self) -> Vec<&NarrativeNode> {
         self.nodes.values().filter(|n| n.is_ending).collect()
     }
 
     /// Get a node by ID.
+    #[must_use]
     pub fn get(&self, id: &str) -> Option<&NarrativeNode> {
         self.nodes.get(id)
     }
@@ -145,6 +148,7 @@ impl NarrativeGraph {
     }
 
     /// Total number of edges in the graph.
+    #[must_use]
     pub fn edge_count(&self) -> usize {
         self.nodes.values().map(|n| n.exits.len()).sum()
     }
@@ -153,6 +157,7 @@ impl NarrativeGraph {
     ///
     /// Depth 0 = start, depth N = N forward hops minimum.  Unreachable nodes
     /// are absent from the map.
+    #[must_use]
     pub fn bfs_depths(&self) -> HashMap<String, usize> {
         use std::collections::VecDeque;
 

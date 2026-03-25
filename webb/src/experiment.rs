@@ -69,6 +69,7 @@ pub fn check_skip(label: &str) {
 ///
 /// Returns `Some(ExitCode)` if the primal is missing (caller should return
 /// it early), `None` if the primal is available.
+#[must_use]
 pub fn primal_or_skip(domain: &str, bridge: &crate::ipc::bridge::PrimalBridge) -> Option<ExitCode> {
     if bridge.has(domain) {
         None
@@ -83,6 +84,7 @@ pub fn primal_or_skip(domain: &str, bridge: &crate::ipc::bridge::PrimalBridge) -
 /// Print a summary and return the exit code (0 = all pass, 1 = any fail).
 ///
 /// Fails if no checks were recorded (guards against silent empty suites).
+#[must_use]
 pub fn finish(experiment_name: &str) -> i32 {
     let (pass, fail, skip, checks) = collect_results();
 
@@ -105,6 +107,7 @@ pub fn finish(experiment_name: &str) -> i32 {
 ///
 /// Preferred over `finish()` + `std::process::exit()` for cleaner stack
 /// unwinding and `Drop` execution.
+#[must_use]
 pub fn finish_with_code(experiment_name: &str) -> ExitCode {
     let code = finish(experiment_name);
     if code == 0 {

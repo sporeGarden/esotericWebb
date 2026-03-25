@@ -50,7 +50,7 @@ fn main() {
 
         // Simple heuristic: pick first available action
         let action = &actions[0];
-        let result = session.act(&action.kind, &action.id);
+        let result = session.act(action.kind, &action.id);
         if result.is_ok() {
             turns_taken += 1;
             visited_nodes.insert(session.snapshot().current_node.clone());

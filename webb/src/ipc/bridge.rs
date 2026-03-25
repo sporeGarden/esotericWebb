@@ -73,6 +73,7 @@ impl PrimalBridge {
     /// Discover live primals and connect to healthy ones.
     ///
     /// Tries TCP first (if a `tcp_addr` was discovered), falls back to UDS.
+    #[must_use]
     pub fn discover() -> Self {
         let registry = PrimalRegistry::discover();
         let mut clients = HashMap::new();
@@ -132,6 +133,7 @@ impl PrimalBridge {
     }
 
     /// Create an empty bridge with no connections (for standalone mode).
+    #[must_use]
     pub fn standalone() -> Self {
         let statuses = PRIMAL_DOMAINS
             .iter()
@@ -171,16 +173,19 @@ impl PrimalBridge {
     }
 
     /// Status of all primal connections.
+    #[must_use]
     pub fn statuses(&self) -> &[PrimalStatus] {
         &self.statuses
     }
 
     /// Whether a specific domain has a healthy connection.
+    #[must_use]
     pub fn has(&self, domain: &str) -> bool {
         self.clients.contains_key(domain)
     }
 
     /// Number of connected primals.
+    #[must_use]
     pub fn connected_count(&self) -> usize {
         self.clients.len()
     }
@@ -250,6 +255,87 @@ impl PrimalBridge {
         Err(last_err.unwrap_or_else(|| IpcError::Io("all retries exhausted".to_owned())))
     }
 
+    // ── Generic call helpers ──────────────────────────────────
+    //
+    // Four patterns that all domain methods share. Using helpers
+    // keeps the per-domain methods to 1-3 lines each.
+
+    /// Call a domain method and deserialize the result, returning
+    /// `default` when the primal is absent or deserialization fails.
+    #[allow(clippy::unnecessary_wraps)]
+    fn call_or_default<T: serde::de::DeserializeOwned>(
+        &mut self,
+        domain: &str,
+        method: &str,
+        params: serde_json::Value,
+        default: T,
+    ) -> Result<T, IpcError> {
+        if !self.has(domain) {
+            return Ok(default);
+        }
+        match self.resilient_call(domain, method, params) {
+            Ok(resp) => {
+                if let Some(result) = resp.result {
+                    if let Ok(val) = serde_json::from_value::<T>(result) {
+                        return Ok(val);
+                    }
+                }
+                Ok(default)
+            }
+            Err(_) => Ok(default),
+        }
+    }
+
+    /// Call a domain method, discarding the response (fire-and-forget).
+    fn call_fire(
+        &mut self,
+        domain: &str,
+        method: &str,
+        params: serde_json::Value,
+    ) -> Result<(), IpcError> {
+        if self.has(domain) {
+            let _ = self.resilient_call(domain, method, params)?;
+        }
+        Ok(())
+    }
+
+    /// Call a domain method and extract a string ID from the result
+    /// using a list of candidate field names.
+    fn call_extract_id(
+        &mut self,
+        domain: &str,
+        method: &str,
+        params: serde_json::Value,
+        fields: &[&str],
+    ) -> Result<Option<String>, IpcError> {
+        if !self.has(domain) {
+            return Ok(None);
+        }
+        let resp = self.resilient_call(domain, method, params)?;
+        if let Some(result) = resp.result {
+            for &field in fields {
+                if let Some(id) = result.get(field).and_then(serde_json::Value::as_str) {
+                    return Ok(Some(id.to_owned()));
+                }
+            }
+        }
+        Ok(None)
+    }
+
+    /// Call a domain method and return the raw result value.
+    fn call_passthrough(
+        &mut self,
+        domain: &str,
+        method: &str,
+        params: serde_json::Value,
+    ) -> Result<Option<serde_json::Value>, IpcError> {
+        if !self.has(domain) {
+            return Ok(None);
+        }
+        let resp = self.resilient_call(domain, method, params)?;
+        Ok(resp.result)
+    }
+
     // ── AI domain (Squirrel) ────────────────────────────────
 
     /// Generate narration via the AI primal.
@@ -260,23 +346,15 @@ impl PrimalBridge {
     ///
     /// Returns [`IpcError`] if the call fails unexpectedly.
     pub fn ai_narrate(&mut self, prompt: &str) -> Result<ChatResponse, IpcError> {
-        if self.has(DOMAIN_AI) {
-            let params = serde_json::json!({
-                "messages": [{"role": "user", "content": prompt}],
-            });
-            if let Ok(resp) = self.resilient_call(DOMAIN_AI, METHOD_AI_CHAT, params) {
-                if let Some(result) = resp.result {
-                    if let Ok(chat) = serde_json::from_value::<ChatResponse>(result) {
-                        return Ok(chat);
-                    }
-                }
-            }
-        }
-        Ok(ChatResponse {
+        let params = serde_json::json!({
+            "messages": [{"role": "user", "content": prompt}],
+        });
+        let default = ChatResponse {
             text: format!("[AI primal unavailable — narration placeholder for: {prompt}]"),
             model: "none".to_owned(),
             tokens: 0,
-        })
+        };
+        self.call_or_default(DOMAIN_AI, METHOD_AI_CHAT, params, default)
     }
 
     /// Summarize context via the AI primal.
@@ -297,7 +375,7 @@ impl PrimalBridge {
         Ok(format!("[degraded: summary unavailable] {truncated}..."))
     }
 
-    // ── Visualization domain (PetalTongue) ──────────────────
+    // ── Visualization domain (`PetalTongue`) ─────────────────
 
     /// Push a scene payload for rendering.
     ///
@@ -305,14 +383,24 @@ impl PrimalBridge {
     ///
     /// Returns [`IpcError`] if the call fails unexpectedly.
     pub fn render_scene(&mut self, scene: &serde_json::Value) -> Result<(), IpcError> {
-        if self.has(DOMAIN_VISUALIZATION) {
-            let _ =
-                self.resilient_call(DOMAIN_VISUALIZATION, METHOD_RENDER_SCENE, scene.clone())?;
-        }
-        Ok(())
+        self.call_fire(DOMAIN_VISUALIZATION, METHOD_RENDER_SCENE, scene.clone())
     }
 
-    // ── Compute domain (ToadStool) ──────────────────────────
+    /// Poll for player input events from `petalTongue`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IpcError`] if the call fails unexpectedly.
+    pub fn poll_input(&mut self) -> Result<Vec<InputEvent>, IpcError> {
+        self.call_or_default(
+            DOMAIN_VISUALIZATION,
+            METHOD_INTERACTION_POLL,
+            serde_json::Value::Null,
+            Vec::new(),
+        )
+    }
+
+    // ── Compute domain (`ToadStool`) ────────────────────────
 
     /// Submit a compute task.
     ///
@@ -320,18 +408,15 @@ impl PrimalBridge {
     ///
     /// Returns [`IpcError`] if the call fails unexpectedly.
     pub fn compute_submit(&mut self, task: &serde_json::Value) -> Result<Option<String>, IpcError> {
-        if self.has(DOMAIN_COMPUTE) {
-            let resp = self.resilient_call(DOMAIN_COMPUTE, METHOD_COMPUTE_SUBMIT, task.clone())?;
-            if let Some(serde_json::Value::String(job_id)) =
-                resp.result.as_ref().and_then(|r| r.get("job_id").cloned())
-            {
-                return Ok(Some(job_id));
-            }
-        }
-        Ok(None)
+        self.call_extract_id(
+            DOMAIN_COMPUTE,
+            METHOD_COMPUTE_SUBMIT,
+            task.clone(),
+            &["job_id"],
+        )
     }
 
-    // ── Storage domain (NestGate) ───────────────────────────
+    // ── Storage domain (`NestGate`) ─────────────────────────
 
     /// Store a value.
     ///
@@ -339,12 +424,12 @@ impl PrimalBridge {
     ///
     /// Returns [`IpcError`] if the call fails unexpectedly.
     pub fn store(&mut self, key: &str, value: &serde_json::Value) -> Result<bool, IpcError> {
-        if self.has(DOMAIN_STORAGE) {
-            let params = serde_json::json!({ "key": key, "value": value });
-            let resp = self.resilient_call(DOMAIN_STORAGE, METHOD_STORAGE_STORE, params)?;
-            return Ok(resp.error.is_none());
+        if !self.has(DOMAIN_STORAGE) {
+            return Ok(false);
         }
-        Ok(false)
+        let params = serde_json::json!({ "key": key, "value": value });
+        let resp = self.resilient_call(DOMAIN_STORAGE, METHOD_STORAGE_STORE, params)?;
+        Ok(resp.error.is_none())
     }
 
     /// Retrieve a value.
@@ -353,15 +438,14 @@ impl PrimalBridge {
     ///
     /// Returns [`IpcError`] if the call fails unexpectedly.
     pub fn retrieve(&mut self, key: &str) -> Result<Option<serde_json::Value>, IpcError> {
-        if self.has(DOMAIN_STORAGE) {
-            let params = serde_json::json!({ "key": key });
-            let resp = self.resilient_call(DOMAIN_STORAGE, METHOD_STORAGE_RETRIEVE, params)?;
-            return Ok(resp.result);
-        }
-        Ok(None)
+        self.call_passthrough(
+            DOMAIN_STORAGE,
+            METHOD_STORAGE_RETRIEVE,
+            serde_json::json!({ "key": key }),
+        )
     }
 
-    // ── Game science domain (LudoSpring) ────────────────────
+    // ── Game science domain (`LudoSpring`) ──────────────────
 
     /// Evaluate flow state.
     ///
@@ -369,20 +453,15 @@ impl PrimalBridge {
     ///
     /// Returns [`IpcError`] if the call fails unexpectedly.
     pub fn evaluate_flow(&mut self, params: &serde_json::Value) -> Result<FlowResult, IpcError> {
-        if self.has(DOMAIN_GAME) {
-            if let Ok(resp) = self.resilient_call(DOMAIN_GAME, METHOD_EVALUATE_FLOW, params.clone())
-            {
-                if let Some(result) = resp.result {
-                    if let Ok(flow) = serde_json::from_value::<FlowResult>(result) {
-                        return Ok(flow);
-                    }
-                }
-            }
-        }
-        Ok(FlowResult {
-            flow_score: 0.5,
-            in_flow: false,
-        })
+        self.call_or_default(
+            DOMAIN_GAME,
+            METHOD_EVALUATE_FLOW,
+            params.clone(),
+            FlowResult {
+                flow_score: 0.5,
+                in_flow: false,
+            },
+        )
     }
 
     /// Get engagement metrics.
@@ -391,20 +470,16 @@ impl PrimalBridge {
     ///
     /// Returns [`IpcError`] if the call fails unexpectedly.
     pub fn engagement(&mut self, params: &serde_json::Value) -> Result<EngagementResult, IpcError> {
-        if self.has(DOMAIN_GAME) {
-            if let Ok(resp) = self.resilient_call(DOMAIN_GAME, METHOD_ENGAGEMENT, params.clone()) {
-                if let Some(result) = resp.result {
-                    if let Ok(eng) = serde_json::from_value::<EngagementResult>(result) {
-                        return Ok(eng);
-                    }
-                }
-            }
-        }
-        Ok(EngagementResult {
-            actions_per_minute: 0.0,
-            exploration_ratio: 0.0,
-            engagement_score: 0.5,
-        })
+        self.call_or_default(
+            DOMAIN_GAME,
+            METHOD_ENGAGEMENT,
+            params.clone(),
+            EngagementResult {
+                actions_per_minute: 0.0,
+                exploration_ratio: 0.0,
+                engagement_score: 0.5,
+            },
+        )
     }
 
     /// Get DDA recommendation.
@@ -416,21 +491,15 @@ impl PrimalBridge {
         &mut self,
         params: &serde_json::Value,
     ) -> Result<DdaResult, IpcError> {
-        if self.has(DOMAIN_GAME) {
-            if let Ok(resp) =
-                self.resilient_call(DOMAIN_GAME, METHOD_DIFFICULTY_ADJUSTMENT, params.clone())
-            {
-                if let Some(result) = resp.result {
-                    if let Ok(dda) = serde_json::from_value::<DdaResult>(result) {
-                        return Ok(dda);
-                    }
-                }
-            }
-        }
-        Ok(DdaResult {
-            adjustment: 0.0,
-            reason: "game science primal unavailable — no adjustment".to_owned(),
-        })
+        self.call_or_default(
+            DOMAIN_GAME,
+            METHOD_DIFFICULTY_ADJUSTMENT,
+            params.clone(),
+            DdaResult {
+                adjustment: 0.0,
+                reason: "game science primal unavailable — no adjustment".to_owned(),
+            },
+        )
     }
 
     /// NPC dialogue via ludoSpring → Squirrel delegation.
@@ -442,21 +511,17 @@ impl PrimalBridge {
         &mut self,
         params: &serde_json::Value,
     ) -> Result<DialogueResponse, IpcError> {
-        if self.has(DOMAIN_GAME) {
-            if let Ok(resp) = self.resilient_call(DOMAIN_GAME, METHOD_NPC_DIALOGUE, params.clone())
-            {
-                if let Some(result) = resp.result {
-                    if let Ok(d) = serde_json::from_value::<DialogueResponse>(result) {
-                        return Ok(d);
-                    }
-                }
-            }
-        }
-        Ok(DialogueResponse {
-            text: "[game science primal unavailable — NPC dialogue degraded]".to_owned(),
-            voice_notes: Vec::new(),
-            passive_checks_fired: false,
-        })
+        self.call_or_default(
+            DOMAIN_GAME,
+            METHOD_NPC_DIALOGUE,
+            params.clone(),
+            DialogueResponse {
+                text: "[game science primal unavailable — NPC dialogue degraded]".to_owned(),
+                voice_notes: Vec::new(),
+                passive_checks_fired: false,
+                degraded: true,
+            },
+        )
     }
 
     /// Narrate an action via ludoSpring → Squirrel delegation.
@@ -465,22 +530,16 @@ impl PrimalBridge {
     ///
     /// Returns [`IpcError`] if the call fails unexpectedly.
     pub fn narrate_action(&mut self, params: &serde_json::Value) -> Result<ChatResponse, IpcError> {
-        if self.has(DOMAIN_GAME) {
-            if let Ok(resp) =
-                self.resilient_call(DOMAIN_GAME, METHOD_NARRATE_ACTION, params.clone())
-            {
-                if let Some(result) = resp.result {
-                    if let Ok(chat) = serde_json::from_value::<ChatResponse>(result) {
-                        return Ok(chat);
-                    }
-                }
-            }
-        }
-        Ok(ChatResponse {
-            text: "[game science primal unavailable — narration degraded]".to_owned(),
-            model: "none".to_owned(),
-            tokens: 0,
-        })
+        self.call_or_default(
+            DOMAIN_GAME,
+            METHOD_NARRATE_ACTION,
+            params.clone(),
+            ChatResponse {
+                text: "[game science primal unavailable — narration degraded]".to_owned(),
+                model: "none".to_owned(),
+                tokens: 0,
+            },
+        )
     }
 
     /// Internal voice check via ludoSpring.
@@ -489,28 +548,16 @@ impl PrimalBridge {
     ///
     /// Returns [`IpcError`] if the call fails unexpectedly.
     pub fn voice_check(&mut self, params: &serde_json::Value) -> Result<Vec<VoiceNote>, IpcError> {
-        if self.has(DOMAIN_GAME) {
-            if let Ok(resp) = self.resilient_call(DOMAIN_GAME, METHOD_VOICE_CHECK, params.clone()) {
-                if let Some(result) = resp.result {
-                    if let Ok(notes) = serde_json::from_value::<Vec<VoiceNote>>(result) {
-                        return Ok(notes);
-                    }
-                }
-            }
-        }
-        Ok(Vec::new())
+        self.call_or_default(DOMAIN_GAME, METHOD_VOICE_CHECK, params.clone(), Vec::new())
     }
 
-    /// Push scene via ludoSpring → petalTongue delegation.
+    /// Push scene via ludoSpring → `petalTongue` delegation.
     ///
     /// # Errors
     ///
     /// Returns [`IpcError`] if the call fails unexpectedly.
     pub fn game_push_scene(&mut self, params: &serde_json::Value) -> Result<(), IpcError> {
-        if self.has(DOMAIN_GAME) {
-            let _ = self.resilient_call(DOMAIN_GAME, METHOD_PUSH_SCENE, params.clone())?;
-        }
-        Ok(())
+        self.call_fire(DOMAIN_GAME, METHOD_PUSH_SCENE, params.clone())
     }
 
     /// Begin a game session in the provenance system via ludoSpring.
@@ -522,19 +569,12 @@ impl PrimalBridge {
         &mut self,
         params: &serde_json::Value,
     ) -> Result<Option<String>, IpcError> {
-        if self.has(DOMAIN_GAME) {
-            let resp = self.resilient_call(DOMAIN_GAME, METHOD_BEGIN_SESSION, params.clone())?;
-            if let Some(result) = resp.result {
-                if let Some(id) = result
-                    .get("session_id")
-                    .or_else(|| result.get("id"))
-                    .and_then(serde_json::Value::as_str)
-                {
-                    return Ok(Some(id.to_owned()));
-                }
-            }
-        }
-        Ok(None)
+        self.call_extract_id(
+            DOMAIN_GAME,
+            METHOD_BEGIN_SESSION,
+            params.clone(),
+            &["session_id", "id"],
+        )
     }
 
     /// Complete a game session in the provenance system via ludoSpring.
@@ -543,13 +583,10 @@ impl PrimalBridge {
     ///
     /// Returns [`IpcError`] if the call fails unexpectedly.
     pub fn game_complete_session(&mut self, params: &serde_json::Value) -> Result<(), IpcError> {
-        if self.has(DOMAIN_GAME) {
-            let _ = self.resilient_call(DOMAIN_GAME, METHOD_COMPLETE_SESSION, params.clone())?;
-        }
-        Ok(())
+        self.call_fire(DOMAIN_GAME, METHOD_COMPLETE_SESSION, params.clone())
     }
 
-    // ── Provenance domain (RootPulse trio) ──────────────────
+    // ── Provenance / DAG domain (rhizoCrypt) ────────────────
 
     /// Append a provenance vertex to the session DAG.
     ///
@@ -557,18 +594,14 @@ impl PrimalBridge {
     ///
     /// Returns [`IpcError`] if the call fails unexpectedly.
     pub fn provenance_append(&mut self, vertex: &serde_json::Value) -> Result<bool, IpcError> {
-        if self.has(DOMAIN_DAG) {
-            let resp = self.resilient_call(DOMAIN_DAG, METHOD_DAG_EVENT_APPEND, vertex.clone())?;
-            return Ok(resp.error.is_none());
+        if !self.has(DOMAIN_DAG) {
+            return Ok(false);
         }
-        Ok(false)
+        let resp = self.resilient_call(DOMAIN_DAG, METHOD_DAG_EVENT_APPEND, vertex.clone())?;
+        Ok(resp.error.is_none())
     }
 
-    // ── DAG domain (rhizoCrypt) — typed API ─────────────────
-
     /// Create a new session on the DAG primal.
-    ///
-    /// Returns the session ID if rhizoCrypt is connected, `None` otherwise.
     ///
     /// # Errors
     ///
@@ -577,25 +610,15 @@ impl PrimalBridge {
         &mut self,
         params: &serde_json::Value,
     ) -> Result<Option<String>, IpcError> {
-        if self.has(DOMAIN_DAG) {
-            let resp =
-                self.resilient_call(DOMAIN_DAG, METHOD_DAG_SESSION_CREATE, params.clone())?;
-            if let Some(result) = resp.result {
-                if let Some(id) = result
-                    .get("session_id")
-                    .or_else(|| result.get("id"))
-                    .and_then(serde_json::Value::as_str)
-                {
-                    return Ok(Some(id.to_owned()));
-                }
-            }
-        }
-        Ok(None)
+        self.call_extract_id(
+            DOMAIN_DAG,
+            METHOD_DAG_SESSION_CREATE,
+            params.clone(),
+            &["session_id", "id"],
+        )
     }
 
     /// Append an event to a session DAG.
-    ///
-    /// Returns the vertex ID if successful.
     ///
     /// # Errors
     ///
@@ -604,18 +627,17 @@ impl PrimalBridge {
         &mut self,
         params: &serde_json::Value,
     ) -> Result<Option<String>, IpcError> {
-        if self.has(DOMAIN_DAG) {
-            let resp = self.resilient_call(DOMAIN_DAG, METHOD_DAG_EVENT_APPEND, params.clone())?;
-            if let Some(result) = resp.result {
-                if let Some(id) = result
-                    .get("vertex_id")
-                    .or_else(|| result.get("id"))
-                    .and_then(serde_json::Value::as_str)
-                {
+        if !self.has(DOMAIN_DAG) {
+            return Ok(None);
+        }
+        let resp = self.resilient_call(DOMAIN_DAG, METHOD_DAG_EVENT_APPEND, params.clone())?;
+        if let Some(result) = resp.result {
+            for field in &["vertex_id", "id"] {
+                if let Some(id) = result.get(*field).and_then(serde_json::Value::as_str) {
                     return Ok(Some(id.to_owned()));
                 }
-                return Ok(Some("ok".to_owned()));
             }
+            return Ok(Some("ok".to_owned()));
         }
         Ok(None)
     }
@@ -629,11 +651,7 @@ impl PrimalBridge {
         &mut self,
         params: &serde_json::Value,
     ) -> Result<Option<serde_json::Value>, IpcError> {
-        if self.has(DOMAIN_DAG) {
-            let resp = self.resilient_call(DOMAIN_DAG, METHOD_DAG_FRONTIER_GET, params.clone())?;
-            return Ok(resp.result);
-        }
-        Ok(None)
+        self.call_passthrough(DOMAIN_DAG, METHOD_DAG_FRONTIER_GET, params.clone())
     }
 
     /// Get the Merkle root of a session DAG.
@@ -645,19 +663,12 @@ impl PrimalBridge {
         &mut self,
         params: &serde_json::Value,
     ) -> Result<Option<String>, IpcError> {
-        if self.has(DOMAIN_DAG) {
-            let resp = self.resilient_call(DOMAIN_DAG, METHOD_DAG_MERKLE_ROOT, params.clone())?;
-            if let Some(result) = resp.result {
-                if let Some(root) = result
-                    .get("root")
-                    .or_else(|| result.get("merkle_root"))
-                    .and_then(serde_json::Value::as_str)
-                {
-                    return Ok(Some(root.to_owned()));
-                }
-            }
-        }
-        Ok(None)
+        self.call_extract_id(
+            DOMAIN_DAG,
+            METHOD_DAG_MERKLE_ROOT,
+            params.clone(),
+            &["root", "merkle_root"],
+        )
     }
 
     /// Complete a session DAG.
@@ -666,10 +677,7 @@ impl PrimalBridge {
     ///
     /// Returns [`IpcError`] if the call fails unexpectedly.
     pub fn dag_session_complete(&mut self, params: &serde_json::Value) -> Result<(), IpcError> {
-        if self.has(DOMAIN_DAG) {
-            let _ = self.resilient_call(DOMAIN_DAG, METHOD_DAG_SESSION_COMPLETE, params.clone())?;
-        }
-        Ok(())
+        self.call_fire(DOMAIN_DAG, METHOD_DAG_SESSION_COMPLETE, params.clone())
     }
 
     /// Query vertices from a session DAG.
@@ -681,12 +689,7 @@ impl PrimalBridge {
         &mut self,
         params: &serde_json::Value,
     ) -> Result<Option<serde_json::Value>, IpcError> {
-        if self.has(DOMAIN_DAG) {
-            let resp =
-                self.resilient_call(DOMAIN_DAG, METHOD_DAG_QUERY_VERTICES, params.clone())?;
-            return Ok(resp.result);
-        }
-        Ok(None)
+        self.call_passthrough(DOMAIN_DAG, METHOD_DAG_QUERY_VERTICES, params.clone())
     }
 
     // ── Lineage domain (loamSpine) ──────────────────────────
@@ -700,34 +703,7 @@ impl PrimalBridge {
         &mut self,
         params: &serde_json::Value,
     ) -> Result<Option<serde_json::Value>, IpcError> {
-        if self.has(DOMAIN_LINEAGE) {
-            let resp = self.resilient_call(DOMAIN_LINEAGE, METHOD_CERT_MINT, params.clone())?;
-            return Ok(resp.result);
-        }
-        Ok(None)
-    }
-
-    // ── Visualization domain (petalTongue) — direct ─────────
-
-    /// Poll for player input events from petalTongue.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`IpcError`] if the call fails unexpectedly.
-    pub fn poll_input(&mut self) -> Result<Vec<InputEvent>, IpcError> {
-        if self.has(DOMAIN_VISUALIZATION) {
-            let resp = self.resilient_call(
-                DOMAIN_VISUALIZATION,
-                METHOD_INTERACTION_POLL,
-                serde_json::Value::Null,
-            )?;
-            if let Some(result) = resp.result {
-                if let Ok(events) = serde_json::from_value::<Vec<InputEvent>>(result) {
-                    return Ok(events);
-                }
-            }
-        }
-        Ok(Vec::new())
+        self.call_passthrough(DOMAIN_LINEAGE, METHOD_CERT_MINT, params.clone())
     }
 }
 

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Esoteric Webb — UniBin entry point.
+//! Esoteric Webb — `UniBin` entry point.
 //!
 //! Subcommands:
 //! - `serve`     — start the full BYOB niche (germinate primals + game director)
 //! - `validate`  — lint and validate a content directory
 //! - `preview`   — text-mode game preview (human player)
 //! - `autoplay`  — automated playthrough (AI-as-player demonstration)
-//! - `graph`     — visualize the NarrativeGraph as DOT
+//! - `graph`     — visualize the `NarrativeGraph` as DOT
 //! - `replay`    — replay a provenance-traced session
 //! - `new-world` — scaffold a new content directory with template YAML
 
@@ -43,6 +43,9 @@ enum Command {
         /// Path to content directory.
         #[arg(long, default_value = "content")]
         content: String,
+        /// Run all experiment validation suites (replaces standalone `validate_all`).
+        #[arg(long)]
+        all: bool,
     },
     /// Text-mode interactive game preview (human player).
     Preview {
@@ -62,7 +65,7 @@ enum Command {
         #[arg(long)]
         json: bool,
     },
-    /// Visualize the NarrativeGraph as DOT format.
+    /// Visualize the `NarrativeGraph` as DOT format.
     ///
     /// Three views: bare narrative (default), played session (--played),
     /// or live session state (--live).
@@ -112,7 +115,13 @@ fn main() {
             launch,
             graph,
         } => commands::cmd_serve(&content, launch, &graph),
-        Command::Validate { content } => commands::cmd_validate(&content),
+        Command::Validate { content, all } => {
+            if all {
+                commands::cmd_validate_all()
+            } else {
+                commands::cmd_validate(&content)
+            }
+        }
         Command::Preview { content } => commands::cmd_preview(&content),
         Command::Autoplay {
             content,

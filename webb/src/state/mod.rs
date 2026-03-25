@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! WorldState — composite game state that predicates query and effects mutate.
+//! `WorldState` — composite game state that predicates query and effects mutate.
 //!
 //! The combinatorial richness of this state (knowledge x trust x inventory x
 //! conditions x arcs x plane x flags) is what creates the "near-infinite
@@ -39,6 +39,7 @@ pub struct WorldState {
 
 impl WorldState {
     /// Create a new default world state.
+    #[must_use]
     pub fn new() -> Self {
         Self {
             active_plane: "exploration".to_owned(),
@@ -47,6 +48,7 @@ impl WorldState {
     }
 
     /// Evaluate a predicate against the current state.
+    #[must_use]
     pub fn evaluate(&self, predicate: &StatePredicate) -> bool {
         match predicate {
             StatePredicate::HasKnowledge(k) => self.knowledge.contains(k),

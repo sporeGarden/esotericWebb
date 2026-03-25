@@ -78,6 +78,9 @@ pub struct DialogueResponse {
     pub voice_notes: Vec<VoiceNote>,
     /// Whether any passive checks triggered.
     pub passive_checks_fired: bool,
+    /// Whether this response is a degradation placeholder (primal unavailable).
+    #[serde(default)]
+    pub degraded: bool,
 }
 
 /// A voice interjection.
@@ -99,11 +102,13 @@ pub struct LudoSpringClient {
 
 impl LudoSpringClient {
     /// Create a new client. Availability is determined at discovery time.
+    #[must_use]
     pub const fn new(available: bool) -> Self {
         Self { available }
     }
 
     /// Whether the game science primal was discovered and is healthy.
+    #[must_use]
     pub const fn is_available(&self) -> bool {
         self.available
     }
@@ -209,6 +214,7 @@ impl LudoSpringClient {
             text: "[game science primal unavailable — NPC dialogue degraded]".to_owned(),
             voice_notes: Vec::new(),
             passive_checks_fired: false,
+            degraded: true,
         })
     }
 
@@ -317,6 +323,7 @@ impl LudoSpringClient {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 
@@ -324,27 +331,127 @@ mod tests {
     fn unavailable_client_degrades() {
         let client = LudoSpringClient::new(false);
         assert!(!client.is_available());
-        let flow = client.evaluate_flow(&Value::Null, None);
-        assert!(flow.is_ok());
+        let flow = client.evaluate_flow(&Value::Null, None).unwrap();
+        assert!((flow.flow_score - 0.5).abs() < f64::EPSILON);
+        assert!(!flow.in_flow);
     }
 
     #[test]
     fn available_client_returns_defaults() {
         let client = LudoSpringClient::new(true);
         assert!(client.is_available());
-        let eng = client.engagement(&Value::Null, None);
-        assert!(eng.is_ok());
+        let eng = client.engagement(&Value::Null, None).unwrap();
+        assert!((eng.engagement_score - 0.5).abs() < f64::EPSILON);
     }
 
     #[test]
-    fn dda_degradation() {
+    fn dda_unavailable_gives_unavailable_reason() {
         let client = LudoSpringClient::new(false);
-        let dda = client.difficulty_adjustment(&Value::Null, None);
-        assert!(dda.is_ok());
-        let result = dda.unwrap_or(DdaResult {
-            adjustment: 0.0,
-            reason: String::new(),
-        });
-        assert!((result.adjustment).abs() < f64::EPSILON);
+        let dda = client.difficulty_adjustment(&Value::Null, None).unwrap();
+        assert!((dda.adjustment).abs() < f64::EPSILON);
+        assert!(dda.reason.contains("unavailable"));
+    }
+
+    #[test]
+    fn dda_available_gives_default_reason() {
+        let client = LudoSpringClient::new(true);
+        let dda = client.difficulty_adjustment(&Value::Null, None).unwrap();
+        assert!((dda.adjustment).abs() < f64::EPSILON);
+        assert_eq!(dda.reason, "default");
+    }
+
+    #[test]
+    fn npc_dialogue_degrades_without_client() {
+        let client = LudoSpringClient::new(false);
+        let resp = client.npc_dialogue(&Value::Null, None).unwrap();
+        assert!(resp.degraded);
+        assert!(resp.text.contains("degraded"));
+        assert!(resp.voice_notes.is_empty());
+        assert!(!resp.passive_checks_fired);
+    }
+
+    #[test]
+    fn narrate_action_degrades_without_client() {
+        let client = LudoSpringClient::new(false);
+        let resp = client.narrate_action(&Value::Null, None).unwrap();
+        assert_eq!(resp.model, "none");
+        assert!(resp.text.contains("degraded"));
+    }
+
+    #[test]
+    fn voice_check_degrades_without_client() {
+        let client = LudoSpringClient::new(false);
+        let notes = client.voice_check(&Value::Null, None).unwrap();
+        assert!(notes.is_empty());
+    }
+
+    #[test]
+    fn push_scene_degrades_without_client() {
+        let client = LudoSpringClient::new(false);
+        assert!(client.push_scene(&Value::Null, None).is_ok());
+    }
+
+    #[test]
+    fn begin_session_degrades_without_client() {
+        let client = LudoSpringClient::new(false);
+        let result = client.begin_session(&Value::Null, None).unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn complete_session_degrades_without_client() {
+        let client = LudoSpringClient::new(false);
+        assert!(client.complete_session(&Value::Null, None).is_ok());
+    }
+
+    #[test]
+    fn dialogue_response_serde_round_trip() {
+        let resp = DialogueResponse {
+            text: "Hello traveler".to_owned(),
+            voice_notes: vec![VoiceNote {
+                voice_id: "logic".to_owned(),
+                text: "Be careful.".to_owned(),
+                priority: 1,
+            }],
+            passive_checks_fired: true,
+            degraded: false,
+        };
+        let json = serde_json::to_string(&resp).unwrap();
+        let back: DialogueResponse = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.text, "Hello traveler");
+        assert!(!back.degraded);
+        assert_eq!(back.voice_notes.len(), 1);
+        assert!(back.passive_checks_fired);
+    }
+
+    #[test]
+    fn degraded_defaults_to_false() {
+        let json = r#"{"text":"hi","voice_notes":[],"passive_checks_fired":false}"#;
+        let resp: DialogueResponse = serde_json::from_str(json).unwrap();
+        assert!(!resp.degraded);
+    }
+
+    #[test]
+    fn flow_result_serde_round_trip() {
+        let flow = FlowResult {
+            flow_score: 0.7,
+            in_flow: true,
+        };
+        let json = serde_json::to_string(&flow).unwrap();
+        let back: FlowResult = serde_json::from_str(&json).unwrap();
+        assert!((back.flow_score - 0.7).abs() < f64::EPSILON);
+        assert!(back.in_flow);
+    }
+
+    #[test]
+    fn engagement_result_serde_round_trip() {
+        let eng = EngagementResult {
+            actions_per_minute: 3.5,
+            exploration_ratio: 0.8,
+            engagement_score: 0.9,
+        };
+        let json = serde_json::to_string(&eng).unwrap();
+        let back: EngagementResult = serde_json::from_str(&json).unwrap();
+        assert!((back.actions_per_minute - 3.5).abs() < f64::EPSILON);
     }
 }
