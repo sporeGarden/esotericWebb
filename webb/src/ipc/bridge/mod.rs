@@ -54,9 +54,15 @@ pub struct PrimalStatus {
 }
 
 /// Runtime coordinator that discovers and holds live primal connections.
+///
+/// Supports two routing modes:
+/// - **Direct**: per-domain `PrimalClient` connections (legacy, always attempted)
+/// - **Neural API**: single connection to biomeOS `neural-api` socket, routing via
+///   `capability.call`. Used as fallback when a direct domain client is absent.
 #[derive(Debug)]
 pub struct PrimalBridge {
     clients: HashMap<String, PrimalClient>,
+    neural_api: Option<PrimalClient>,
     statuses: Vec<PrimalStatus>,
     circuits: HashMap<String, CircuitBreaker>,
     retry_policy: RetryPolicy,
@@ -111,12 +117,33 @@ impl PrimalBridge {
             });
         }
 
+        let neural_api = crate::niche::resolve_neural_api_socket().and_then(|path| {
+            match PrimalClient::connect(&path, "neural-api") {
+                Ok(client) => {
+                    tracing::info!(
+                        path = %path.display(),
+                        "Neural API connected — capability routing available"
+                    );
+                    Some(client)
+                }
+                Err(e) => {
+                    tracing::debug!(
+                        path = %path.display(),
+                        error = %e,
+                        "Neural API socket found but connection failed"
+                    );
+                    None
+                }
+            }
+        });
+
         let circuits = DOMAIN_PRIMAL_MAP
             .iter()
             .map(|&(domain, _)| (domain.to_owned(), CircuitBreaker::from_env()))
             .collect();
         Self {
             clients,
+            neural_api,
             statuses,
             circuits,
             retry_policy: RetryPolicy::from_env(),
@@ -143,6 +170,7 @@ impl PrimalBridge {
 
         Self {
             clients: HashMap::new(),
+            neural_api: None,
             statuses,
             circuits,
             retry_policy: RetryPolicy::from_env(),
@@ -163,16 +191,58 @@ impl PrimalBridge {
         }
     }
 
+    /// Inject a Neural API client directly (used by launcher/tests).
+    pub fn inject_neural_api(&mut self, client: PrimalClient) {
+        self.neural_api = Some(client);
+    }
+
+    /// Whether a Neural API connection is available.
+    #[must_use]
+    pub fn has_neural_api(&self) -> bool {
+        self.neural_api.is_some()
+    }
+
+    /// Route a call through the Neural API using `capability.call`.
+    ///
+    /// Translates a domain + method into a semantic capability call and
+    /// forwards it through the biomeOS orchestration layer.
+    fn neural_api_call(
+        &mut self,
+        domain: &str,
+        method: &str,
+        params: serde_json::Value,
+    ) -> Result<JsonRpcResponse, IpcError> {
+        let client = self.neural_api.as_mut().ok_or_else(|| {
+            IpcError::PrimalNotFound {
+                domain: "neural-api".to_owned(),
+            }
+        })?;
+
+        let (capability, operation) = if let Some(dot) = method.find('.') {
+            (&method[..dot], &method[dot + 1..])
+        } else {
+            (domain, method)
+        };
+
+        let neural_params = serde_json::json!({
+            "capability": capability,
+            "operation": operation,
+            "params": params
+        });
+
+        client.call("capability.call", neural_params)
+    }
+
     /// Status of all primal connections.
     #[must_use]
     pub fn statuses(&self) -> &[PrimalStatus] {
         &self.statuses
     }
 
-    /// Whether a specific domain has a healthy connection.
+    /// Whether a specific domain has a healthy connection (direct or via Neural API).
     #[must_use]
     pub fn has(&self, domain: &str) -> bool {
-        self.clients.contains_key(domain)
+        self.clients.contains_key(domain) || self.neural_api.is_some()
     }
 
     /// Number of connected primals.
@@ -188,8 +258,9 @@ impl PrimalBridge {
 
     /// Resilient call: circuit breaker + retry with exponential backoff.
     ///
-    /// Returns `Ok(response)` on success, or the last error after exhausting
-    /// retries. Non-recoverable errors are returned immediately.
+    /// Tries the direct domain client first. If absent, falls back to
+    /// Neural API routing via `capability.call`. Returns `Ok(response)`
+    /// on success, or the last error after exhausting retries.
     #[expect(
         clippy::needless_pass_by_value,
         reason = "params is cloned per retry attempt; owned avoids extra clone at call sites"
@@ -205,6 +276,16 @@ impl PrimalBridge {
             return Err(IpcError::ConnectionRefused(format!(
                 "circuit open for domain {domain} — skipping {method}"
             )));
+        }
+
+        if !self.clients.contains_key(domain) {
+            if self.neural_api.is_some() {
+                tracing::debug!(domain, method, "No direct client — routing via Neural API");
+                return self.neural_api_call(domain, method, params);
+            }
+            return Err(IpcError::PrimalNotFound {
+                domain: domain.to_owned(),
+            });
         }
 
         let client = self
