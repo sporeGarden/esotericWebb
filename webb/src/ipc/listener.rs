@@ -65,7 +65,7 @@ pub fn serve(path: &Path, session: &SharedSession) -> Result<(), String> {
             Ok((stream, _addr)) => {
                 let _ = stream.set_nonblocking(false);
                 let sess = Arc::clone(session);
-                std::thread::spawn(move || handle_connection(stream, &sess));
+                std::thread::spawn(move || handle_connection(&stream, &sess));
             }
             Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
                 std::thread::sleep(std::time::Duration::from_millis(50));
@@ -111,7 +111,7 @@ pub fn serve_tcp(addr: &str, session: &SharedSession) -> Result<(), String> {
             Ok((stream, _addr)) => {
                 let _ = stream.set_nonblocking(false);
                 let sess = Arc::clone(session);
-                std::thread::spawn(move || handle_tcp_connection(stream, &sess));
+                std::thread::spawn(move || handle_tcp_connection(&stream, &sess));
             }
             Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
                 std::thread::sleep(std::time::Duration::from_millis(50));
@@ -126,10 +126,9 @@ pub fn serve_tcp(addr: &str, session: &SharedSession) -> Result<(), String> {
     Ok(())
 }
 
-#[allow(clippy::needless_pass_by_value)]
-fn handle_tcp_connection(stream: std::net::TcpStream, session: &SharedSession) {
-    let reader = BufReader::new(&stream);
-    let mut writer = &stream;
+fn handle_tcp_connection(stream: &std::net::TcpStream, session: &SharedSession) {
+    let reader = BufReader::new(stream);
+    let mut writer = stream;
 
     for line in reader.lines() {
         let Ok(line) = line else { break };
@@ -160,10 +159,9 @@ fn handle_tcp_connection(stream: std::net::TcpStream, session: &SharedSession) {
     }
 }
 
-#[allow(clippy::needless_pass_by_value)] // thread::spawn requires owned values
-fn handle_connection(stream: std::os::unix::net::UnixStream, session: &SharedSession) {
-    let reader = BufReader::new(&stream);
-    let mut writer = &stream;
+fn handle_connection(stream: &std::os::unix::net::UnixStream, session: &SharedSession) {
+    let reader = BufReader::new(stream);
+    let mut writer = stream;
 
     for line in reader.lines() {
         let Ok(line) = line else { break };
@@ -195,7 +193,7 @@ fn handle_connection(stream: std::os::unix::net::UnixStream, session: &SharedSes
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[expect(clippy::unwrap_used, reason = "test code uses unwrap for brevity")]
 mod tests {
     use super::*;
     use std::io::{BufRead, BufReader, Write};
@@ -230,7 +228,7 @@ mod tests {
         let (server_stream, _) = listener.accept().unwrap();
 
         std::thread::spawn(move || {
-            handle_connection(server_stream, &session);
+            handle_connection(&server_stream, &session);
         });
 
         let mut client_writer = client.try_clone().unwrap();
@@ -263,7 +261,7 @@ mod tests {
         let (server_stream, _) = listener.accept().unwrap();
 
         std::thread::spawn(move || {
-            handle_tcp_connection(server_stream, &session);
+            handle_tcp_connection(&server_stream, &session);
         });
 
         let mut client_writer = client.try_clone().unwrap();
@@ -296,7 +294,7 @@ mod tests {
         let (server_stream, _) = listener.accept().unwrap();
 
         std::thread::spawn(move || {
-            handle_tcp_connection(server_stream, &session);
+            handle_tcp_connection(&server_stream, &session);
         });
 
         let mut client_writer = client.try_clone().unwrap();
@@ -323,7 +321,7 @@ mod tests {
         let (server_stream, _) = listener.accept().unwrap();
 
         std::thread::spawn(move || {
-            handle_tcp_connection(server_stream, &session);
+            handle_tcp_connection(&server_stream, &session);
         });
 
         let mut client_writer = client.try_clone().unwrap();
@@ -362,7 +360,7 @@ mod tests {
         let (server_stream, _) = listener.accept().unwrap();
 
         std::thread::spawn(move || {
-            handle_connection(server_stream, &session);
+            handle_connection(&server_stream, &session);
         });
 
         let mut client_writer = client.try_clone().unwrap();

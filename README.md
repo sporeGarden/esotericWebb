@@ -2,10 +2,10 @@
 
 | | |
 |---|---|
-| **Version** | V5 |
-| **Tests** | 329 (316 unit + 12 E2E + 1 validation) |
+| **Version** | V5.1 |
+| **Tests** | 335 (316 unit + 18 E2E + 1 validation) |
 | **Coverage** | 90.84% lines (`cargo llvm-cov`) |
-| **Rust files** | 35 (~12.5k LOC) |
+| **Rust files** | 37 (~12.5k LOC) |
 | **Experiments** | 5 (exp001–exp005) |
 | **MSRV** | 1.87 (edition 2024) |
 | **License** | AGPL-3.0 + ORC + CC-BY-SA 4.0 |
@@ -13,7 +13,7 @@
 | **C deps** | Zero (ecoBin compliant) |
 | **Bridge methods** | 23 (all domains, all degrading) |
 | **Primals consumed** | 8 domains (ai, game, viz, dag, lineage, compute, storage, provenance) |
-| **Last validation** | 2026-03-25 (V5) |
+| **Last validation** | 2026-03-29 (V5.1) |
 
 **A [sporeGarden](https://github.com/sporeGarden) project — the primals as a composed CRPG.**
 
@@ -60,7 +60,7 @@ Songbird at runtime.
 | lineage | loamSpine | NPC personality certs | Bridge ready | `certificate.mint` |
 | compute | toadStool | GPU compute dispatch | Bridge ready | `compute.dispatch.submit` |
 | storage | nestGate | Key-value persistence | Bridge ready | `storage.store`, `storage.retrieve` |
-| provenance | sweetGrass | Creative attribution | Bridge ready | `attribution.record` |
+| provenance | sweetGrass | Creative attribution | Discovered, not yet exercised | `attribution.record` (planned) |
 
 ## The Core Thesis: Bounded Space, Infinite Exploration
 
@@ -117,10 +117,10 @@ webb/              Main Rust crate (narrative engine + IPC + director + bridge)
   src/state/       World state (knowledge, trust, inventory, flags, conditions)
 content/           YAML game content (authored by creative teams)
 experiments/       5 standalone validation crates (exp001–exp005)
-graphs/            biomeOS deploy graphs (20+ TOML fragments)
+graphs/            biomeOS deploy graphs (8 TOML compositions)
 niches/            BYOB niche definitions
 deploy/            Composition fragment for biomeOS/primalSpring
-specs/             Design specifications (4 documents)
+specs/             Design specifications (6 documents)
 wateringHole/      Handoffs to primal and spring teams
 config/            Launch profiles for primal composition
 ```

@@ -19,8 +19,8 @@ fn main() {
         bridge.connected_count() == 0,
     );
     check_bool(
-        "standalone has 8 status entries",
-        bridge.statuses().len() == 8,
+        "standalone has all domain status entries",
+        bridge.statuses().len() == esoteric_webb::ipc::primal_names::DOMAIN_PRIMAL_MAP.len(),
     );
 
     let narrate =
@@ -80,9 +80,10 @@ fn main() {
 
     // Discovery handles empty environment
     let registry = PrimalRegistry::discover();
+    let domain_count = registry.by_domain.len();
     check_bool(
-        "discovery returns registry without crash",
-        registry.by_domain.is_empty() || !registry.by_domain.is_empty(),
+        &format!("discovery returns well-formed registry ({domain_count} domains)"),
+        registry.by_domain.keys().all(|k| !k.is_empty()),
     );
     check_bool(
         "find_by_capability on unknown returns None",

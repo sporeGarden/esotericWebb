@@ -5,6 +5,13 @@
 //! exercises the full DAG session lifecycle: create, append, frontier, merkle.
 //! Honestly skips if binaries are not available.
 
+fn allocate_port() -> u16 {
+    std::net::TcpListener::bind("127.0.0.1:0")
+        .and_then(|l| l.local_addr())
+        .map(|a| a.port())
+        .unwrap_or(19404)
+}
+
 fn main() {
     use esoteric_webb::experiment::{check_bool, check_skip, exit};
     use esoteric_webb::ipc::client::PrimalClient;
@@ -19,7 +26,8 @@ fn main() {
     }
 
     let mut launcher = PrimalLauncher::new();
-    let sp = match launcher.spawn("rhizocrypt", 19404, "dag") {
+    let port = allocate_port();
+    let sp = match launcher.spawn("rhizocrypt", port, "dag") {
         Ok(sp) => sp,
         Err(e) => {
             check_skip(&format!("could not spawn rhizocrypt: {e}"));

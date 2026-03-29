@@ -20,7 +20,10 @@ pub fn cmd_serve(
     listen_addr: Option<&str>,
 ) -> Result<(), String> {
     // Launcher owns child processes and kills them on Drop — must outlive the server.
-    #[allow(clippy::collection_is_never_read)] // held for Drop semantics, not read access
+    #[expect(
+        clippy::collection_is_never_read,
+        reason = "held for Drop semantics, not read access"
+    )]
     let _launcher: Option<esoteric_webb::ipc::launcher::PrimalLauncher>;
 
     let bridge = if launch {
@@ -255,7 +258,7 @@ fn read_choice(max: usize) -> Option<usize> {
 /// Show primal composition status.
 ///
 /// Returns `Result` for command dispatch uniformity — currently infallible.
-#[allow(clippy::unnecessary_wraps)] // all cmd_* share a uniform Result signature
+#[expect(clippy::unnecessary_wraps, reason = "uniform cmd_* Result signature")]
 pub fn cmd_status() -> Result<(), String> {
     println!("Esoteric Webb — primal composition status");
     println!("Discovering primals...\n");

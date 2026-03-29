@@ -178,7 +178,7 @@ impl GameSession {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[expect(clippy::unwrap_used, reason = "test code")]
 mod tests {
     use crate::content::{AbilityDef, ContentBundle, NpcDef, SceneContent, WorldMeta};
     use crate::director::GameDirector;
@@ -193,7 +193,7 @@ mod tests {
     use crate::state::WorldState;
     use std::collections::HashMap;
 
-    #[allow(clippy::too_many_lines)]
+    #[expect(clippy::too_many_lines, reason = "test fixture construction")]
     fn test_bundle() -> ContentBundle {
         let mut nodes = HashMap::new();
         let mut scenes = HashMap::new();

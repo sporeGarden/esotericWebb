@@ -6,7 +6,7 @@ Documentation and creative text in this file: CC-BY-SA-4.0
 # Esoteric Webb — Vision and Evolution
 
 **Status**: Active
-**Date**: March 24, 2026
+**Date**: March 29, 2026
 **Related specs**: [ESOTERIC_WEBB_DESIGN.md](ESOTERIC_WEBB_DESIGN.md),
 [BOUNDED_INFINITE_ARCHITECTURE.md](BOUNDED_INFINITE_ARCHITECTURE.md),
 [EVOLUTION_GAPS.md](../EVOLUTION_GAPS.md)
@@ -15,7 +15,7 @@ Documentation and creative text in this file: CC-BY-SA-4.0
 
 ## What Esoteric Webb is today
 
-Webb is a ~10,100 LOC Rust project that composes deployed primals from
+Webb is a ~12,500 LOC Rust project that composes deployed primals from
 `plasmidBin/` into a Disco Elysium-inspired CRPG. It is the first **gen4
 consumer** — a working tool that exercises the full ecoPrimals stack via
 BYOB composition and feeds gaps back into the springs that need to evolve.
@@ -35,20 +35,21 @@ consumes primals — the same way a real product would.
 | Session | Stateful game loop — `act()` pipeline with 6-stage primal enrichment | Tested |
 | Autoplay | Heuristic AI-as-player with novelty tracking, stale detection | Solid |
 | IPC | JSON-RPC 2.0 over UDS/TCP, capability discovery, circuit breakers, retry | Architecturally mature |
-| Bridge | Runtime coordinator for 7 primal domains with graceful degradation | Refactored |
+| Bridge | Runtime coordinator for 8 primal domains with graceful degradation | V5 |
 | CLI | UniBin: `serve`, `validate`, `preview`, `autoplay`, `graph`, `new-world`, `status` | Complete |
 
-### Quality metrics (V4)
+### Quality metrics (V5)
 
-- 32 source files, 236 tests (223 unit + 12 e2e integration + 1 validation)
-- 83% line coverage, 85% region coverage (llvm-cov)
+- 37 source files, 335 tests (316 unit + 18 e2e integration + 1 validation)
+- 90.84% line coverage (`cargo llvm-cov`)
 - Zero clippy warnings (pedantic + nursery), zero unsafe, `forbid(unsafe_code)`
+- All `#[allow]` migrated to `#[expect]` with reasons; zero TODO/FIXME in production
 - 5 experiment suites, signal handling via `signal-hook`
 - AGPL-3.0-or-later + CC-BY-SA-4.0 + ORC, SPDX headers on all files
 
 ### Primal consumption
 
-Webb has IPC clients and bridge methods for 7 capability domains:
+Webb has IPC clients and bridge methods for 8 capability domains:
 
 | Domain | Primal | Key methods | Status |
 |--------|--------|-------------|--------|
@@ -59,6 +60,7 @@ Webb has IPC clients and bridge methods for 7 capability domains:
 | lineage | loamSpine | `certificate.mint` | Bridge ready |
 | compute | toadStool | `compute.dispatch.submit` | Bridge ready |
 | storage | nestGate | `storage.store`, `storage.retrieve` | Bridge ready |
+| provenance | sweetGrass | `attribution.record` (planned) | Discovered, not yet exercised |
 
 In standalone mode every method degrades gracefully. In composition mode
 primals enrich gameplay with AI narration, NPC dialogue, flow science,

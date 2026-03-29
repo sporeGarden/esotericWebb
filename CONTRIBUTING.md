@@ -23,7 +23,7 @@ Every change must pass before merge:
 
 - `unsafe_code = "forbid"` — no unsafe anywhere
 - `missing_docs = "deny"` — every public item documented
-- `unwrap_used = "deny"` / `expect_used = "deny"` — use `?`, `unwrap_or`, or match in library code; `#[allow]` only in test modules
+- `unwrap_used = "deny"` / `expect_used = "deny"` — use `?`, `unwrap_or`, or match in library code; `#[expect(…, reason = "…")]` only in test modules
 - Clippy pedantic + nursery at warn level — treat all warnings as errors in CI
 
 ## Adding an experiment

@@ -70,12 +70,13 @@ fn main() {
     );
 
     let ended = session.is_ended();
+    let no_actions = session.available_actions().is_empty();
     check_bool(
         &format!(
-            "reached ending or exhausted (ended={ended}, turns={turns_taken}, nodes={})",
+            "terminated: ended={ended}, no_actions={no_actions}, turns={turns_taken}, nodes={}",
             visited_nodes.len()
         ),
-        true,
+        ended || no_actions,
     );
 
     exit("exp005_autoplay_coverage");

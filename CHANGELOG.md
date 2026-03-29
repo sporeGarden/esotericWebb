@@ -2,6 +2,35 @@
 
 All notable changes to Esoteric Webb are documented here.
 
+## V5.1 — Audit Evolution (March 29, 2026)
+
+- **Zero `#[allow]` in production code** — all suppression attributes migrated to
+  `#[expect(…, reason = "…")]` with mandatory justification; dead lints removed
+  entirely rather than converted (e.g. `handle_tools_list` no longer triggers
+  `too_many_lines`, `validation_experiments.rs` narrowed to `expect_used` only)
+- **Smart module refactoring** — `content/mod.rs` (967 LOC) decomposed into
+  `content/types.rs` (data model) + `content/mod.rs` (873, load/validate/scaffold);
+  `ipc/bridge.rs` (943 LOC) decomposed into `ipc/bridge/mod.rs` (565, core +
+  resilience + tests) + `ipc/bridge/domains.rs` (396, domain delegations); both
+  well under 1000-line limit with growth headroom for new domains
+- **Hardcoded port elimination** — experiment ports (`exp004`, `validation_experiments`)
+  evolved from hardcoded values to dynamic OS-assigned ephemeral ports via
+  `allocate_port()` helper (bind to `127.0.0.1:0`), preventing parallel test collisions
+- **Tautological assertion fixes** — `exp005` autoplay termination check and `exp002`
+  discovery registry check corrected from always-true to genuine validation logic
+- **TCP E2E test suite** — 5 new TCP E2E tests (`health`, `identity`, `capabilities`,
+  `multiple_requests`, `session_lifecycle`) + capability registry cross-validation test
+  ensuring all methods in `capability_registry.toml` dispatch without "method not found"
+- **Listener signature evolution** — `handle_tcp_connection` and `handle_connection`
+  evolved to accept references (`&TcpStream`, `&UnixStream`) instead of owned values,
+  eliminating `needless_pass_by_value` lint at the source rather than suppressing
+- **Documentation alignment** — `README.md`, `VISION_AND_EVOLUTION.md`,
+  `CREATOR_PROFILES_AND_SYSTEM_DESIGN.md`, `CONTRIBUTING.md`, `experiments/README.md`
+  updated to reflect V5+ state (test counts, domain counts, lint policy, dates)
+- **`PAPER_REVIEW_QUEUE.md` created** — ecosystem compliance document distinguishing
+  Webb's structural validation methodology from numerical baseline springs
+- 335+ tests, all 5 quality gates clean
+
 ## V5 — Deep Debt Resolution + Ecosystem Evolution (March 25, 2026)
 
 - **Coverage gate: 90.84% lines** — enforced via `cargo llvm-cov --fail-under-lines 90`;

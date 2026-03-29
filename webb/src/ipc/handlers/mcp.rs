@@ -20,7 +20,6 @@ use super::session::{
 };
 
 /// `tools.list` — MCP tool descriptors with JSON Schema `input_schema`.
-#[allow(clippy::too_many_lines, reason = "declarative JSON Schema catalog")]
 pub(super) fn handle_tools_list() -> Value {
     serde_json::json!({
         "tools": mcp_tool_descriptors()
@@ -160,7 +159,7 @@ fn mcp_tool_descriptors() -> Value {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[expect(clippy::unwrap_used, clippy::expect_used, reason = "test code")]
 mod tests {
     use super::*;
     use std::sync::{Arc, Mutex};

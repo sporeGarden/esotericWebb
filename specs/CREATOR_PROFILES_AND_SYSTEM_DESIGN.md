@@ -216,7 +216,7 @@ is done.
 | AI-generated narration within constraints | AI primal IPC with personality certs | Degradation stub (GAP-003) |
 | Rendered game UI | Visualization primal scene rendering | Degradation stub (GAP-002) |
 | Session provenance and replay | Provenance primal vertex DAG | Local fallback (GAP-004) |
-| Live BYOB composition | `esotericwebb serve` with full primal stack | Deploy graph defined, not yet live |
+| Live BYOB composition | `esotericwebb serve` with full primal stack | Wired (V4+), degrades when primals absent |
 | Internal voice interjections | Game science primal voice_check + AI primal narration | IPC stub, science validated in ludoSpring exp069-070 |
 | Multi-plane transitions | Plane transition nodes in narrative graph | Narrative engine supports; live mechanics via game science primal |
 | Transparent/hidden dice modes | RulesetCert per plane | YAML format defined; runtime evaluation via game science primal |

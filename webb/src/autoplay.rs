@@ -177,7 +177,7 @@ pub fn run(session: &mut GameSession, config: &AutoplayConfig) -> Result<Autopla
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::too_many_lines)]
+#[expect(clippy::unwrap_used, clippy::too_many_lines, reason = "test code")]
 mod tests {
     use super::*;
     use crate::content::{ContentBundle, SceneContent, WorldMeta};

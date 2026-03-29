@@ -1,20 +1,20 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
-# Esoteric Webb V5 — Evolution Patterns and Ecosystem Learnings
+# Esoteric Webb V5.1 — Evolution Patterns and Ecosystem Learnings
 
-**Date:** March 25, 2026
+**Date:** March 29, 2026
 **Author:** ecoPrimals / sporeGarden
-**Foundation:** V1–V4 bootstrap through live primal composition; V5 deep debt resolution
-**Coverage:** 90.84% lines (329 tests)
+**Foundation:** V1–V4 bootstrap through live primal composition; V5 deep debt resolution; V5.1 audit evolution
+**Coverage:** 90.84% lines (335 tests)
 
 ---
 
 ## What This Is
 
 This document captures patterns, discoveries, and architectural learnings from
-Esoteric Webb's evolution from V1 (bootstrap) through V5 (deep debt
-resolution). Webb is the first gen4 consumer in the ecoPrimals ecosystem —
-a CRPG substrate that composes primals via JSON-RPC IPC without importing
-any spring or primal Rust crates.
+Esoteric Webb's evolution from V1 (bootstrap) through V5.1 (audit evolution).
+Webb is the first gen4 consumer in the ecoPrimals ecosystem — a CRPG substrate
+that composes primals via JSON-RPC IPC without importing any spring or primal
+Rust crate.
 
 These learnings feed back to the ecosystem via wateringHole handoffs and are
 relevant to any team building primal consumers or evolving primal producers.
@@ -72,25 +72,33 @@ benefit from canonical name modules rather than scattered constants.
 
 ## Pattern 3: Smart Module Refactoring (Not Just Splitting)
 
-**Problem.** `session.rs` grew to 1192 lines (violating 1000-line quality
-gate). Naive splitting would scatter related logic across files without
-improving cohesion.
+**Problem.** Modules approaching 1000-line quality gates need restructuring
+without sacrificing cohesion.
 
 **Solution.** Identify *semantic boundaries* within the module:
-1. **Data structures** → `session/types.rs` (ActionRecord, ActionKind,
-   AvailableAction, GameStateSnapshot, NarrationContext, PrimalEnrichment,
-   VoiceEnrichment)
-2. **Primal composition pipeline** → `session/enrichment.rs` (enrich_action,
-   push_scene_to_ui, complete_provenance_if_ended, record_provenance_vertex)
-3. **Core session logic** → `session/mod.rs` (act, state management,
-   initialization, serialization)
 
-**Key insight.** Make fields `pub(crate)` to allow submodules to operate on
-shared state while keeping the public API unchanged. The refactoring is
-invisible to external consumers.
+**V5 — session.rs (1192 → 3 modules):**
+1. **Data structures** → `session/types.rs`
+2. **Primal composition pipeline** → `session/enrichment.rs`
+3. **Core session logic** → `session/mod.rs`
 
-**Metric.** 1192 lines → 891 + 178 + 15 (types) = 1084 total across three
-files, each under 1000 lines.
+**V5.1 — content/mod.rs (967 → 2 modules):**
+1. **Data model** → `content/types.rs` (109 LOC — pure serde structs)
+2. **Load/validate/scaffold** → `content/mod.rs` (873 LOC)
+
+**V5.1 — bridge.rs (943 → directory module):**
+1. **Core struct + resilience + call helpers** → `bridge/mod.rs` (565 LOC)
+2. **Domain delegations** → `bridge/domains.rs` (396 LOC)
+
+**Key insight.** `bridge/domains.rs` is exclusively 1-3 line delegation methods
+that map to generic call helpers. This boundary is *functional*: new primal
+domains add lines only to `domains.rs`, never growing the core infrastructure.
+Private methods in the parent module are accessible to child modules in Rust,
+so no visibility changes were needed.
+
+**Metric.** `pub(crate)` fields allow submodules to operate on shared state
+while keeping the public API unchanged. The refactoring is invisible to
+external consumers.
 
 ---
 
@@ -108,8 +116,7 @@ deployment flexibility.
 
 **Ecosystem alignment.** Mirrors primalSpring's transport negotiation. TCP is
 the default for cross-platform portability; UDS is the performance path for
-biomeOS-native deployments. The `ESOTERICWEBB_TRANSPORT_PRIORITY` env var
-allows runtime override.
+biomeOS-native deployments.
 
 ---
 
@@ -147,20 +154,65 @@ without catching bugs.
 
 **Solution.** Target specific uncovered *behavior paths*:
 - Content validation edge cases (missing NPC, empty compound predicates)
-- Launcher pure functions (topological sort cycles, diamonds, TOML parsing)
-- Discovery metadata ingestion (missing fields, bad TOML, unknown domains)
-- Client fallback chains (capabilities method negotiation, health liveness)
-- Enrichment pipeline paths (standalone bridge, provenance with history)
-- TCP listener protocol handling (valid JSON-RPC, parse errors, empty lines)
+- Topological sort edge cases (diamond dependencies, missing deps, cycles)
+- Metadata ingestion edge cases (missing fields, bad TOML)
+- Protocol handling (TCP listener parse errors, empty lines)
 
 **Metric.** 84.42% → 90.84% lines, achieved by adding 149 targeted tests
-(267 → 316 unit tests) that exercise previously untested code paths, not
-by adding trivial assertions.
+that exercise previously untested code paths, not by adding trivial assertions.
 
-**Constraint.** `unsafe_code = "forbid"` in Rust 2024 edition means
-`std::env::set_var()` and `std::env::remove_var()` are unavailable in tests.
-This limits env-var-dependent test coverage. Design code so env-var paths
-have pure-function alternatives that can be unit-tested independently.
+**Constraint.** Rust 2024's `unsafe` classification of `std::env::set_var()`
+means env-var-dependent code paths cannot be directly unit-tested under
+`#![forbid(unsafe_code)]`. Design code so env-var paths have pure-function
+alternatives.
+
+---
+
+## Pattern 7: `#[expect]` Over `#[allow]` (V5.1)
+
+**Problem.** `#[allow(clippy::some_lint)]` silently suppresses warnings
+forever — if a refactoring fixes the underlying issue, the dead suppression
+persists as noise.
+
+**Solution.** Migrate all lint suppressions to `#[expect(clippy::some_lint,
+reason = "justification")]`. This:
+- **Fires a warning** if the lint is no longer triggered (dead suppressions
+  surface automatically)
+- **Requires a reason string**, documenting why the suppression is justified
+- Narrows scope precisely (e.g. `expect_used` only, not `unwrap_used`, when
+  the test module uses `.expect()` but not `.unwrap()`)
+
+**Key insight.** During migration, several `#[allow]` attributes were found
+to be dead. For example, `handle_tools_list` had `#[allow(too_many_lines)]`
+but the function was 5 lines — the lint never fired. Rather than converting
+dead suppressions to `#[expect]` (which would trigger unfulfilled-expectation
+warnings), remove them entirely.
+
+**Better than suppressing.** In some cases, refactoring eliminates the lint
+at the source. `handle_tcp_connection` had `#[allow(needless_pass_by_value)]`
+because it took owned `TcpStream`. Refactoring the signature to accept
+`&TcpStream` eliminates the lint without any suppression attribute.
+
+---
+
+## Pattern 8: Dynamic Port Allocation in Tests (V5.1)
+
+**Problem.** Hardcoded ports in experiment binaries and integration tests
+cause spurious failures during parallel test execution.
+
+**Solution.** Bind to `127.0.0.1:0` and let the OS assign an ephemeral port:
+
+```rust
+fn allocate_port() -> u16 {
+    std::net::TcpListener::bind("127.0.0.1:0")
+        .expect("bind ephemeral port")
+        .local_addr()
+        .expect("local addr")
+        .port()
+}
+```
+
+This pattern eliminates port collisions without configuration.
 
 ---
 
@@ -179,7 +231,7 @@ have pure-function alternatives that can be unit-tested independently.
 
 ---
 
-## Architecture Summary (V5)
+## Architecture Summary (V5.1)
 
 ```
 Springs (science + experiments)  →  produce  →  primals (genomeBin/ecoBin)
@@ -195,5 +247,5 @@ Springs (science + experiments)  →  produce  →  primals (genomeBin/ecoBin)
                               All phases degrade gracefully → gameplay never blocked
 ```
 
-35 Rust files, ~12.5k LOC, 329 tests, 90.84% coverage, zero unsafe, zero C
+37 Rust files, ~12.5k LOC, 335 tests, 90.84% coverage, zero unsafe, zero C
 dependencies, pure Rust edition 2024.

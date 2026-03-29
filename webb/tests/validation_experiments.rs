@@ -5,10 +5,17 @@
 //! `plasmidBin/`. They are **skipped** when the required binary is
 //! not available — CI without binaries still passes.
 
-#![allow(clippy::unwrap_used, clippy::expect_used)]
+#![expect(clippy::expect_used, reason = "integration test code")]
 
 use esoteric_webb::ipc::client::PrimalClient;
 use esoteric_webb::ipc::launcher::{PrimalLauncher, discover_binary};
+
+fn allocate_port() -> u16 {
+    std::net::TcpListener::bind("127.0.0.1:0")
+        .and_then(|l| l.local_addr())
+        .map(|a| a.port())
+        .unwrap_or(19401)
+}
 
 /// exp008: Live round-trip with rhizoCrypt from plasmidBin.
 ///
@@ -27,7 +34,7 @@ fn exp008_rhizocrypt_live_round_trip() {
     }
 
     let mut launcher = PrimalLauncher::new();
-    let port = 19401; // high port to avoid conflicts
+    let port = allocate_port();
 
     let sp = match launcher.spawn("rhizocrypt", port, "dag") {
         Ok(sp) => sp,

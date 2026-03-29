@@ -11,12 +11,14 @@
 //!
 //! Discovery strategy:
 //!
-//! **UDS** (5-tier, per wateringHole `UNIVERSAL_IPC_STANDARD_V3`):
+//! **UDS** (4-tier implemented, per wateringHole `UNIVERSAL_IPC_STANDARD_V3`):
 //! 1. `$BIOMEOS_SOCKET_DIR/<domain>.sock`
 //! 2. `$XDG_RUNTIME_DIR/biomeos/<domain>.sock`
 //! 3. `/run/user/<uid>/biomeos/<domain>.sock`
 //! 4. `/tmp/biomeos-<uid>/<domain>.sock`
-//! 5. Songbird `discovery.query` (if available)
+//!
+//! Tier 5 (Songbird `discovery.query`) is planned but not yet implemented
+//! — see `EVOLUTION_GAPS.md` GAP-006.
 //!
 //! **TCP** (checked first, highest priority):
 //! 1. `<PRIMAL>_ADDRESS` env var (e.g. `RHIZOCRYPT_ADDRESS=127.0.0.1:9401`)
@@ -317,7 +319,7 @@ fn uid_from_env() -> Option<u32> {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[expect(clippy::unwrap_used, reason = "test code")]
 mod tests {
     use super::*;
 

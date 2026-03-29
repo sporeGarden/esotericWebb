@@ -284,7 +284,7 @@ mod tests {
     };
     use std::collections::HashMap;
 
-    #[allow(clippy::too_many_lines)]
+    #[expect(clippy::too_many_lines, reason = "test fixture construction")]
     fn test_content() -> ContentBundle {
         let mut nodes = HashMap::new();
         let mut scenes = HashMap::new();

@@ -8,8 +8,7 @@ Operational documentation, guides, and evolution handoffs for Webb.
 ```
 wateringHole/
 ├── README.md           ← you are here
-├── handoffs/           ← active evolution handoffs to springs
-│   └── archive/        ← completed handoffs (dated, never deleted)
+├── handoffs/           ← evolution handoffs to springs (dated, kept as fossil record)
 ```
 
 ## How handoffs work
@@ -17,8 +16,8 @@ wateringHole/
 1. Webb exercises a primal composition and discovers a gap
 2. The gap is logged in `EVOLUTION_GAPS.md` with evidence
 3. When the gap is actionable, a handoff document is written in `handoffs/`
-4. The owning spring picks up the handoff, evolves, and redeploys
-5. The handoff moves to `handoffs/archive/` with a completion date
+4. A corresponding handoff is filed at `ecoPrimals/infra/wateringHole/handoffs/`
+5. The owning spring picks up the handoff, evolves, and redeploys
 6. Webb absorbs the new capability via `plasmidBin/` discovery
 
 ## Handoff format
@@ -42,9 +41,10 @@ wateringHole/
 | `ESOTERICWEBB_V3_ECOSYSTEM_ABSORPTION_HANDOFF_MAR24_2026.md` | Outbound | V3 IPC handler split, MCP, resilience patterns |
 | `ESOTERICWEBB_V4_LIVE_PRIMAL_COMPOSITION_HANDOFF_MAR24_2026.md` | Outbound | V4 bridge methods, composition pipeline, provenance lifecycle |
 | `ESOTERICWEBB_V4_ECOSYSTEM_REVIEW_ABSORPTION_HANDOFF_MAR24_2026.md` | Inbound | Absorption opportunities from 8 sibling springs |
+| `ESOTERICWEBB_V51_AUDIT_EVOLUTION_HANDOFF_MAR29_2026.md` | Outbound | V5.1 module refactoring, lint evolution, TCP E2E, primal team feedback |
 
-A corresponding ecosystem handoff lives at:
-`ecoPrimals/wateringHole/handoffs/ESOTERICWEBB_V4_GEN4_FIRST_CONSUMER_HANDOFF_MAR24_2026.md`
+Corresponding ecosystem handoffs live at:
+`ecoPrimals/infra/wateringHole/handoffs/ESOTERICWEBB_V51_AUDIT_EVOLUTION_PRIMAL_TEAM_HANDOFF_MAR29_2026.md`
 
 ## Guides
 

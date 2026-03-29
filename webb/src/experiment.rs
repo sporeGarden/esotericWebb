@@ -194,7 +194,7 @@ fn json_mode() -> bool {
 }
 
 #[cfg(test)]
-#[allow(clippy::significant_drop_tightening)]
+#[expect(clippy::significant_drop_tightening, reason = "test mutex patterns")]
 mod tests {
     use super::*;
 

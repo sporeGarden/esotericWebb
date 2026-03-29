@@ -373,7 +373,7 @@ fn await_tcp_ready(addr: &str) -> Result<(), String> {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[expect(clippy::unwrap_used, reason = "test code")]
 mod tests {
     use super::*;
 
