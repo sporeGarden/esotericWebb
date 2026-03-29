@@ -34,6 +34,8 @@ of spring evolution.
 ## Architecture
 
 - **Main crate**: `esoteric-webb` (library + UniBin binary)
+- **Niche module**: `niche.rs` — self-knowledge (identity, capabilities, socket
+  resolution, family ID, neural-api discovery). Absorbed from ludoSpring V32 pattern.
 - **IPC**: JSON-RPC 2.0 over TCP and Unix domain sockets (newline-delimited)
 - **Transport**: TCP (default, platform-agnostic) + UDS; `connect_transport()` parses `unix:`, `tcp:`, and implicit formats; XDG-compliant socket path resolution, capability-based discovery
 - **No cross-primal Rust imports**: all coordination via runtime IPC

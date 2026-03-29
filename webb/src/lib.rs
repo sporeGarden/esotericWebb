@@ -33,5 +33,6 @@ pub mod director;
 pub mod experiment;
 pub mod ipc;
 pub mod narrative;
+pub mod niche;
 pub mod session;
 pub mod state;

@@ -3,9 +3,9 @@
 | | |
 |---|---|
 | **Version** | V5.1 |
-| **Tests** | 335 (316 unit + 18 E2E + 1 validation) |
+| **Tests** | 341 (322 unit + 18 E2E + 1 validation) |
 | **Coverage** | 90.84% lines (`cargo llvm-cov`) |
-| **Rust files** | 37 (~12.5k LOC) |
+| **Rust files** | 38 (~12.8k LOC) |
 | **Experiments** | 5 (exp001–exp005) |
 | **MSRV** | 1.87 (edition 2024) |
 | **License** | AGPL-3.0 + ORC + CC-BY-SA 4.0 |

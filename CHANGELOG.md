@@ -2,7 +2,27 @@
 
 All notable changes to Esoteric Webb are documented here.
 
-## V5.1 — Audit Evolution (March 29, 2026)
+## V5.1 — Audit Evolution + Use-Case Gap Pass (March 29, 2026)
+
+### Use-Case Gaps (ecosystem review)
+
+- **`niche.rs` self-knowledge module** — absorbed from ludoSpring V32 pattern;
+  centralizes `NICHE_NAME`, `NICHE_DOMAIN`, `CAPABILITIES` array, `family_id()`,
+  `socket_dirs()`, `resolve_server_socket()`, and `resolve_neural_api_socket()`;
+  `listener.rs::socket_path()` now delegates to niche; 6 tests verify identity,
+  capability namespacing, and socket resolution
+- **Deploy fragment evolved** — `deploy/esotericwebb.toml` added nestgate,
+  toadstool, songbird, beardog to optional dependencies (all bridge-ready domains)
+- **5 new evolution gaps filed** (GAP-016 through GAP-020):
+  - GAP-016: ludoSpring UDS-only transport blocks container composition (high)
+  - GAP-017: biomeOS neural-api fails to start in benchScale (critical)
+  - GAP-018: neuralAPI executors not exposed on JSON-RPC (high)
+  - GAP-019: beardog crypto domain not wired into Webb bridge (medium, self-owned)
+  - GAP-020: Deploy graph format divergence (low)
+- **Handoffs updated** — use-case gap evidence filed to both local wateringHole
+  and `ecoPrimals/infra/wateringHole/` with prioritized action items per team
+
+### Audit evolution (code quality)
 
 - **Zero `#[allow]` in production code** — all suppression attributes migrated to
   `#[expect(…, reason = "…")]` with mandatory justification; dead lints removed
@@ -24,12 +44,9 @@ All notable changes to Esoteric Webb are documented here.
 - **Listener signature evolution** — `handle_tcp_connection` and `handle_connection`
   evolved to accept references (`&TcpStream`, `&UnixStream`) instead of owned values,
   eliminating `needless_pass_by_value` lint at the source rather than suppressing
-- **Documentation alignment** — `README.md`, `VISION_AND_EVOLUTION.md`,
-  `CREATOR_PROFILES_AND_SYSTEM_DESIGN.md`, `CONTRIBUTING.md`, `experiments/README.md`
-  updated to reflect V5+ state (test counts, domain counts, lint policy, dates)
-- **`PAPER_REVIEW_QUEUE.md` created** — ecosystem compliance document distinguishing
-  Webb's structural validation methodology from numerical baseline springs
-- 335+ tests, all 5 quality gates clean
+- **Documentation alignment** — all root docs, specs, CHANGELOG, README,
+  CONTRIBUTING aligned to current state
+- 341 tests, all 5 quality gates clean
 
 ## V5 — Deep Debt Resolution + Ecosystem Evolution (March 25, 2026)
 

@@ -17,13 +17,13 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use super::envelope::JsonRpcRequest;
 use super::handlers::{SharedSession, dispatch_with_session};
 
-/// Resolve the XDG-compliant socket path for Webb.
+/// Resolve the socket path for Webb's IPC server.
+///
+/// Delegates to [`crate::niche::resolve_server_socket`] — the single
+/// source of truth for Webb's identity and socket naming.
 #[must_use]
 pub fn socket_path() -> PathBuf {
-    let runtime_dir = std::env::var("XDG_RUNTIME_DIR").unwrap_or_else(|_| "/tmp".to_owned());
-    Path::new(&runtime_dir)
-        .join("biomeos")
-        .join("esotericwebb.sock")
+    crate::niche::resolve_server_socket()
 }
 
 /// Start the Webb IPC server on a Unix domain socket.

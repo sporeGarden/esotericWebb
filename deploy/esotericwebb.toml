@@ -17,6 +17,10 @@ optional_dependencies = [
     "rhizocrypt",
     "loamspine",
     "sweetgrass",
+    "nestgate",
+    "toadstool",
+    "songbird",
+    "beardog",
 ]
 
 capabilities = [

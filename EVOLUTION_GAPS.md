@@ -217,6 +217,101 @@ Webb exercises primal composition -> discovers gap in a primal capability
 - **Handoff**: biomeOS/primalSpring for deployment tooling.
 - **Status**: open
 
+### GAP-016: ludoSpring UDS-only transport blocks container composition
+
+- **Primal**: game science (`game.*`)
+- **Spring (producer)**: ludoSpring
+- **Severity**: high
+- **Evidence**: Webb is TCP-first for platform portability (containers,
+  Graphene, benchScale topologies). ludoSpring V32 only listens on UDS.
+  In a benchScale tower-2node topology, Webb cannot connect to ludoSpring
+  via TCP. The "play a storytelling session" use case fails at transport
+  before method dispatch.
+- **Expected**: ludoSpring exposes `--listen addr:port` (UniBin v1.2) so
+  Webb can connect via TCP in containerized and cross-host deployments.
+  UDS remains for co-located same-host scenarios.
+- **Workaround**: Webb degrades all `game.*` calls to mechanical defaults.
+  The storytelling composition runs without game science enrichment.
+- **Handoff**: `ESOTERICWEBB_V51_AUDIT_EVOLUTION_HANDOFF_MAR29_2026.md`
+- **Status**: open
+
+### GAP-017: biomeOS neural-api fails to start in benchScale
+
+- **Primal**: neural-api (biomeOS orchestration layer)
+- **Spring (producer)**: biomeOS
+- **Severity**: critical
+- **Evidence**: In a benchScale `tower-2node` live run, beardog and songbird
+  come up `LIVE`, but biomeOS `neural-api` is `ZOMBIE` (fails health check
+  after startup). This blocks the "biomeOS-orchestrated composition" use case
+  where graphs are submitted to neural-api and routed to primals. Webb cannot
+  test graph-based orchestration until neural-api is healthy.
+- **Expected**: biomeOS neural-api starts healthy in benchScale topologies
+  and responds to `health.liveness` within the configured timeout.
+- **Workaround**: Webb composes directly to primals via PrimalBridge,
+  bypassing biomeOS orchestration entirely. All capability routing is
+  done by Webb's own discovery + bridge.
+- **Handoff**: `ESOTERICWEBB_V51_AUDIT_EVOLUTION_HANDOFF_MAR29_2026.md`
+- **Status**: open
+
+### GAP-018: neuralAPI executors not exposed on JSON-RPC
+
+- **Primal**: neural-api (`ConditionalDag`, `Pipeline`, `ContinuousExecutor`)
+- **Spring (producer)**: biomeOS
+- **Severity**: high
+- **Evidence**: Webb's storytelling loop is naturally a continuous execution
+  graph: player input → narrate → evaluate flow → push scene → wait for next
+  input → repeat. biomeOS has `ConditionalDag`, `Pipeline`, and
+  `ContinuousExecutor` in the codebase but they are not exposed as JSON-RPC
+  methods. Webb cannot submit a storytelling graph for orchestrated execution.
+  The `PathwayLearner` (learns from execution traces to optimize routing) is
+  also internal-only. Without these, "E2E neuralAPI workflow" means only basic
+  `graph.execute` → `graph.status` → `graph.result` for simple DAGs.
+- **Expected**: `ConditionalDag` execution, `Pipeline` chaining, and
+  `ContinuousExecutor` sessions available via JSON-RPC methods. PathwayLearner
+  exposes `pathway.learn` and `pathway.suggest` for adaptive optimization.
+- **Workaround**: Webb drives its own composition loop via PrimalBridge
+  sequential calls. No graph-based orchestration.
+- **Handoff**: `ESOTERICWEBB_V51_AUDIT_EVOLUTION_HANDOFF_MAR29_2026.md`
+- **Status**: open
+
+### GAP-019: beardog crypto domain not wired into Webb bridge
+
+- **Primal**: crypto (`crypto.sign`, `crypto.hash`, `crypto.verify`)
+- **Spring (producer)**: esotericWebb (self) + beardog
+- **Severity**: medium
+- **Evidence**: Webb's "signed provenance" use case requires cryptographic
+  signing of DAG vertices and session commits. beardog V4 has real
+  cryptography (Ed25519, SHA-256, post-quantum Kyber/Dilithium, HSM
+  abstraction) but Webb's PrimalBridge has no crypto domain methods.
+  The Tower domain has `crypto.sign`, `crypto.hash`, `discovery.query`
+  listed in CONTEXT.md but no bridge delegations to exercise them.
+- **Expected**: Webb wires `crypto.sign` for provenance vertex signing,
+  `crypto.verify` for integrity checks on loaded content packs, and
+  `crypto.hash` for DAG merkle root computation. These feed into the
+  provenance trio: signed vertices → rhizoCrypt DAG → loamSpine lineage.
+- **Workaround**: Provenance vertices are unsigned. Content integrity is
+  trust-on-first-use.
+- **Handoff**: Self-owned (Webb bridge evolution). beardog primal is ready.
+- **Status**: open
+
+### GAP-020: Deploy graph format divergence (TOML fragments vs biomeOS JSON)
+
+- **Primal**: deployment infrastructure
+- **Spring (producer)**: primalSpring / biomeOS
+- **Severity**: low
+- **Evidence**: Webb ships `deploy/esotericwebb.toml` and `graphs/*.toml`
+  composition fragments. biomeOS uses JSON graph definitions internally.
+  primalSpring reads TOML fragments. Two conventions exist side by side
+  with no formal schema or cross-validation. When biomeOS ingests a
+  composition graph, the format translation is opaque.
+- **Expected**: Ecosystem-wide deploy fragment schema (TOML canonical,
+  JSON derived) with validation tooling. `primalSpring validate-graph`
+  checks a composition before deployment.
+- **Workaround**: Webb maintains TOML fragments per wateringHole convention.
+  Manual verification against primalSpring expectations.
+- **Handoff**: primalSpring / wateringHole for schema standardization.
+- **Status**: open
+
 ---
 
 ## Absorbed gaps

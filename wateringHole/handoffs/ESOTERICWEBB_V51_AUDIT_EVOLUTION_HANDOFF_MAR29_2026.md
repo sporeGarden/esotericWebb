@@ -1,10 +1,10 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
-# HANDOFF: Esoteric Webb V5.1 — Audit Evolution, Module Refactoring, Primal Feedback
+# HANDOFF: Esoteric Webb V5.1 — Use-Case Gaps, Audit Evolution, Primal Feedback
 
-- **Date**: 2026-03-29
+- **Date**: 2026-03-29 (updated: use-case gap pass)
 - **Source**: esotericWebb V5.1 (sporeGarden / ecoPrimals / gardens)
 - **Audience**: All primal teams, all spring teams, ecosystem coordination
-- **Type**: Evolution feedback + code quality patterns + primal-specific requests
+- **Type**: Use-case failure evidence + evolution feedback + code quality patterns
 
 ---
 
@@ -59,6 +59,62 @@ zero `#[allow]` in production, zero TODO/FIXME, zero unsafe.
 7. All root docs, specs, CHANGELOG, README, CONTRIBUTING aligned to V5.1 state
 8. `PAPER_REVIEW_QUEUE.md` created (ecosystem compliance)
 9. experiments/README date corrected
+
+---
+
+## Use-Case Gaps (Spring Validation Gaps → Primal Debt)
+
+Webb is the use-case layer. When a composition doesn't work, that's a spring
+validation gap. Spring validation gaps find primal debt. These gaps were
+discovered by attempting real compositions against live primals in benchScale
+topologies and by analyzing the ecosystem codebase.
+
+### GAP-016: ludoSpring UDS-only transport blocks container composition
+
+Webb → ludoSpring fails in containers and benchScale. Webb is TCP-first
+(UniBin v1.2). ludoSpring V32 only listens on UDS. The "play a storytelling
+session" use case fails at transport before method dispatch.
+
+**Severity:** high — blocks all `game.*` composition in non-local deployments.
+
+**Action for ludoSpring team:** Implement `--listen addr:port` (UniBin v1.2 TCP
+listener). Webb, beardog, songbird, and all springs in benchScale already
+support TCP. ludoSpring is the last holdout.
+
+### GAP-017: biomeOS neural-api fails to start in benchScale
+
+In benchScale `tower-2node`, beardog and songbird come up `LIVE`, biomeOS
+`neural-api` is `ZOMBIE`. This blocks all graph-based orchestration use cases.
+Webb cannot test composition graphs routed through neural-api.
+
+**Severity:** critical — blocks the entire "biomeOS orchestrates primals" use case.
+
+**Action for biomeOS team:** Investigate neural-api startup failure in Docker.
+The ZOMBIE status means it started but failed health check. Likely a socket
+bind, dependency, or configuration issue in the container environment.
+
+### GAP-018: neuralAPI executors not on JSON-RPC
+
+Webb's storytelling loop is a continuous execution graph. biomeOS has
+`ConditionalDag`, `Pipeline`, `ContinuousExecutor`, and `PathwayLearner`
+internally but none are exposed as JSON-RPC methods. Only basic
+`graph.execute` → `graph.status` → `graph.result` is available.
+
+**Severity:** high — blocks adaptive/continuous/pipeline compositions.
+
+**Action for biomeOS team:** Expose `ContinuousExecutor` session management,
+`ConditionalDag` branching, `Pipeline` chaining, and `PathwayLearner`
+learn/suggest on JSON-RPC. These are the gates to "E2E neuralAPI workflows."
+
+### GAP-020: Deploy graph format divergence
+
+Webb ships TOML fragments, biomeOS uses JSON graph definitions internally.
+No formal schema or cross-validation tooling exists.
+
+**Severity:** low — currently manual alignment works.
+
+**Action for primalSpring / wateringHole:** Define canonical deploy fragment
+schema. `primalSpring validate-graph` would catch mismatches before deployment.
 
 ---
 
@@ -117,16 +173,37 @@ queries so Webb can implement tier-5 discovery.
 
 ### ludoSpring (game science domain)
 
+**GAP-016 is the critical blocker.** Webb cannot compose with ludoSpring in
+any non-local environment because ludoSpring is UDS-only. All `game.*`
+enrichment degrades to mechanical defaults in benchScale, Docker, and
+cross-host topologies.
+
 **GAP-009 remains open.** Webb loads `rulesets/*.yaml` as opaque documents.
 No structural validation against ludoSpring's RulesetCert schema exists.
 
-**Request:** Publish RulesetCert JSON Schema or validation endpoint
-(`game.ruleset_validate`) so Webb can validate ruleset YAML at content
-authoring time.
+**Requests:**
+1. **TCP listener** (`--listen addr:port`, UniBin v1.2) — this is the P1 gate
+2. Publish RulesetCert JSON Schema or `game.ruleset_validate` endpoint
 
-### toadStool / nestGate / biomeOS
+### beardog (crypto domain)
+
+**GAP-019: self-owned.** Webb needs to wire `crypto.sign`, `crypto.verify`,
+and `crypto.hash` into PrimalBridge for signed provenance. beardog V4 is
+ready with Ed25519, SHA-256, post-quantum, HSM abstraction. No blocker on
+beardog's side.
+
+### toadStool / nestGate
 
 Bridge-ready, optional in deploy graphs. No new feedback from V5.1.
+
+### biomeOS
+
+**GAP-017 is the critical blocker.** neural-api doesn't start healthy in
+benchScale. Blocks all graph-based orchestration.
+
+**GAP-018 is the next gate.** Once neural-api is healthy, Webb needs
+`ContinuousExecutor`, `ConditionalDag`, `Pipeline`, and `PathwayLearner`
+on JSON-RPC to build real E2E neuralAPI workflows.
 
 **GAP-010 remains open.** plasmidBin deployment automation is the primary
 blocker for gen4 adoption — Webb can compose primals but cannot automatically
@@ -145,6 +222,10 @@ any primal producer or consumer:
 3. **Dynamic port allocation** — `bind("127.0.0.1:0")` in test infrastructure
 4. **Capability registry cross-validation** — test that iterates all registered
    methods and verifies dispatch
+5. **`niche.rs` self-knowledge** — centralized identity constants, capability
+   arrays, family-scoped socket resolution, neural-api discovery. Absorbed from
+   ludoSpring V32 pattern. Every composition and primal should have a single
+   niche module with no IPC dependencies.
 
 ---
 

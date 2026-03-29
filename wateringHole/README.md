@@ -41,7 +41,7 @@ wateringHole/
 | `ESOTERICWEBB_V3_ECOSYSTEM_ABSORPTION_HANDOFF_MAR24_2026.md` | Outbound | V3 IPC handler split, MCP, resilience patterns |
 | `ESOTERICWEBB_V4_LIVE_PRIMAL_COMPOSITION_HANDOFF_MAR24_2026.md` | Outbound | V4 bridge methods, composition pipeline, provenance lifecycle |
 | `ESOTERICWEBB_V4_ECOSYSTEM_REVIEW_ABSORPTION_HANDOFF_MAR24_2026.md` | Inbound | Absorption opportunities from 8 sibling springs |
-| `ESOTERICWEBB_V51_AUDIT_EVOLUTION_HANDOFF_MAR29_2026.md` | Outbound | V5.1 module refactoring, lint evolution, TCP E2E, primal team feedback |
+| `ESOTERICWEBB_V51_AUDIT_EVOLUTION_HANDOFF_MAR29_2026.md` | Outbound | V5.1 use-case gaps (GAP-016–020), niche.rs, audit evolution, primal team feedback |
 
 Corresponding ecosystem handoffs live at:
 `ecoPrimals/infra/wateringHole/handoffs/ESOTERICWEBB_V51_AUDIT_EVOLUTION_PRIMAL_TEAM_HANDOFF_MAR29_2026.md`
