@@ -58,33 +58,30 @@ Session: `session.start`, `session.state`, `session.actions`,
 
 MCP: `tools.list`, `tools.call`
 
-## Consumed primal capabilities (V5.1 — live wired)
+## Consumed primal capabilities (V6 — self-composed)
 
-Game science: `game.evaluate_flow`, `game.engagement`,
-`game.difficulty_adjustment`, `game.npc_dialogue`, `game.narrate_action`,
-`game.voice_check`, `game.push_scene`, `game.begin_session`,
-`game.record_action`, `game.complete_session`, `game.query_vertices`,
-`game.mint_certificate`
+AI (Squirrel via biomeOS): `ai.query`, `ai.suggest`, `ai.analyze`
 
-AI: `ai.chat`, `ai.inference`, `ai.summarize`
+Visualization (petalTongue): `visualization.render.scene`, `interaction.poll`
 
-Visualization: `visualization.render.scene`, `ui.render`,
-`interaction.subscribe`, `interaction.poll`
+Compute (ToadStool): `compute.dispatch.submit`
 
-DAG: `dag.session.create`, `dag.event.append`, `dag.frontier.get`,
+Storage (NestGate): `storage.store`, `storage.retrieve`
+
+DAG (rhizoCrypt): `dag.session.create`, `dag.event.append`, `dag.frontier.get`,
 `dag.merkle.root`, `dag.session.complete`, `dag.query.vertices`
 
-Lineage: `certificate.mint`
+Lineage (LoamSpine): `certificate.mint`
 
-Provenance: `provenance.session_create`, `provenance.vertex_append`,
-`provenance.vertex_query`, `certificate.query`, `attribution.record`
+## Local science (absorbed, no IPC)
 
-Tower: `crypto.sign`, `crypto.hash`, `discovery.query`
+Flow evaluation, engagement metrics, dynamic difficulty adjustment — pure math
+absorbed from ludoSpring patterns into `science/` module. When a game-science
+primal emerges, these can switch from local to IPC (GAP-021).
 
-All game science, AI, visualization, and DAG capabilities are wired into
-`GameSession::act()` via `PrimalBridge` with graceful degradation. Each
-action runs the full composition pipeline: narrate → dialogue → flow →
-scene push → provenance. Absent primals degrade to mechanical defaults.
+All primal calls go through `PrimalBridge` with graceful degradation. The
+enrichment pipeline: AI narration → NPC dialogue → local flow → scene push →
+provenance. Absent primals degrade to mechanical defaults. No spring dependencies.
 
 ## Build
 

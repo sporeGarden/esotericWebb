@@ -5,16 +5,30 @@
 //! the generic call helpers in [`super`]. Keeping these delegations
 //! in their own file prevents the bridge module from growing beyond
 //! the 1000-line ecosystem limit as new domains are wired.
+//!
+//! ## Architecture (V6 — ludoSpring decomposition)
+//!
+//! Webb no longer routes through ludoSpring. All calls go to the
+//! underlying primals directly:
+//!
+//! - **AI domain** (Squirrel): narration, NPC dialogue, voice checks,
+//!   summarization — using biomeOS semantic methods (`ai.query`,
+//!   `ai.suggest`, `ai.analyze`).
+//! - **Visualization** (petalTongue): scene rendering, input polling.
+//! - **Compute** (ToadStool): GPU dispatch.
+//! - **Storage** (NestGate): key-value store.
+//! - **DAG** (rhizoCrypt): provenance, session lifecycle.
+//! - **Lineage** (LoamSpine): certificates.
+//!
+//! Game science (flow, engagement, DDA) is now local via `science/`.
 
 use crate::ipc::envelope::IpcError;
-use crate::ipc::ludospring::{
-    DdaResult, DialogueResponse, EngagementResult, FlowResult, METHOD_BEGIN_SESSION,
-    METHOD_COMPLETE_SESSION, METHOD_DIFFICULTY_ADJUSTMENT, METHOD_ENGAGEMENT, METHOD_EVALUATE_FLOW,
-    METHOD_NARRATE_ACTION, METHOD_NPC_DIALOGUE, METHOD_PUSH_SCENE, METHOD_VOICE_CHECK, VoiceNote,
-};
 use crate::ipc::petaltongue::{InputEvent, METHOD_INTERACTION_POLL, METHOD_RENDER_SCENE};
 use crate::ipc::primal_names::domain;
-use crate::ipc::squirrel::{ChatResponse, METHOD_AI_CHAT, METHOD_AI_SUMMARIZE};
+use crate::ipc::squirrel::{
+    ChatResponse, DialogueResponse, METHOD_AI_ANALYZE, METHOD_AI_QUERY, METHOD_AI_SUGGEST,
+    VoiceNote,
+};
 use crate::ipc::{
     METHOD_CERT_MINT, METHOD_COMPUTE_SUBMIT, METHOD_DAG_EVENT_APPEND, METHOD_DAG_FRONTIER_GET,
     METHOD_DAG_MERKLE_ROOT, METHOD_DAG_QUERY_VERTICES, METHOD_DAG_SESSION_COMPLETE,
@@ -26,7 +40,7 @@ use super::{PrimalBridge, degraded_summary_limit};
 impl PrimalBridge {
     // ── AI domain (Squirrel) ────────────────────────────────
 
-    /// Generate narration via the AI primal.
+    /// Generate narration via the AI primal (`ai.query`).
     ///
     /// Degrades to a placeholder if Squirrel is unavailable.
     ///
@@ -42,10 +56,10 @@ impl PrimalBridge {
             model: "none".to_owned(),
             tokens: 0,
         };
-        self.call_or_default(domain::AI, METHOD_AI_CHAT, params, default)
+        self.call_or_default(domain::AI, METHOD_AI_QUERY, params, default)
     }
 
-    /// Summarize context via the AI primal.
+    /// Summarize context via the AI primal (`ai.suggest`).
     ///
     /// # Errors
     ///
@@ -53,7 +67,7 @@ impl PrimalBridge {
     pub fn ai_summarize(&mut self, context: &str) -> Result<String, IpcError> {
         if self.has(domain::AI) {
             let params = serde_json::json!({ "text": context });
-            if let Ok(resp) = self.resilient_call(domain::AI, METHOD_AI_SUMMARIZE, params) {
+            if let Ok(resp) = self.resilient_call(domain::AI, METHOD_AI_SUGGEST, params) {
                 if let Some(serde_json::Value::String(text)) = resp.result {
                     return Ok(text);
                 }
@@ -63,7 +77,109 @@ impl PrimalBridge {
         Ok(format!("[degraded: summary unavailable] {truncated}..."))
     }
 
-    // ── Visualization domain (`PetalTongue`) ─────────────────
+    /// NPC dialogue via AI primal (`ai.query` with NPC personality context).
+    ///
+    /// Webb formats the NPC context into a prompt and calls Squirrel
+    /// directly. No ludoSpring mediation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IpcError`] if the call fails unexpectedly.
+    pub fn npc_dialogue(
+        &mut self,
+        params: &serde_json::Value,
+    ) -> Result<DialogueResponse, IpcError> {
+        if !self.has(domain::AI) {
+            return Ok(DialogueResponse {
+                text: "[AI primal unavailable — NPC dialogue degraded]".to_owned(),
+                voice_notes: Vec::new(),
+                passive_checks_fired: false,
+                degraded: true,
+            });
+        }
+
+        let npc_id = params
+            .get("npc_id")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("unknown");
+        let context = params
+            .get("context")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("");
+        let prompt =
+            format!("You are NPC '{npc_id}' in a CRPG. Respond in character.\nContext: {context}");
+
+        let query_params = serde_json::json!({
+            "messages": [{"role": "user", "content": prompt}],
+        });
+        match self.resilient_call(domain::AI, METHOD_AI_QUERY, query_params) {
+            Ok(resp) => {
+                if let Some(result) = resp.result {
+                    if let Ok(chat) = serde_json::from_value::<ChatResponse>(result) {
+                        return Ok(DialogueResponse {
+                            text: chat.text,
+                            voice_notes: Vec::new(),
+                            passive_checks_fired: false,
+                            degraded: false,
+                        });
+                    }
+                }
+                Ok(DialogueResponse {
+                    text: "[AI response could not be parsed]".to_owned(),
+                    voice_notes: Vec::new(),
+                    passive_checks_fired: false,
+                    degraded: true,
+                })
+            }
+            Err(_) => Ok(DialogueResponse {
+                text: "[AI primal unavailable — NPC dialogue degraded]".to_owned(),
+                voice_notes: Vec::new(),
+                passive_checks_fired: false,
+                degraded: true,
+            }),
+        }
+    }
+
+    /// Narrate an action via AI primal (`ai.suggest`).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IpcError`] if the call fails unexpectedly.
+    pub fn narrate_action(&mut self, params: &serde_json::Value) -> Result<ChatResponse, IpcError> {
+        let action = params
+            .get("action")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("unknown");
+        let outcome = params
+            .get("outcome")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("");
+
+        let suggest_params = serde_json::json!({
+            "text": format!("Narrate: {action}. Outcome: {outcome}"),
+        });
+        self.call_or_default(
+            domain::AI,
+            METHOD_AI_SUGGEST,
+            suggest_params,
+            ChatResponse {
+                text: "[AI primal unavailable — narration degraded]".to_owned(),
+                model: "none".to_owned(),
+                tokens: 0,
+            },
+        )
+    }
+
+    /// Internal voice check via AI primal (`ai.analyze`).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IpcError`] if the call fails unexpectedly.
+    pub fn voice_check(&mut self, params: &serde_json::Value) -> Result<Vec<VoiceNote>, IpcError> {
+        self.call_or_default(domain::AI, METHOD_AI_ANALYZE, params.clone(), Vec::new())
+    }
+
+    // ── Visualization domain (petalTongue) ─────────────────
 
     /// Push a scene payload for rendering.
     ///
@@ -74,7 +190,7 @@ impl PrimalBridge {
         self.call_fire(domain::VISUALIZATION, METHOD_RENDER_SCENE, scene.clone())
     }
 
-    /// Poll for player input events from `petalTongue`.
+    /// Poll for player input events from petalTongue.
     ///
     /// # Errors
     ///
@@ -88,7 +204,7 @@ impl PrimalBridge {
         )
     }
 
-    // ── Compute domain (`ToadStool`) ────────────────────────
+    // ── Compute domain (ToadStool) ────────────────────────
 
     /// Submit a compute task.
     ///
@@ -104,7 +220,7 @@ impl PrimalBridge {
         )
     }
 
-    // ── Storage domain (`NestGate`) ─────────────────────────
+    // ── Storage domain (NestGate) ─────────────────────────
 
     /// Store a value.
     ///
@@ -131,147 +247,6 @@ impl PrimalBridge {
             METHOD_STORAGE_RETRIEVE,
             serde_json::json!({ "key": key }),
         )
-    }
-
-    // ── Game science domain (`LudoSpring`) ──────────────────
-
-    /// Evaluate flow state.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`IpcError`] if the call fails unexpectedly.
-    pub fn evaluate_flow(&mut self, params: &serde_json::Value) -> Result<FlowResult, IpcError> {
-        self.call_or_default(
-            domain::GAME,
-            METHOD_EVALUATE_FLOW,
-            params.clone(),
-            FlowResult {
-                flow_score: 0.5,
-                in_flow: false,
-            },
-        )
-    }
-
-    /// Get engagement metrics.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`IpcError`] if the call fails unexpectedly.
-    pub fn engagement(&mut self, params: &serde_json::Value) -> Result<EngagementResult, IpcError> {
-        self.call_or_default(
-            domain::GAME,
-            METHOD_ENGAGEMENT,
-            params.clone(),
-            EngagementResult {
-                actions_per_minute: 0.0,
-                exploration_ratio: 0.0,
-                engagement_score: 0.5,
-            },
-        )
-    }
-
-    /// Get DDA recommendation.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`IpcError`] if the call fails unexpectedly.
-    pub fn difficulty_adjustment(
-        &mut self,
-        params: &serde_json::Value,
-    ) -> Result<DdaResult, IpcError> {
-        self.call_or_default(
-            domain::GAME,
-            METHOD_DIFFICULTY_ADJUSTMENT,
-            params.clone(),
-            DdaResult {
-                adjustment: 0.0,
-                reason: "game science primal unavailable — no adjustment".to_owned(),
-            },
-        )
-    }
-
-    /// NPC dialogue via ludoSpring → Squirrel delegation.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`IpcError`] if the call fails unexpectedly.
-    pub fn npc_dialogue(
-        &mut self,
-        params: &serde_json::Value,
-    ) -> Result<DialogueResponse, IpcError> {
-        self.call_or_default(
-            domain::GAME,
-            METHOD_NPC_DIALOGUE,
-            params.clone(),
-            DialogueResponse {
-                text: "[game science primal unavailable — NPC dialogue degraded]".to_owned(),
-                voice_notes: Vec::new(),
-                passive_checks_fired: false,
-                degraded: true,
-            },
-        )
-    }
-
-    /// Narrate an action via ludoSpring → Squirrel delegation.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`IpcError`] if the call fails unexpectedly.
-    pub fn narrate_action(&mut self, params: &serde_json::Value) -> Result<ChatResponse, IpcError> {
-        self.call_or_default(
-            domain::GAME,
-            METHOD_NARRATE_ACTION,
-            params.clone(),
-            ChatResponse {
-                text: "[game science primal unavailable — narration degraded]".to_owned(),
-                model: "none".to_owned(),
-                tokens: 0,
-            },
-        )
-    }
-
-    /// Internal voice check via ludoSpring.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`IpcError`] if the call fails unexpectedly.
-    pub fn voice_check(&mut self, params: &serde_json::Value) -> Result<Vec<VoiceNote>, IpcError> {
-        self.call_or_default(domain::GAME, METHOD_VOICE_CHECK, params.clone(), Vec::new())
-    }
-
-    /// Push scene via ludoSpring → `petalTongue` delegation.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`IpcError`] if the call fails unexpectedly.
-    pub fn game_push_scene(&mut self, params: &serde_json::Value) -> Result<(), IpcError> {
-        self.call_fire(domain::GAME, METHOD_PUSH_SCENE, params.clone())
-    }
-
-    /// Begin a game session in the provenance system via ludoSpring.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`IpcError`] if the call fails unexpectedly.
-    pub fn game_begin_session(
-        &mut self,
-        params: &serde_json::Value,
-    ) -> Result<Option<String>, IpcError> {
-        self.call_extract_id(
-            domain::GAME,
-            METHOD_BEGIN_SESSION,
-            params.clone(),
-            &["session_id", "id"],
-        )
-    }
-
-    /// Complete a game session in the provenance system via ludoSpring.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`IpcError`] if the call fails unexpectedly.
-    pub fn game_complete_session(&mut self, params: &serde_json::Value) -> Result<(), IpcError> {
-        self.call_fire(domain::GAME, METHOD_COMPLETE_SESSION, params.clone())
     }
 
     // ── Provenance / DAG domain (rhizoCrypt) ────────────────
@@ -380,9 +355,9 @@ impl PrimalBridge {
         self.call_passthrough(domain::DAG, METHOD_DAG_QUERY_VERTICES, params.clone())
     }
 
-    // ── Lineage domain (loamSpine) ──────────────────────────
+    // ── Lineage domain (LoamSpine) ──────────────────────────
 
-    /// Mint a certificate via loamSpine.
+    /// Mint a certificate via `LoamSpine`.
     ///
     /// # Errors
     ///

@@ -1,3 +1,7 @@
+> **ARCHIVE NOTE (V6)**: This handoff describes V4 architecture including
+> `game.*` domain IPC via ludoSpring and `ai.chat`/`ai.inference`. V6
+> removed all spring dependencies. Retained as evolution fossil record.
+
 # ESOTERICWEBB V4 — Live Primal Composition Handoff
 
 **Date**: 2026-03-24

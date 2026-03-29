@@ -16,7 +16,7 @@ feeds discovered gaps back into the science springs that own the primals.
 |-------------------|--------|---------------------|---------------|
 | ZA/UM internal design (Disco Elysium postmortems) | Narrative design | Bounded-infinite architecture, skill-as-voice, failure-as-content | esotericWebb (self) |
 | Cliche Studio (Esoteric Ebb) | Game mechanics | Multi-plane play, transparent dice, RulesetCert per plane | esotericWebb (self) |
-| RPGPT internal voices spec | AI + game science | `VoiceId` system, personality constraints, voice temperature | ludoSpring |
+| RPGPT internal voices spec | AI + game science | `VoiceId` system, personality constraints, voice temperature | Spec provenance: ludoSpring; runtime: Webb local + Squirrel AI |
 | Provenance DAG lifecycle | Data provenance | `dag.session.create` → `dag.event.append` → `dag.merkle.root` | rhizoCrypt |
 | Creative attribution chains | Attribution | `braid.create`, `attribution.chain`, PROV-O export | sweetGrass |
 | NPC personality certificates | Lineage | `certificate.mint` for trust-gated knowledge bounds | loamSpine |

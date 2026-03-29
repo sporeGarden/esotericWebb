@@ -6,21 +6,23 @@
 //! blocked by missing or slow primals.
 //!
 //! Phases:
-//! 1. AI narration (ludoSpring → Squirrel, fallback to direct Squirrel)
-//! 2. NPC dialogue (talk actions only, via ludoSpring → Squirrel)
-//! 3. Flow evaluation (ludoSpring game science)
+//! 1. AI narration (Squirrel via `ai.suggest` / `ai.query`)
+//! 2. NPC dialogue (talk actions only, Squirrel via `ai.query`)
+//! 3. Flow evaluation (local science — no IPC)
 //! 4. Scene push to UI (petalTongue via `render_scene`)
 //! 5. Provenance vertex append (rhizoCrypt DAG)
 //! 6. Session completion check (DAG close on ending)
 
 use super::GameSession;
 use super::types::{ActionKind, PrimalEnrichment, VoiceEnrichment};
+use crate::science::FLOW_CHANNEL_WIDTH;
+use crate::science::flow::flow_channel_metrics;
 
 impl GameSession {
     /// Best-effort enrichment via primal composition.
     ///
-    /// Calls AI and game science primals to enrich the mechanical action
-    /// outcome. All calls degrade silently — gameplay is never blocked.
+    /// Calls AI primals directly (no ludoSpring mediation) and uses
+    /// local science for flow evaluation. All calls degrade silently.
     pub(crate) fn enrich_action(
         &mut self,
         kind: ActionKind,
@@ -32,10 +34,12 @@ impl GameSession {
         let action_str = format!("{kind}:{id}");
 
         let Some(bridge) = self.bridge.as_mut() else {
+            self.enrich_flow_locally(&mut enrichment);
             return enrichment;
         };
 
-        if bridge.has(crate::ipc::domain::GAME) {
+        // Phase 1: AI narration via Squirrel (ai.suggest / ai.query)
+        if bridge.has(crate::ipc::domain::AI) {
             let params = serde_json::json!({
                 "action": action_str,
                 "outcome": outcome_text,
@@ -58,7 +62,8 @@ impl GameSession {
             }
         }
 
-        if kind == ActionKind::Talk && bridge.has(crate::ipc::domain::GAME) {
+        // Phase 2: NPC dialogue via Squirrel (ai.query with NPC context)
+        if kind == ActionKind::Talk && bridge.has(crate::ipc::domain::AI) {
             let params = serde_json::json!({
                 "npc_id": id,
                 "context": outcome_text,
@@ -79,15 +84,44 @@ impl GameSession {
             }
         }
 
-        if bridge.has(crate::ipc::domain::GAME) {
-            let params = serde_json::json!({ "turn": turn, "action_kind": kind.to_string() });
-            if let Ok(flow) = bridge.evaluate_flow(&params) {
-                enrichment.flow_score = Some(flow.flow_score);
-                enrichment.in_flow = Some(flow.in_flow);
-            }
-        }
+        // Phase 3: Flow evaluation (local science — no IPC)
+        self.enrich_flow_locally(&mut enrichment);
 
         enrichment
+    }
+
+    /// Evaluate flow state using local science (no primal IPC required).
+    ///
+    /// Derives challenge from turn progress and skill from action diversity.
+    /// These are heuristic estimates; a dedicated game-science primal would
+    /// provide more sophisticated models.
+    fn enrich_flow_locally(&self, enrichment: &mut PrimalEnrichment) {
+        let challenge = self.estimated_challenge();
+        let skill = self.estimated_skill();
+        let result = flow_channel_metrics(challenge, skill, FLOW_CHANNEL_WIDTH);
+        enrichment.flow_score = Some(result.flow_score);
+        enrichment.in_flow = Some(result.in_flow);
+    }
+
+    /// Heuristic challenge estimate based on turn progression.
+    fn estimated_challenge(&self) -> f64 {
+        let progress = (f64::from(self.turn) / 50.0).min(1.0);
+        0.3 + progress * 0.4
+    }
+
+    /// Heuristic skill estimate based on action diversity.
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "history length is realistically small"
+    )]
+    fn estimated_skill(&self) -> f64 {
+        if self.history.is_empty() {
+            return 0.5;
+        }
+        let unique_nodes: std::collections::HashSet<&str> =
+            self.history.iter().map(|h| h.node_after.as_str()).collect();
+        let diversity = unique_nodes.len() as f64 / self.history.len() as f64;
+        diversity.mul_add(0.4, 0.3).min(1.0)
     }
 
     /// Push current scene state to petalTongue for rendering.
@@ -344,7 +378,8 @@ mod tests {
         assert!(enrichment.ai_narration.is_none());
         assert!(enrichment.npc_dialogue.is_none());
         assert!(enrichment.voice_notes.is_empty());
-        assert!(enrichment.flow_score.is_none());
+        // Flow is always computed locally (no IPC needed).
+        assert!(enrichment.flow_score.is_some());
     }
 
     #[test]

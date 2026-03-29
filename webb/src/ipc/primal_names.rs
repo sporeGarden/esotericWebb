@@ -34,8 +34,6 @@ pub mod domain {
     pub const COMPUTE: &str = "compute";
     /// Storage domain (nestGate).
     pub const STORAGE: &str = "storage";
-    /// Game science domain (ludoSpring).
-    pub const GAME: &str = "game";
     /// DAG domain (rhizoCrypt).
     pub const DAG: &str = "dag";
     /// Lineage domain (loamSpine).
@@ -54,7 +52,6 @@ pub const DOMAIN_PRIMAL_MAP: &[(&str, &str)] = &[
     (domain::VISUALIZATION, PETALTONGUE),
     (domain::COMPUTE, TOADSTOOL),
     (domain::STORAGE, NESTGATE),
-    (domain::GAME, LUDOSPRING),
     (domain::DAG, RHIZOCRYPT),
     (domain::LINEAGE, LOAMSPINE),
     (domain::PROVENANCE, SWEETGRASS),
@@ -164,10 +161,10 @@ mod tests {
 
     #[test]
     fn domain_primal_map_covers_all_domains() {
-        assert_eq!(DOMAIN_PRIMAL_MAP.len(), 8);
+        assert_eq!(DOMAIN_PRIMAL_MAP.len(), 7);
         assert_eq!(primal_for_domain(domain::AI), Some(SQUIRREL));
         assert_eq!(primal_for_domain(domain::DAG), Some(RHIZOCRYPT));
-        assert_eq!(primal_for_domain(domain::GAME), Some(LUDOSPRING));
+        assert_eq!(primal_for_domain("game"), None);
         assert_eq!(primal_for_domain("nonexistent"), None);
     }
 

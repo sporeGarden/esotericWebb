@@ -1,10 +1,10 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
-# Esoteric Webb V5.1 — Evolution Patterns and Ecosystem Learnings
+# Esoteric Webb V6 — Evolution Patterns and Ecosystem Learnings
 
 **Date:** March 29, 2026
 **Author:** ecoPrimals / sporeGarden
-**Foundation:** V1–V4 bootstrap through live primal composition; V5 deep debt resolution; V5.1 audit evolution
-**Coverage:** 90.84% lines (341 tests)
+**Foundation:** V1–V4 bootstrap through live primal composition; V5 deep debt resolution; V5.1 audit evolution; V6 ludoSpring decomposition
+**Coverage:** ~91% lines (342 tests)
 
 ---
 
@@ -133,9 +133,9 @@ gameplay.
 4. Never block gameplay for a missing primal
 
 The 6-phase enrichment pipeline in `enrichment.rs` exemplifies this:
-1. AI narration (ludoSpring → Squirrel, fallback to direct Squirrel)
-2. NPC dialogue (talk actions only)
-3. Flow evaluation (game science)
+1. AI narration (Squirrel via `ai.suggest` / `ai.query`)
+2. NPC dialogue (Squirrel via `ai.query` with NPC context)
+3. Flow evaluation (local `science/` module — no IPC)
 4. Scene push to UI (petalTongue)
 5. Provenance vertex append (rhizoCrypt)
 6. Session completion check (DAG close)
@@ -226,17 +226,19 @@ This pattern eliminates port collisions without configuration.
 | GAP-006 | Discovery primal capability-filtered queries (tier-5) | Songbird |
 | GAP-007 | Voice interjection preview without live AI | esotericWebb (self) + Squirrel |
 | GAP-008 | Creative content pack format for distribution | esotericWebb (self) |
-| GAP-009 | RulesetCert YAML authoring and per-plane validation | esotericWebb (self) + ludoSpring |
+| GAP-009 | RulesetCert YAML authoring and per-plane validation | esotericWebb (self) |
 | GAP-010 | plasmidBin population and deployment automation | biomeOS / primalSpring |
-| GAP-016 | ludoSpring UDS-only transport blocks containers | ludoSpring |
+| GAP-016 | ~~ludoSpring UDS-only transport~~ | superseded (V6) |
 | GAP-017 | biomeOS neural-api fails to start in benchScale | biomeOS |
 | GAP-018 | neuralAPI executors not exposed on JSON-RPC | biomeOS |
 | GAP-019 | beardog crypto domain not wired into Webb bridge | esotericWebb (self) |
 | GAP-020 | Deploy graph format divergence (TOML vs JSON) | primalSpring / wateringHole |
+| GAP-021 | Game science has no standalone primal | primalSpring / wateringHole |
+| GAP-022 | AI method alignment with biomeOS registry | resolved (V6) |
 
 ---
 
-## Architecture Summary (V5.1)
+## Architecture Summary (V6)
 
 ```
 Springs (science + experiments)  →  produce  →  primals (genomeBin/ecoBin)
@@ -245,12 +247,17 @@ Springs (science + experiments)  →  produce  →  primals (genomeBin/ecoBin)
                                                        ↓
                               Webb discovers + composes via JSON-RPC IPC
                                      (TCP default, UDS for biomeOS)
-                                                       ↓
+                                        ↓                    ↓
+                              local science/         direct primal calls
+                              (flow, engagement,     (ai.query, dag.*, viz.*,
+                               DDA — no IPC)          storage.*, etc.)
+                                        ↓                    ↓
                               6-phase enrichment pipeline per action:
                                 narrate → dialogue → flow → scene → DAG → close
                                                        ↓
                               All phases degrade gracefully → gameplay never blocked
 ```
 
-38 Rust files, ~12.8k LOC, 341 tests, 90.84% coverage, zero unsafe, zero C
-dependencies, pure Rust edition 2024.
+41 Rust files, ~13.5k LOC, 342 tests, ~91% coverage, zero unsafe, zero C
+dependencies, pure Rust edition 2024. No spring dependencies — self-composed
+via primal composition only.

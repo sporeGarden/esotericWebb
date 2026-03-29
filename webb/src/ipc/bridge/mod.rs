@@ -117,8 +117,11 @@ impl PrimalBridge {
             });
         }
 
-        let neural_api = crate::niche::resolve_neural_api_socket().and_then(|path| {
-            match PrimalClient::connect(&path, "neural-api") {
+        let neural_api =
+            crate::niche::resolve_neural_api_socket().and_then(|path| match PrimalClient::connect(
+                &path,
+                "neural-api",
+            ) {
                 Ok(client) => {
                     tracing::info!(
                         path = %path.display(),
@@ -134,8 +137,7 @@ impl PrimalBridge {
                     );
                     None
                 }
-            }
-        });
+            });
 
         let circuits = DOMAIN_PRIMAL_MAP
             .iter()
@@ -198,7 +200,7 @@ impl PrimalBridge {
 
     /// Whether a Neural API connection is available.
     #[must_use]
-    pub fn has_neural_api(&self) -> bool {
+    pub const fn has_neural_api(&self) -> bool {
         self.neural_api.is_some()
     }
 
@@ -206,23 +208,26 @@ impl PrimalBridge {
     ///
     /// Translates a domain + method into a semantic capability call and
     /// forwards it through the biomeOS orchestration layer.
+    #[expect(
+        clippy::needless_pass_by_value,
+        reason = "params is moved into serde_json::json! macro; clippy cannot see through the expansion"
+    )]
     fn neural_api_call(
         &mut self,
         domain: &str,
         method: &str,
         params: serde_json::Value,
     ) -> Result<JsonRpcResponse, IpcError> {
-        let client = self.neural_api.as_mut().ok_or_else(|| {
-            IpcError::PrimalNotFound {
+        let client = self
+            .neural_api
+            .as_mut()
+            .ok_or_else(|| IpcError::PrimalNotFound {
                 domain: "neural-api".to_owned(),
-            }
-        })?;
+            })?;
 
-        let (capability, operation) = if let Some(dot) = method.find('.') {
-            (&method[..dot], &method[dot + 1..])
-        } else {
-            (domain, method)
-        };
+        let (capability, operation) = method
+            .find('.')
+            .map_or((domain, method), |dot| (&method[..dot], &method[dot + 1..]));
 
         let neural_params = serde_json::json!({
             "capability": capability,
@@ -261,10 +266,6 @@ impl PrimalBridge {
     /// Tries the direct domain client first. If absent, falls back to
     /// Neural API routing via `capability.call`. Returns `Ok(response)`
     /// on success, or the last error after exhausting retries.
-    #[expect(
-        clippy::needless_pass_by_value,
-        reason = "params is cloned per retry attempt; owned avoids extra clone at call sites"
-    )]
     fn resilient_call(
         &mut self,
         domain: &str,
@@ -476,23 +477,6 @@ mod tests {
     }
 
     #[test]
-    fn standalone_evaluate_flow_degrades() {
-        let mut bridge = PrimalBridge::standalone();
-        let result = bridge.evaluate_flow(&serde_json::Value::Null).unwrap();
-        assert!((result.flow_score - 0.5).abs() < f64::EPSILON);
-        assert!(!result.in_flow);
-    }
-
-    #[test]
-    fn standalone_difficulty_adjustment_degrades() {
-        let mut bridge = PrimalBridge::standalone();
-        let result = bridge
-            .difficulty_adjustment(&serde_json::Value::Null)
-            .unwrap();
-        assert!((result.adjustment).abs() < f64::EPSILON);
-    }
-
-    #[test]
     fn standalone_provenance_returns_false() {
         let mut bridge = PrimalBridge::standalone();
         let result = bridge
@@ -536,13 +520,6 @@ mod tests {
     }
 
     #[test]
-    fn standalone_engagement_degrades() {
-        let mut bridge = PrimalBridge::standalone();
-        let result = bridge.engagement(&serde_json::Value::Null).unwrap();
-        assert!((result.engagement_score - 0.5).abs() < f64::EPSILON);
-    }
-
-    #[test]
     fn standalone_npc_dialogue_degrades() {
         let mut bridge = PrimalBridge::standalone();
         let result = bridge
@@ -568,33 +545,6 @@ mod tests {
             .voice_check(&serde_json::json!({"voice_id": "logic"}))
             .unwrap();
         assert!(result.is_empty());
-    }
-
-    #[test]
-    fn standalone_game_push_scene_is_noop() {
-        let mut bridge = PrimalBridge::standalone();
-        assert!(
-            bridge
-                .game_push_scene(&serde_json::json!({"type": "test"}))
-                .is_ok()
-        );
-    }
-
-    #[test]
-    fn standalone_game_begin_session_returns_none() {
-        let mut bridge = PrimalBridge::standalone();
-        assert!(
-            bridge
-                .game_begin_session(&serde_json::json!({}))
-                .unwrap()
-                .is_none()
-        );
-    }
-
-    #[test]
-    fn standalone_game_complete_session_is_noop() {
-        let mut bridge = PrimalBridge::standalone();
-        assert!(bridge.game_complete_session(&serde_json::json!({})).is_ok());
     }
 
     #[test]

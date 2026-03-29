@@ -39,7 +39,6 @@ pub mod envelope;
 pub mod handlers;
 pub mod launcher;
 pub mod listener;
-pub mod ludospring;
 pub mod petaltongue;
 pub mod primal_names;
 pub mod provenance;

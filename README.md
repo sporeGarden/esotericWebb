@@ -2,18 +2,19 @@
 
 | | |
 |---|---|
-| **Version** | V5.1 |
-| **Tests** | 341 (322 unit + 18 E2E + 1 validation) |
-| **Coverage** | 90.84% lines (`cargo llvm-cov`) |
-| **Rust files** | 38 (~12.8k LOC) |
+| **Version** | V6 |
+| **Tests** | 342 (323 unit + 18 E2E + 1 validation) |
+| **Coverage** | ~91% lines (`cargo llvm-cov`) |
+| **Rust files** | 41 (~13.5k LOC) |
 | **Experiments** | 5 (exp001–exp005) |
 | **MSRV** | 1.87 (edition 2024) |
 | **License** | AGPL-3.0 + ORC + CC-BY-SA 4.0 |
 | **Unsafe** | `#![forbid(unsafe_code)]` |
 | **C deps** | Zero (ecoBin compliant) |
-| **Bridge methods** | 23 (all domains, all degrading) |
-| **Primals consumed** | 8 domains (ai, game, viz, dag, lineage, compute, storage, provenance) |
-| **Last validation** | 2026-03-29 (V5.1) |
+| **Bridge methods** | 19 (all domains, all degrading) |
+| **Primals consumed** | 7 domains (ai, viz, dag, lineage, compute, storage, provenance) |
+| **Local science** | flow, engagement, DDA (absorbed from ludoSpring patterns) |
+| **Last validation** | 2026-03-29 (V6) |
 
 **A [sporeGarden](https://github.com/sporeGarden) project — the primals as a composed CRPG.**
 

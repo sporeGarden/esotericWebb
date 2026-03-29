@@ -5,11 +5,12 @@ Documentation and creative text in this file: CC-BY-SA-4.0
 
 # Creator Profiles and System Design
 
-**Status**: Active
-**Date**: March 23, 2026
+**Status**: Active (V6)
+**Date**: March 29, 2026
 **Purpose**: Profile the creative teams that Esoteric Webb is built for, map their design DNA to system capabilities, and define the dual-surface (developer + creative) architecture.
 **License**: AGPL-3.0-or-later (code); documentation under [CC-BY-SA-4.0](../LICENSE-CC-BY-SA)
 **Science derived from**: Game science spring quality profiles and RPGPT research (derivation, not dependency)
+**Identity**: sporeGarden composition — deploys primal compositions, no spring runtime dependencies
 
 ---
 
@@ -46,11 +47,11 @@ not AAA game development.
 | Trait | What it means | How Webb supports it |
 |-------|--------------|---------------------|
 | **Literature-first** | The game was a novel before it was a game. Dialogue is the primary medium. Mechanics serve narrative, not the reverse. | YAML scene authoring with no code requirement. The narrative graph IS the manuscript. |
-| **Skills as perspectives** | Each skill (Logic, Empathy, Electrochemistry, Inland Empire) is a character with opinions, not a number to optimize. | `VoiceId` system from ludoSpring's RPGPT_INTERNAL_VOICES_SPEC. Voices have personality parameters, temperature, forbidden topics. Webb's `StatePredicate` triggers voice interjections based on game state, not random rolls. |
+| **Skills as perspectives** | Each skill (Logic, Empathy, Electrochemistry, Inland Empire) is a character with opinions, not a number to optimize. | `VoiceId` system (derived from RPGPT internal voices spec). Voices have personality parameters, temperature, forbidden topics. Webb's `StatePredicate` triggers voice interjections based on game state, not random rolls. |
 | **Failure as content** | Failed skill checks produce unique dialogue, not "try again." Failing a Rhetoric check gives you embarrassing lines that advance the story differently. | `StateEffect` mutations on both success and failure branches. The narrative graph has edges for BOTH outcomes. No dead ends from failure. |
 | **World as character** | Martinaise (the district) has opinions, moods, weather that responds to time. The space is small but dense. | World state as first-class `WorldState` dimension. Location descriptions are state-gated — the same room reads differently at trust level 0 vs trust level 5 with a specific NPC. |
 | **No combat** | DE deliberately chose to have zero combat. Every conflict resolves through dialogue, introspection, or environmental interaction. | Planes are optional. A DE-style game uses Dialogue + Investigation + Exploration planes and ignores Tactical entirely. `RulesetCert` defines which planes are active. |
-| **Political and personal** | The game does not shy from ideology, identity, mental health, addiction, or failure. It trusts the player to encounter difficult content. | Content authoring is unconstrained. The system does not censor authored content. Pathogen detection (from ludoSpring) identifies exploitative mechanics, not provocative themes. Art is a human medium. |
+| **Political and personal** | The game does not shy from ideology, identity, mental health, addiction, or failure. It trusts the player to encounter difficult content. | Content authoring is unconstrained. The system does not censor authored content. Pathogen detection (pattern derived from game science research) identifies exploitative mechanics, not provocative themes. Art is a human medium. |
 
 ### What ZA/UM needed that didn't exist
 
@@ -82,7 +83,7 @@ mechanical crunch are not mutually exclusive.
 | Trait | What it means | How Webb supports it |
 |-------|--------------|---------------------|
 | **Voices + dice** | Internal voices comment on mechanical outcomes, not just narrative beats. A Logic voice might note that the DC was unusually high, implying deception. | Voice triggers can reference mechanical state: `ConditionActive("high_dc_detected")`, `FlagSet("deception_suspected")`. Squirrel narrates within personality constraints. |
-| **Transparent mechanics** | Players see dice, DCs, modifiers. No hidden rolls. Risk assessment is part of the gameplay. | `RulesetCert` defines dice systems per plane. ludoSpring's `game.voice_check` evaluates passive checks with visible results. Scene DTOs include `DiceResultScene` with optional BearDog signatures. |
+| **Transparent mechanics** | Players see dice, DCs, modifiers. No hidden rolls. Risk assessment is part of the gameplay. | `RulesetCert` defines dice systems per plane. Voice analysis via Squirrel (`ai.analyze`) evaluates passive checks. Scene DTOs include `DiceResultScene` with optional BearDog signatures. |
 | **Multi-plane play** | Investigation, dialogue, and tactical play coexist. Moving from a conversation to a fight preserves world state — the NPC remembers what you said. | `PlaneTransition` as first-class narrative nodes. `WorldStateSnapshot` for condition mapping. Trust, knowledge, and inventory persist across plane boundaries. |
 | **Mechanical storytelling** | Game mechanics tell stories. A critical failure on a Rhetoric check isn't just "you fail" — it's "you said something so catastrophically wrong that the NPC's arc advances in a direction you didn't intend." | `StateEffect::AdvanceArc` on failure branches. The narrative graph encodes mechanical consequences as state mutations, not just text flavor. |
 
@@ -105,7 +106,8 @@ mechanical crunch are not mutually exclusive.
 One person. Maybe two. Four years in a room with a vision.
 
 This is Eric Barone (Stardew Valley). This is Lucas Pope (Return of the Obra
-Dinn). This is the person ludoSpring's Lysogeny catalog was built for.
+Dinn). This is the person the Lysogeny catalog (from game science research)
+was built for.
 
 ### What they need
 
@@ -217,9 +219,9 @@ is done.
 | Rendered game UI | Visualization primal scene rendering | Degradation stub (GAP-002) |
 | Session provenance and replay | Provenance primal vertex DAG | Local fallback (GAP-004) |
 | Live BYOB composition | `esotericwebb serve` with full primal stack | Wired (V4+), degrades when primals absent |
-| Internal voice interjections | Game science primal voice_check + AI primal narration | IPC stub, science validated in ludoSpring exp069-070 |
-| Multi-plane transitions | Plane transition nodes in narrative graph | Narrative engine supports; live mechanics via game science primal |
-| Transparent/hidden dice modes | RulesetCert per plane | YAML format defined; runtime evaluation via game science primal |
+| Internal voice interjections | Squirrel `ai.analyze` voice check + `ai.query` narration | IPC wired (V6), personality constraints enforced via certs |
+| Multi-plane transitions | Plane transition nodes in narrative graph | Narrative engine supports; science metrics via local `science/` module |
+| Transparent/hidden dice modes | RulesetCert per plane | YAML format defined; runtime evaluation via local science + future primal (GAP-021) |
 
 ---
 
@@ -241,7 +243,7 @@ primals. The Weaver's Parlor demonstrates the full content format.
 ### V3 — Live play and testing
 
 - Full `esotericwebb serve` with visualization primal rendering.
-- Live DDA feedback: game science primal evaluates pacing during playtesting.
+- Live DDA feedback: local science module evaluates pacing during playtesting.
 - Session recording and replay via provenance trio.
 
 ### V4 — Community and modding

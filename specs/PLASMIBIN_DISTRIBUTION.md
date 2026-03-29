@@ -224,10 +224,10 @@ cargo run -- serve --content content --launch
 
 ### Other springs
 
-Springs that need primal capabilities at test time (e.g. ludoSpring testing
-against a live Squirrel) follow the same pattern: clone plasmidBin, run
-`fetch.sh`, set `ECOPRIMALS_PLASMID_BIN` to point at it, run integration
-tests.
+Springs that need primal capabilities at test time (e.g. any spring testing
+against a live Squirrel or rhizoCrypt) follow the same pattern: clone
+plasmidBin, run `fetch.sh`, set `ECOPRIMALS_PLASMID_BIN` to point at it,
+run integration tests.
 
 ### Environment override
 

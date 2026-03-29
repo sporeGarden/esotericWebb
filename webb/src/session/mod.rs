@@ -666,7 +666,7 @@ mod tests {
         assert!(ctx.enrichment.ai_narration.is_none());
         assert!(ctx.enrichment.npc_dialogue.is_none());
         assert!(ctx.enrichment.voice_notes.is_empty());
-        assert!(ctx.enrichment.flow_score.is_none());
+        assert!(ctx.enrichment.flow_score.is_some());
         assert!(!ctx.enrichment.scene_pushed);
     }
 
@@ -801,7 +801,7 @@ mod tests {
         assert!(ctx.enrichment.ai_narration.is_none());
         assert!(ctx.enrichment.npc_dialogue.is_none());
         assert!(ctx.enrichment.voice_notes.is_empty());
-        assert!(ctx.enrichment.flow_score.is_none());
+        assert!(ctx.enrichment.flow_score.is_some());
     }
 
     #[test]

@@ -1,4 +1,9 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
+
+> **ARCHIVE NOTE (V6)**: This handoff describes V4 architecture. V6 removed
+> all ludoSpring runtime dependency and absorbed game science locally. Retained
+> as ecosystem evolution fossil record.
+
 # HANDOFF: Esoteric Webb V4 — Ecosystem Review & Absorption Opportunities
 
 - **Date**: 2026-03-24

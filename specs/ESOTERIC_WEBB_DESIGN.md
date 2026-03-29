@@ -5,27 +5,36 @@ Documentation and creative text in this file: CC-BY-SA-4.0
 
 # Esoteric Webb — Core Design
 
-**Status**: Active  
-**Date**: March 23, 2026  
-**Primals consumed**: Game science, AI/MCP, visualization, session DAG, certificates, attribution, signing, discovery — composed via JSON-RPC IPC  
-**Primal source**: `ecoPrimals/plasmidBin/` (genomeBin/ecoBin deployment surface)  
-**Science derived from**: ludoSpring, Squirrel, petalTongue, provenance trio — springs produce primals; Webb consumes primals  
+**Status**: Active (V6)
+**Date**: March 29, 2026
+**Identity**: sporeGarden composition — deploys primal compositions via biomeOS graph deployments
+**Primals consumed**: AI (Squirrel), visualization (petalTongue), compute (ToadStool), storage (NestGate), DAG (rhizoCrypt), lineage (LoamSpine), provenance (sweetGrass) — composed via JSON-RPC IPC
+**Local science**: flow, engagement, DDA (absorbed from ludoSpring patterns, no runtime dependency)
+**Primal source**: `ecoPrimals/plasmidBin/` (genomeBin/ecoBin deployment surface)
+**Science derived from**: ludoSpring, Squirrel, petalTongue, provenance trio — springs produce primals; Webb composes primals
 **License**: AGPL-3.0-or-later (code); documentation under [CC-BY-SA-4.0](../LICENSE-CC-BY-SA)
 
 ---
 
 ## Overview
 
-**Esoteric Webb** is a **working tool** — a cross-evolution substrate that
-composes deployed primals (genomeBins/ecoBins resolved from `plasmidBin/`)
-into a playable creative surface. It is informed by the science in the
-springs but anchored in primal capabilities, not spring source code.
+**Esoteric Webb** is a **composition for deployment** — a gen4 consumer in
+the sporeGarden organization that composes deployed primals (genomeBins/ecoBins
+resolved from `plasmidBin/`) into a playable creative surface. It is informed
+by the science in the springs but anchored in primal capabilities, not spring
+source code.
 
 Webb is intentionally **not a spring**. Springs are development workspaces
 that contain science, experiments, and specs. Springs **produce** primals.
-Webb **consumes** primals — like primalSpring does — via JSON-RPC IPC and
-capability-based discovery. This makes Webb leaner than the springs it
-draws science from, and functionally independent of their internal evolution.
+Webb **composes** primals — via JSON-RPC IPC, biomeOS capability routing,
+and local science algorithms — into a self-composed game engine and creative
+engine with UI and AI agentics.
+
+**sporeGarden projects** share this identity: they are compositions for
+deployment. They consume primals, discover gaps, and hand off evolution
+pressure to the springs that own each domain. The gap between what primal
+compositions can do today and what a self-composed creative engine needs
+drives the entire ecosystem forward.
 
 The end result is a **creator/player game system**: a dual-surface tool
 where developers work in Rust and creatives work in YAML, both composing
@@ -39,23 +48,28 @@ Webb separates the **working tool** from the **scientific foundation**:
 
 | Layer | What it is | Where it lives |
 |-------|-----------|----------------|
-| **Working tool** (Webb) | Narrative engine, GameDirector, content authoring, CLI, IPC orchestration | `ecoSprings/esotericWebb/` |
+| **Working tool** (Webb) | Narrative engine, GameDirector, content authoring, CLI, IPC orchestration, local science | `gardens/esotericWebb/` |
+| **Local science** | Flow evaluation, engagement metrics, DDA — pure math absorbed from spring patterns | `webb/src/science/` |
 | **Deployed primals** | Compiled genomeBin/ecoBin binaries with IPC capabilities | `ecoPrimals/plasmidBin/` |
-| **Scientific foundation** | Validated HCI models, experiments, quality profiles, RPGPT theory | Spring source trees (ludoSpring, etc.) — derivation only |
+| **Scientific foundation** | Validated HCI models, experiments, quality profiles, RPGPT theory | Spring source trees — derivation only |
 
 Webb references the science as **derivation** — "this design was informed
-by ludoSpring's flow model" — not as a dependency. The game science primal's
-`game.evaluate_flow` capability exists because a spring built it; Webb
-discovers and calls it without knowing how the spring is structured.
+by ludoSpring's flow model" — not as a dependency. V6 absorbed core game
+science algorithms locally so Webb is self-sufficient for flow, engagement,
+and DDA without any spring or game-science primal at runtime (GAP-021 tracks
+the evolution toward a dedicated game-science primal for ecosystem reuse).
 
 This means:
 
 - **Springs evolve independently** — a spring can refactor, rename crates,
   or restructure without breaking Webb.
-- **Webb is leaner** — it carries no spring experiments, no test fixtures for
-  other domains, no scientific apparatus. Just the tool.
+- **Webb is self-composed** — it carries no spring dependencies, no game
+  domain coupling. Just the tool, local science, and direct primal composition.
 - **Primals are the contract** — the IPC method signatures and capability
   names are the only coupling. Everything else is derivation.
+- **biomeOS is the router** — capability.call routes requests through
+  the ecosystem's semantic registry, translating Webb's calls to primal-
+  native methods transparently.
 
 ---
 
@@ -73,24 +87,24 @@ This means:
 
 ---
 
-## Architecture: BYOB composition via JSON-RPC IPC
+## Architecture: self-composed via primal composition
 
-Webb coordinates primals **only** through **JSON-RPC 2.0** IPC (e.g. Unix
-domain sockets, capability-based discovery). There are **no cross-primal Rust
-crate imports**: the narrative engine owns orchestration; primals own their
-domains. Primal binaries are resolved from `plasmidBin/` or discovered via
-Songbird at runtime.
+Webb coordinates primals **only** through **JSON-RPC 2.0** IPC (TCP default,
+UDS for co-located). There are **no cross-primal Rust crate imports** and
+**no spring dependencies**: the narrative engine owns orchestration; primals
+own their domains. Primal binaries are resolved from `plasmidBin/` or
+discovered via Songbird at runtime. biomeOS `capability.call` provides
+semantic routing when direct connections are unavailable.
 
-**Composition stack (conceptual):**
+**Composition stack (V6):**
 
 | Layer | Responsibility |
 |-------|----------------|
-| **Esoteric Webb** | Narrative direction, scene selection, state machine, content validation, `GameDirector`, metrics hooks |
-| **Game science primal** | RPGPT-oriented evaluation (`game.*`), flow/DDA/engagement, voice checks, session/scene hooks |
-| **AI primal** | Narration, inference, summarization (`ai.*`) |
-| **Visualization primal** | Scene rendering, UI, interaction (`visualization.*`, `ui.*`, `interaction.*`) |
-| **Provenance trio** | Session DAG vertices, certificates/rulesets, creative attribution |
-| **Tower primals** | Signing/hashing, discovery — as consumed for crypto and lookup |
+| **Esoteric Webb** | Narrative direction, scene selection, state machine, content validation, `GameDirector`, local science (flow/engagement/DDA) |
+| **AI primal** (Squirrel) | Narration via `ai.query`, summarization via `ai.suggest`, analysis via `ai.analyze` — routed through biomeOS capability registry |
+| **Visualization primal** (petalTongue) | Scene rendering, UI, interaction (`visualization.*`, `interaction.*`) |
+| **Provenance trio** | Session DAG vertices (rhizoCrypt), certificates/rulesets (LoamSpine), creative attribution (sweetGrass) |
+| **Infrastructure primals** | Compute (ToadStool), storage (NestGate), crypto (BearDog, GAP-019), discovery (Songbird, GAP-006) |
 
 This is **BYOB** (bring your own binaries): deploy the niche from
 `plasmidBin/`, connect sockets, discover capabilities — Webb does not embed
@@ -104,9 +118,9 @@ A Webb-shaped game is not "a dialogue system plus combat." It is a **composition
 of primals**:
 
 - **Narrative direction** — authored graph + predicates + effects (Webb).
-- **Game science** — flow, difficulty, engagement, NPC dialogue metrics (game science primal).
-- **AI** — voices, paraphrase, summarization, inference under cert constraints (AI primal).
-- **UI** — scene rendering and interaction surfaces (visualization primal).
+- **Game science** — flow, difficulty, engagement (local `science/` module; future primal via GAP-021).
+- **AI** — narration, NPC dialogue, voice analysis via Squirrel (`ai.query`, `ai.suggest`, `ai.analyze`).
+- **UI** — scene rendering and interaction surfaces (petalTongue).
 - **Provenance** — every meaningful action is a vertex with traceable lineage (provenance trio).
 
 When one primal lags, the whole experience degrades in a **specific** way —
@@ -125,7 +139,7 @@ topology** without infinite bespoke dialogue.
 
 Webb explicitly targets:
 
-- **Internal voices** — triggered commentary tied to game science and state.
+- **Internal voices** — triggered commentary tied to AI analysis and state.
 - **Knowledge bounds** — what NPCs know, suspect, lie about, or lack.
 - **Trust dynamics** — per-NPC gates that change what is said or offered.
 - **Plane transitions** — DAG-recorded shifts of interaction rules while world
@@ -134,22 +148,26 @@ Webb explicitly targets:
 
 ---
 
-## The RPGPT pipeline
+## The enrichment pipeline
 
-End-to-end play loop (conceptual):
+End-to-end play loop (V6):
 
 ```
 Player input
   -> GameDirector
   -> state evaluation (predicates, arcs, knowledge, trust, plane, flags)
-  -> primal orchestration (game science / AI / visualization / provenance)
-  -> narration (AI primal + style constraints)
-  -> scene rendering (visualization primal)
-  -> metrics (engagement, flow, DDA via game science primal)
+  -> enrichment pipeline:
+       1. AI narration (Squirrel via ai.suggest / ai.query)
+       2. NPC dialogue (Squirrel via ai.query with NPC context)
+       3. Flow evaluation (local science — no IPC)
+       4. Scene rendering (petalTongue)
+       5. Provenance vertex (rhizoCrypt DAG)
+       6. Session completion (rhizoCrypt DAG close)
 ```
 
 Provenance writes occur at orchestration boundaries so **replay, analysis,
-and attribution** remain first-class.
+and attribution** remain first-class. All phases degrade gracefully — gameplay
+is never blocked by a missing or slow primal.
 
 ---
 
@@ -184,24 +202,26 @@ standards so evolution is **actionable** and **traceable**.
 
 ---
 
-## Primal consumption table
+## Primal consumption table (V6)
 
-What Webb **consumes** from each primal (illustrative; exact method names
-evolve with IPC versions). Webb resolves these from `plasmidBin/` or via
-Songbird discovery — never from spring source trees:
+What Webb **consumes** from each primal via direct IPC or biomeOS
+`capability.call` routing. Resolved from `plasmidBin/` or via Songbird
+discovery — never from spring source trees:
 
-| Primal | Webb's use | Representative capabilities |
-|--------|------------|----------------------------|
-| **Game science** | RPGPT hooks, metrics | `game.evaluate_flow`, engagement, DDA, NPC dialogue evaluation, voice checks, session/scene lifecycle |
-| **AI** | Narration, inference, compression of state for prompts | `ai.chat`, `ai.inference`, `ai.summarize` |
-| **Visualization** | Scene and UI | `visualization.render.scene`, `ui.render`, `interaction.subscribe`, `interaction.poll` |
-| **Session DAG** | Provenance vertices | `provenance.session_create`, `provenance.vertex_append`, `provenance.vertex_query` |
-| **Certificates** | Rulesets, NPC/voice certificates | `certificate.mint`, `certificate.query` |
-| **Attribution** | Creative attribution | `attribution.record`, `attribution.query` |
-| **Crypto** | Signing and hashing | `crypto.sign`, `crypto.hash` |
-| **Discovery** | Capability-based primal lookup | `discovery.query` |
+| Domain | Primal | Webb's use | Representative capabilities |
+|--------|--------|------------|----------------------------|
+| **AI** | Squirrel | Narration, NPC dialogue, voice analysis | `ai.query`, `ai.suggest`, `ai.analyze` |
+| **Visualization** | petalTongue | Scene rendering, input | `visualization.render.scene`, `interaction.poll` |
+| **Compute** | ToadStool | GPU dispatch | `compute.dispatch.submit` |
+| **Storage** | NestGate | Key-value persistence | `storage.store`, `storage.retrieve` |
+| **DAG** | rhizoCrypt | Session provenance | `dag.session.create`, `dag.event.append`, `dag.merkle.root` |
+| **Lineage** | LoamSpine | Certificates | `certificate.mint` |
+| **Provenance** | sweetGrass | Attribution | `attribution.record` |
+| **Local** | (Webb itself) | Flow, engagement, DDA | `science/flow.rs`, `science/engagement.rs`, `science/dda.rs` |
 
-Webb **orchestrates**; it does not duplicate primal internals.
+Webb **composes**; it does not duplicate primal internals. Local science is
+a stopgap — when a game-science primal emerges (GAP-021), Webb can swap
+local calls for IPC without architectural changes.
 
 ---
 
@@ -214,17 +234,18 @@ Webb **orchestrates**; it does not duplicate primal internals.
    state dimensions (knowledge, trust, inventory, conditions, arcs, plane, flags),
    pipeline stubs with clear seams for IPC.
 
-3. **IPC spine** — JSON-RPC clients for game science, AI, and visualization
+3. **IPC spine** — JSON-RPC clients for AI, visualization, and provenance
    primals; health/liveness; capability discovery from `plasmidBin/`;
-   graceful degradation when a primal is absent.
+   graceful degradation when a primal is absent; biomeOS `capability.call`
+   fallback routing.
 
 4. **Provenance & certificates** — session DAG/vertex lifecycle,
    certificate queries/mints, attribution on creative outputs; crypto and
-   discovery primals wired where required.
+   discovery primals wired where required (GAP-019, GAP-006).
 
-5. **Full BYOB play** — `serve` path with rendering, internal voices hooks,
-   plane transitions coordinated with game science rulesets, metrics fed back
-   into direction and tuning.
+5. **Full BYOB play** — `serve` path with rendering, internal voices via
+   AI analysis, plane transitions, local science metrics fed back into
+   direction and tuning.
 
 6. **Evolution closure** — systematic use of `EVOLUTION_GAPS.md`, wateringHole
    handoffs, absorption of new capabilities, performance and reliability hardening
@@ -246,6 +267,6 @@ Webb's design was informed by these spring-produced specifications. They
 are cited as derivation — Webb does not import or depend on their source
 trees. The primals produced by these springs are consumed via IPC:
 
-- Game science: RPGPT deep system design, internal voices, NPC personality, planes schema (ludoSpring)
+- Game science: RPGPT deep system design, internal voices, NPC personality, planes schema (ludoSpring — patterns absorbed, no runtime dependency)
 - Quality profiles: game exemplar and anti-pattern catalog (ludoSpring)
 - Provenance: session DAG, certificates, attribution (rhizoCrypt, loamSpine, sweetGrass)

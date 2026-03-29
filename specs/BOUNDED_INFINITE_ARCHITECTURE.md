@@ -5,9 +5,9 @@ Documentation and creative text in this file: CC-BY-SA-4.0
 
 # Bounded Infinite Architecture — Combinatorial State on Finite Topology
 
-**Status**: Active  
-**Date**: March 23, 2026  
-**Depends on**: Esoteric Webb narrative model; ludoSpring RPGPT specifications (planes, voices, NPCs)  
+**Status**: Active (V6)
+**Date**: March 29, 2026
+**Derived from**: Esoteric Webb narrative model; RPGPT specifications (planes, voices, NPCs) — derivation only, no runtime dependency
 **License**: AGPL-3.0-or-later (code); documentation under [CC-BY-SA-4.0](../LICENSE-CC-BY-SA)
 
 ---
@@ -70,8 +70,8 @@ on state. Authors author **local** rules; **global** behavior emerges when:
 
 1. Effects update state (knowledge, trust, flags, …).
 2. The **NarrativeGraph** reevaluates outgoing edges and eligible scenes.
-3. **ludoSpring**-aligned metrics (flow, engagement, DDA) may influence
-   tension or optional scaffolding.
+3. Local science metrics (flow, engagement, DDA — absorbed from spring
+   patterns, evaluated locally) may influence tension or optional scaffolding.
 
 Authors cannot enumerate every interaction — that is the point. **Emergence**
 is **bounded** by the DAG and certificate/rule constraints, not unbounded LLM
@@ -173,8 +173,9 @@ invest in **state** and **predicates** on a **fixed** narrative skeleton.
 
 This architecture was informed by RPGPT specifications from the game science
 spring. These are cited as derivation — Webb does not import or depend on
-their source trees. The game science primal produced by that spring is
-consumed via IPC:
+their source trees. Game science algorithms (flow, engagement, DDA) are
+absorbed locally in `webb/src/science/`; all other capabilities are composed
+from deployed primals via IPC:
 
 - RPGPT deep system design — planes, substrate, ruleset certs, pipeline
 - RPGPT NPC personality spec — NPC certificates, memory, personality

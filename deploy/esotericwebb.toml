@@ -11,7 +11,6 @@ binary = "esotericwebb"
 health_check = "webb.liveness"
 dependencies = []
 optional_dependencies = [
-    "ludospring",
     "squirrel",
     "petaltongue",
     "rhizocrypt",

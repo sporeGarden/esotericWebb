@@ -55,14 +55,14 @@ Webb exercises primal composition -> discovers gap in a primal capability
 
 ### GAP-003: AI primal NPC dialogue constraint enforcement
 
-- **Primal**: AI (`ai.chat`, `ai.inference`)
+- **Primal**: AI (`ai.query`, `ai.analyze`)
 - **Spring (producer)**: Squirrel
 - **Severity**: medium
 - **Evidence**: Webb's NPC personality certs define knowledge bounds, trust
   gates, lies with detection DCs, and voice constraints. When Webb calls
-  `game.npc_dialogue` (which the game science primal delegates to the AI
-  primal), the AI primal needs to respect these constraints mechanically —
-  not just as system prompt guidance.
+  `ai.query` with NPC context (direct Squirrel composition, V6), the AI
+  primal needs to respect these constraints mechanically — not just as
+  system prompt guidance.
 - **Expected**: The AI primal accepts an NPC personality cert and enforces
   knowledge bounds, lies, and trust gates as hard constraints on generated
   dialogue, not soft prompt suggestions.
@@ -146,7 +146,7 @@ Webb exercises primal composition -> discovers gap in a primal capability
 
 ### GAP-007: Voice interjection preview without live AI primal
 
-- **Primal**: AI (`ai.chat`)
+- **Primal**: AI (`ai.query`, `ai.analyze`)
 - **Spring (producer)**: esotericWebb (self) + Squirrel
 - **Severity**: medium
 - **Evidence**: Creators profiled in CREATOR_PROFILES_AND_SYSTEM_DESIGN.md
@@ -182,22 +182,23 @@ Webb exercises primal composition -> discovers gap in a primal capability
 
 ### GAP-009: RulesetCert YAML authoring and per-plane validation
 
-- **Primal**: game science (`game.ruleset_validate`)
-- **Spring (producer)**: esotericWebb (self) + ludoSpring
+- **Primal**: game science (future `science.ruleset_validate`, GAP-021)
+- **Spring (producer)**: esotericWebb (self) + future game-science primal
 - **Severity**: medium
 - **Evidence**: Cliche Studio's creative DNA (transparent dice, multi-plane
   play) requires RulesetCert definitions per plane (Investigation, Dialogue,
   Tactical, Crafting). The CONTENT_AUTHORING_SPEC defines a rulesets/
   directory but the content loader does not yet parse or validate RulesetCert
-  YAML against the game science primal's expected schema.
-- **Expected**: YAML rulesets/ loaded, validated against a schema compatible
-  with the game science primal's RulesetCert structure. `esotericwebb
-  validate` reports ruleset errors. The game science primal's
-  `game.ruleset_validate` confirms compatibility at composition time.
+  YAML against any schema. V6 absorbed flow/engagement/DDA locally but
+  RulesetCert validation remains unimplemented.
+- **Expected**: YAML rulesets/ loaded, validated against a schema. `esotericwebb
+  validate` reports ruleset errors. When a game-science primal emerges
+  (GAP-021), `science.ruleset_validate` confirms compatibility at composition
+  time.
 - **Workaround**: Rulesets loaded as opaque YAML documents. No structural
   validation beyond well-formedness.
-- **Handoff**: Self-owned for loader; game science primal spring for
-  validation endpoint.
+- **Handoff**: Self-owned for loader; future game-science primal for
+  validation endpoint (GAP-021).
 - **Status**: open
 
 ### GAP-010: plasmidBin population and deployment automation
@@ -217,23 +218,12 @@ Webb exercises primal composition -> discovers gap in a primal capability
 - **Handoff**: biomeOS/primalSpring for deployment tooling.
 - **Status**: open
 
-### GAP-016: ludoSpring UDS-only transport blocks container composition
+### GAP-016: ludoSpring UDS-only transport blocks container composition → SUPERSEDED (V6)
 
-- **Primal**: game science (`game.*`)
-- **Spring (producer)**: ludoSpring
-- **Severity**: high
-- **Evidence**: Webb is TCP-first for platform portability (containers,
-  Graphene, benchScale topologies). ludoSpring V32 only listens on UDS.
-  In a benchScale tower-2node topology, Webb cannot connect to ludoSpring
-  via TCP. The "play a storytelling session" use case fails at transport
-  before method dispatch.
-- **Expected**: ludoSpring exposes `--listen addr:port` (UniBin v1.2) so
-  Webb can connect via TCP in containerized and cross-host deployments.
-  UDS remains for co-located same-host scenarios.
-- **Workaround**: Webb degrades all `game.*` calls to mechanical defaults.
-  The storytelling composition runs without game science enrichment.
-- **Handoff**: `ESOTERICWEBB_V51_AUDIT_EVOLUTION_HANDOFF_MAR29_2026.md`
-- **Status**: open
+- **Status**: superseded — Webb no longer depends on ludoSpring (V6 decomposition).
+  Game science (flow, engagement, DDA) absorbed locally. AI delegation routes
+  directly to Squirrel via biomeOS semantic methods. This gap is no longer
+  relevant to Webb; it may still apply to other ludoSpring consumers.
 
 ### GAP-017: biomeOS neural-api fails to start in benchScale
 
@@ -311,6 +301,47 @@ Webb exercises primal composition -> discovers gap in a primal capability
   Manual verification against primalSpring expectations.
 - **Handoff**: primalSpring / wateringHole for schema standardization.
 - **Status**: open
+
+### GAP-021: Game science has no standalone primal
+
+- **Primal**: game science (flow, engagement, DDA, WFC, noise, Fitts, accessibility)
+- **Spring (producer)**: N/A — no primal offers these capabilities yet
+- **Severity**: medium (Webb works with local science; primal would enable ecosystem reuse)
+- **Evidence**: ludoSpring bundles 8 pure-science algorithms (flow evaluation,
+  Fitts' law, engagement metrics, DDA, WFC, noise generation, UI analysis,
+  accessibility scoring) that are deterministic math with zero primal IPC.
+  These algorithms are useful to any game or interactive system, not just
+  ludoSpring. Webb V6 absorbed flow, engagement, and DDA locally to remove
+  the ludoSpring dependency, but the remaining 5 algorithms and the absorbed
+  3 are pure math that would benefit from being a reusable primal capability.
+- **Expected**: A dedicated game-science primal (or barraCuda extension) that
+  exposes `science.evaluate_flow`, `science.engagement`, `science.dda`,
+  `science.wfc_step`, `science.generate_noise`, `science.fitts_cost`,
+  `science.analyze_ui`, `science.accessibility` via JSON-RPC. This allows
+  any consumer (Webb, other gardens, springs) to compose game science without
+  absorbing the algorithms locally or depending on ludoSpring.
+- **Workaround**: Webb implements flow, engagement, and DDA locally in
+  `science/` module (absorbed from ludoSpring patterns). Other science
+  (WFC, noise, Fitts, UI analysis, accessibility) deferred until primal
+  evolution delivers them.
+- **Handoff**: primalSpring / wateringHole for game-science primal design.
+- **Status**: open
+
+### GAP-022: Webb AI method alignment with biomeOS capability registry
+
+- **Primal**: AI (`ai.query`, `ai.suggest`, `ai.analyze`)
+- **Spring (producer)**: esotericWebb (self) — resolved in V6
+- **Severity**: critical (was blocking all AI composition)
+- **Evidence**: Webb V5 called `ai.chat`, `ai.summarize`, `ai.inference` —
+  none of which exist in biomeOS's capability registry or Squirrel's native
+  methods. biomeOS routes `ai.query` → Squirrel `query`, `ai.suggest` →
+  `suggest`, `ai.analyze` → `analyze`. Webb's AI calls silently failed
+  because capability.call found no translation for the wrong method names.
+- **Resolution**: V6 aligned all AI methods: `ai.chat` → `ai.query`,
+  `ai.summarize` → `ai.suggest`, added `ai.analyze`. NPC dialogue and
+  narration now route directly to Squirrel via biomeOS semantic methods
+  instead of through ludoSpring delegation.
+- **Status**: resolved (V6, 2026-03-29)
 
 ---
 

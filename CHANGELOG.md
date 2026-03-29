@@ -2,6 +2,36 @@
 
 All notable changes to Esoteric Webb are documented here.
 
+## V6 — ludoSpring Decomposition: Self-Composed via Primal Composition (March 29, 2026)
+
+### Architecture
+
+- **Removed ludoSpring dependency entirely** — Webb no longer routes any calls
+  through the `game` domain or ludoSpring. All composition is via direct primal
+  calls through biomeOS semantic methods.
+- **`science/` module created** — absorbed flow evaluation, engagement metrics,
+  and DDA algorithms locally. Pure math, zero IPC. Patterns originated in
+  ludoSpring but Webb owns the implementations.
+- **AI method alignment** — fixed `ai.chat` → `ai.query`, `ai.summarize` →
+  `ai.suggest`, added `ai.analyze`. Aligns with biomeOS capability registry
+  and Squirrel's native methods.
+- **NPC dialogue routes directly to Squirrel** — Webb formats NPC personality
+  context and calls `ai.query` directly, no ludoSpring mediation.
+- **Flow evaluation is local** — enrichment pipeline phase 3 now calls local
+  `science::flow::flow_channel_metrics()` instead of IPC to ludoSpring.
+- **Deleted `ipc/ludospring.rs`** — all `game.*` method constants, the
+  `LudoSpringClient` struct, and the 12 ludoSpring JSON-RPC method wrappers
+  removed. Types migrated: `FlowResult` → `science/flow.rs`,
+  `EngagementResult` → `science/engagement.rs`, `DdaResult` → `science/dda.rs`,
+  `DialogueResponse`/`VoiceNote` → `squirrel.rs`.
+- **`domain::GAME` removed** from `primal_names.rs` and `DOMAIN_PRIMAL_MAP`.
+  7 domains remain: ai, visualization, compute, storage, dag, lineage, provenance.
+- **Deploy fragment updated** — `ludospring` removed from
+  `deploy/esotericwebb.toml` optional dependencies.
+- **3 new gaps filed** — GAP-021 (game science needs a primal), GAP-022
+  (AI method alignment, resolved), GAP-016 superseded.
+- 342 tests (all passing), all quality gates clean
+
 ## V5.1 — Audit Evolution + Use-Case Gap Pass (March 29, 2026)
 
 ### Use-Case Gaps (ecosystem review)

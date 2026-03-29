@@ -1,6 +1,9 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <!-- Docs/creative content: CC-BY-SA-4.0 -->
 
+> **ARCHIVE NOTE (V6)**: This handoff describes V3 architecture. V6 removed
+> all spring runtime dependencies. Retained as evolution fossil record.
+
 # Esoteric Webb V3 — Ecosystem Absorption Handoff
 
 **Date**: 2026-03-24

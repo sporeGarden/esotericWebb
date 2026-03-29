@@ -15,14 +15,17 @@ Documentation and creative text in this file: CC-BY-SA-4.0
 
 ## What Esoteric Webb is today
 
-Webb is a ~12,500 LOC Rust project that composes deployed primals from
-`plasmidBin/` into a Disco Elysium-inspired CRPG. It is the first **gen4
-consumer** — a working tool that exercises the full ecoPrimals stack via
-BYOB composition and feeds gaps back into the springs that need to evolve.
+Webb is a ~13,500 LOC Rust project that composes deployed primals from
+`plasmidBin/` into a Disco Elysium-inspired CRPG. It is a **sporeGarden
+composition for deployment** — a gen4 consumer that deploys primal
+compositions via biomeOS graph deployments and feeds gaps back into the
+springs that need to evolve.
 
 Webb is intentionally **not a spring**. Springs are development workspaces
 that contain science, experiments, and specs. Springs produce primals. Webb
-consumes primals — the same way a real product would.
+composes primals — directly via JSON-RPC IPC, with biomeOS capability
+routing — the same way a real product would. sporeGarden projects share
+this identity: they are compositions for deployment, not science workspaces.
 
 ### The engine
 
@@ -35,26 +38,27 @@ consumes primals — the same way a real product would.
 | Session | Stateful game loop — `act()` pipeline with 6-stage primal enrichment | Tested |
 | Autoplay | Heuristic AI-as-player with novelty tracking, stale detection | Solid |
 | IPC | JSON-RPC 2.0 over UDS/TCP, capability discovery, circuit breakers, retry | Architecturally mature |
-| Bridge | Runtime coordinator for 8 primal domains with graceful degradation | V5 |
+| Bridge | Runtime coordinator for 7 primal domains with graceful degradation | V6 |
 | CLI | UniBin: `serve`, `validate`, `preview`, `autoplay`, `graph`, `new-world`, `status` | Complete |
 
-### Quality metrics (V5)
+### Quality metrics (V6)
 
-- 38 source files, 341 tests (322 unit + 18 e2e integration + 1 validation)
-- 90.84% line coverage (`cargo llvm-cov`)
+- 41 source files, 342 tests (323 unit + 18 e2e integration + 1 validation)
+- ~91% line coverage (`cargo llvm-cov`)
 - Zero clippy warnings (pedantic + nursery), zero unsafe, `forbid(unsafe_code)`
 - All `#[allow]` migrated to `#[expect]` with reasons; zero TODO/FIXME in production
 - 5 experiment suites, signal handling via `signal-hook`
 - AGPL-3.0-or-later + CC-BY-SA-4.0 + ORC, SPDX headers on all files
+- Local `science/` module: flow, engagement, DDA (absorbed from ludoSpring patterns)
 
 ### Primal consumption
 
-Webb has IPC clients and bridge methods for 8 capability domains:
+Webb has IPC clients and bridge methods for 7 capability domains (no spring
+dependencies — all direct primal composition via biomeOS semantic methods):
 
 | Domain | Primal | Key methods | Status |
 |--------|--------|-------------|--------|
-| ai | Squirrel | `ai.chat`, `ai.summarize` | Bridge ready, degrades to placeholder |
-| game | ludoSpring | `game.*` (flow, engagement, DDA, dialogue, narration, voice) | Bridge ready, degrades |
+| ai | Squirrel | `ai.query`, `ai.suggest`, `ai.analyze` | Bridge ready, degrades to placeholder |
 | visualization | petalTongue | `visualization.render.scene`, `interaction.poll` | Bridge ready, degrades |
 | dag | rhizoCrypt | `dag.session.*`, `dag.event.*`, `dag.frontier.*`, `dag.merkle.*` | Bridge ready, exp004 validates live |
 | lineage | loamSpine | `certificate.mint` | Bridge ready |
@@ -74,7 +78,7 @@ provenance, and visualization.
 
 | Spring | Domain |
 |--------|--------|
-| ludoSpring | Game/interaction science — RPGPT, Webb's primary science partner |
+| ludoSpring | Game/interaction science — RPGPT (Webb absorbed patterns, no runtime dependency) |
 | primalSpring | Ecosystem coordination — deploy graphs, Neural API, composition validation |
 | neuralSpring | ML/surrogates/scholarly reproduction |
 | hotSpring | Computational physics |
@@ -141,12 +145,12 @@ deployment automation)
 
 ### 2. The game that teaches itself
 
-The RPGPT pipeline (ludoSpring science) is consumed via `game.*` methods.
+Game science (flow, engagement, DDA) is computed locally via the `science/`
+module — absorbed from ludoSpring patterns but with no runtime dependency.
 The architecture allows Webb to become a closed-loop learning system.
 
-**Current foundation**: Flow evaluation, engagement metrics, DDA
-recommendations all wired through bridge. Provenance DAG records every
-action.
+**Current foundation**: Flow evaluation, engagement metrics, DDA available
+locally. Provenance DAG records every action via rhizoCrypt.
 
 **Evolution path**:
 
@@ -244,8 +248,8 @@ Every gap Webb discovers is evolution pressure on the primal that needs to
 improve. This is not a side effect — it is a primary function.
 
 **Current foundation**: EVOLUTION_GAPS.md with structured gap template,
-evidence, workaround, handoff tracking. Two gaps absorbed (V3, V4), eight
-open.
+evidence, workaround, handoff tracking. Two gaps absorbed (V3, V4), two
+resolved (V6), one superseded, eleven open.
 
 **Evolution path**:
 
@@ -272,16 +276,18 @@ How the open gaps in EVOLUTION_GAPS.md map to the evolution vectors above.
 | GAP-008 | Content pack format | 3 (creative tool) |
 | GAP-009 | RulesetCert validation | 2 (closed-loop game) |
 | GAP-010 | plasmidBin deployment | 1 (composition proof), 5 (sovereign) |
-| GAP-016 | ludoSpring UDS-only transport | 1 (composition proof) |
+| GAP-016 | ~~ludoSpring UDS-only transport~~ | superseded (V6 removed ludoSpring) |
 | GAP-017 | biomeOS neural-api health | 1 (composition proof), 5 (sovereign) |
 | GAP-018 | neuralAPI executors not on JSON-RPC | 1 (composition proof), 2 (closed-loop game) |
 | GAP-019 | beardog crypto domain unwired | 4 (multiplayer provenance), 5 (sovereign) |
 | GAP-020 | Deploy graph format divergence | 1 (composition proof) |
+| GAP-021 | Game science needs a primal | 2 (closed-loop game), 1 (composition proof) |
+| GAP-022 | AI method alignment | resolved (V6) |
 
 The highest-leverage gaps are GAP-017 (biomeOS neural-api health) and
-GAP-016 (ludoSpring TCP) — they are the gates to real composition testing.
-GAP-010 is addressed by the plasmidBin public distribution strategy in
-[PLASMIBIN_DISTRIBUTION.md](PLASMIBIN_DISTRIBUTION.md).
+GAP-021 (game science primal). GAP-016 was superseded by V6's ludoSpring
+decomposition. GAP-010 is addressed by the plasmidBin public distribution
+strategy in [PLASMIBIN_DISTRIBUTION.md](PLASMIBIN_DISTRIBUTION.md).
 
 ---
 

@@ -5,7 +5,7 @@ binary crate that exercises a specific capability or composition pattern.
 Experiments use a **shared validation harness** (`check_bool` / `check_skip`)
 and exit with a summary of pass/fail/skip counts.
 
-**Status**: 5 experiments, all passing (V5.1, March 29, 2026)
+**Status**: 5 experiments, all passing (V6, March 29, 2026)
 
 ## Running
 
@@ -54,7 +54,7 @@ ESOTERICWEBB_JSON=1 cargo run --release --bin validate_all
 | # | Name | Track | Modules | Blocked on |
 |---|------|-------|---------|------------|
 | 006 | `content_roundtrip` | Content | YAML load/save/validate, scaffold, cross-ref | — |
-| 007 | `flow_degradation` | DDA/Flow | `game.evaluate_flow` via bridge, degradation path | game science primal |
+| 007 | `flow_degradation` | DDA/Flow | Local `science/flow` + `science/dda`, degradation path | — (local science, no primal needed) |
 | 008 | `deploy_graph_ordering` | Integration | `PrimalLauncher`, topological waves, readiness poll | plasmidBin binaries |
 | 009 | `ai_narration_pipeline` | Composition | `enrich_action()`, Squirrel fallback, voice notes | AI primal |
 

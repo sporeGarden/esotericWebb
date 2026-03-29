@@ -1,4 +1,11 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
+
+> **ARCHIVE NOTE (V6)**: This handoff describes V5.1 architecture which
+> included a ludoSpring GAME domain dependency. V6 decomposed ludoSpring
+> entirely — game science is now local (`science/`), AI methods realigned to
+> `ai.query`/`ai.suggest`/`ai.analyze`, and no spring runtime dependencies
+> remain. GAP-016 is superseded, GAP-022 resolved. See CHANGELOG.md V6 entry.
+
 # HANDOFF: Esoteric Webb V5.1 — Use-Case Gaps, Audit Evolution, Primal Feedback
 
 - **Date**: 2026-03-29 (updated: use-case gap pass)

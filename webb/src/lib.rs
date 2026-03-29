@@ -18,9 +18,9 @@
 //! 3. Evaluate state predicates against [`state::WorldState`]
 //! 4. Apply state effects
 //! 5. Record provenance vertex (provenance primal)
-//! 6. Request narration (game science primal + AI primal)
+//! 6. Request narration (AI primal via `ai.query`)
 //! 7. Push scene (visualization primal)
-//! 8. Evaluate metrics (flow, engagement, DDA via game science primal)
+//! 8. Evaluate metrics (flow, engagement, DDA via local science module)
 //!
 //! ## Content
 //!
@@ -34,5 +34,6 @@ pub mod experiment;
 pub mod ipc;
 pub mod narrative;
 pub mod niche;
+pub mod science;
 pub mod session;
 pub mod state;
