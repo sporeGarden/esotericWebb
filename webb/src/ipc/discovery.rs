@@ -52,17 +52,7 @@ pub struct PrimalRegistry {
     pub capability_index: HashMap<String, String>,
 }
 
-/// Known domain-to-primal name mappings for TCP env-var discovery.
-const KNOWN_PRIMALS: &[(&str, &str)] = &[
-    ("dag", "rhizocrypt"),
-    ("lineage", "loamspine"),
-    ("provenance", "sweetgrass"),
-    ("ai", "squirrel"),
-    ("visualization", "petaltongue"),
-    ("compute", "toadstool"),
-    ("storage", "nestgate"),
-    ("game", "ludospring"),
-];
+use super::primal_names::DOMAIN_PRIMAL_MAP;
 
 impl PrimalRegistry {
     /// Discover primals from TCP env vars, `plasmidBin/` metadata, and UDS socket directories.
@@ -102,7 +92,7 @@ impl PrimalRegistry {
     /// - `<PRIMAL>_JSONRPC_PORT` (e.g. `RHIZOCRYPT_JSONRPC_PORT=9401`)
     /// - `<PRIMAL>_HTTP_ADDRESS` (e.g. `SWEETGRASS_HTTP_ADDRESS=127.0.0.1:9403`)
     fn discover_tcp_from_env(&mut self) {
-        for &(domain, name) in KNOWN_PRIMALS {
+        for &(domain, name) in DOMAIN_PRIMAL_MAP {
             let upper = name.to_uppercase();
 
             let addr = std::env::var(format!("{upper}_ADDRESS"))
@@ -236,7 +226,7 @@ impl PrimalRegistry {
             if path.extension().and_then(|e| e.to_str()) == Some("sock") {
                 let domain = path.file_stem().and_then(|s| s.to_str()).map(str::to_owned);
                 if let Some(domain) = domain {
-                    let name = KNOWN_PRIMALS
+                    let name = DOMAIN_PRIMAL_MAP
                         .iter()
                         .find(|&&(d, _)| d == domain)
                         .map_or_else(|| domain.clone(), |&(_, n)| n.to_owned());
@@ -457,5 +447,178 @@ port = 9402
         assert_eq!(ep.tcp_addr.as_deref(), Some("127.0.0.1:9402"));
 
         let _ = std::fs::remove_file(&meta_path);
+    }
+
+    #[test]
+    fn metadata_ingestion_skips_missing_primal_name() {
+        let dir = std::env::temp_dir().join("esotericwebb-test-meta-noname");
+        let _ = std::fs::create_dir_all(&dir);
+        let meta_path = dir.join("metadata.toml");
+        std::fs::write(
+            &meta_path,
+            r#"
+[capabilities]
+domain = "testdomain"
+methods = ["test.method"]
+"#,
+        )
+        .unwrap();
+
+        let mut registry = PrimalRegistry::default();
+        registry.ingest_metadata(&meta_path);
+        assert!(registry.by_domain.is_empty());
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn metadata_ingestion_skips_missing_domain() {
+        let dir = std::env::temp_dir().join("esotericwebb-test-meta-nodomain");
+        let _ = std::fs::create_dir_all(&dir);
+        let meta_path = dir.join("metadata.toml");
+        std::fs::write(
+            &meta_path,
+            r#"
+[primal]
+name = "orphan"
+"#,
+        )
+        .unwrap();
+
+        let mut registry = PrimalRegistry::default();
+        registry.ingest_metadata(&meta_path);
+        assert!(registry.by_domain.is_empty());
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn metadata_ingestion_skips_bad_toml() {
+        let dir = std::env::temp_dir().join("esotericwebb-test-meta-bad");
+        let _ = std::fs::create_dir_all(&dir);
+        let meta_path = dir.join("metadata.toml");
+        std::fs::write(&meta_path, "{{{ not toml").unwrap();
+
+        let mut registry = PrimalRegistry::default();
+        registry.ingest_metadata(&meta_path);
+        assert!(registry.by_domain.is_empty());
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn metadata_ingestion_skips_missing_file() {
+        let mut registry = PrimalRegistry::default();
+        registry.ingest_metadata(std::path::Path::new("/nonexistent/metadata.toml"));
+        assert!(registry.by_domain.is_empty());
+    }
+
+    #[test]
+    fn probe_directory_finds_sock_files() {
+        let dir = std::env::temp_dir().join("esotericwebb-test-probe");
+        let _ = std::fs::create_dir_all(&dir);
+        std::fs::write(dir.join("ai.sock"), "").unwrap();
+        std::fs::write(dir.join("dag.sock"), "").unwrap();
+        std::fs::write(dir.join("not_a_socket.txt"), "").unwrap();
+
+        let mut registry = PrimalRegistry::default();
+        registry.probe_directory(&dir);
+
+        assert!(registry.by_domain.contains_key("ai"));
+        assert!(registry.by_domain.contains_key("dag"));
+        assert!(!registry.by_domain.contains_key("not_a_socket"));
+
+        let ai = registry.by_domain.get("ai").unwrap();
+        assert!(ai.socket_path.is_some());
+        assert_eq!(ai.name, "squirrel");
+
+        let dag = registry.by_domain.get("dag").unwrap();
+        assert_eq!(dag.name, "rhizocrypt");
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn probe_directory_nonexistent_is_noop() {
+        let mut registry = PrimalRegistry::default();
+        registry.probe_directory(std::path::Path::new("/nonexistent/probe/dir"));
+        assert!(registry.by_domain.is_empty());
+    }
+
+    #[test]
+    fn probe_directory_unknown_domain_uses_filename() {
+        let dir = std::env::temp_dir().join("esotericwebb-test-probe-unknown");
+        let _ = std::fs::create_dir_all(&dir);
+        std::fs::write(dir.join("custom.sock"), "").unwrap();
+
+        let mut registry = PrimalRegistry::default();
+        registry.probe_directory(&dir);
+
+        let ep = registry.by_domain.get("custom").unwrap();
+        assert_eq!(ep.name, "custom");
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    // NOTE: discover_tcp_from_env tests omitted — set_var/remove_var
+    // are unsafe in edition 2024, forbidden by workspace lints.
+    // TCP env var discovery is exercised indirectly via integration tests.
+
+    #[test]
+    fn socket_directories_includes_run_user() {
+        let dirs = socket_directories();
+        let uid = super::process_uid();
+        assert!(
+            dirs.iter()
+                .any(|d| d.to_string_lossy().contains(&format!("/run/user/{uid}")))
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn uid_from_proc_status_returns_some() {
+        let uid = uid_from_proc_status();
+        assert!(uid.is_some());
+    }
+
+    #[test]
+    fn metadata_does_not_overwrite_existing_tcp_addr() {
+        let dir = std::env::temp_dir().join("esotericwebb-test-meta-nooverwrite");
+        let _ = std::fs::create_dir_all(&dir);
+        let meta_path = dir.join("metadata.toml");
+        std::fs::write(
+            &meta_path,
+            r#"
+[primal]
+name = "keeper"
+
+[capabilities]
+domain = "keepdomain"
+methods = ["keep.test"]
+
+[transport]
+tcp_address = "127.0.0.1:8888"
+"#,
+        )
+        .unwrap();
+
+        let mut registry = PrimalRegistry::default();
+        registry.by_domain.insert(
+            "keepdomain".to_owned(),
+            PrimalEndpoint {
+                domain: "keepdomain".to_owned(),
+                name: "keeper".to_owned(),
+                socket_path: None,
+                tcp_addr: Some("10.0.0.1:1111".to_owned()),
+                capabilities: vec![],
+                healthy: false,
+            },
+        );
+        registry.ingest_metadata(&meta_path);
+
+        let ep = registry.by_domain.get("keepdomain").unwrap();
+        assert_eq!(ep.tcp_addr.as_deref(), Some("10.0.0.1:1111"));
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

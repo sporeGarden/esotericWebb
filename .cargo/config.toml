@@ -4,4 +4,4 @@
 target-dir = "/home/southgate/.cargo-build/esotericWebb/target"
 
 [alias]
-coverage = "llvm-cov --workspace --lib --fail-under-lines 60"
+coverage = "llvm-cov --workspace --lib --fail-under-lines 90"

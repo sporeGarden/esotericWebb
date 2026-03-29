@@ -5,8 +5,20 @@
 //! It exposes a JSON-friendly API so both the text REPL and the IPC server
 //! can drive the same game engine. An AI agent sends `act()` with a
 //! choice; a human picks from `available_actions()` in the terminal.
+//!
+//! ## Module layout
+//!
+//! - [`types`]: public data types (`ActionKind`, `ActionRecord`, etc.)
+//! - `enrichment`: primal composition pipeline (AI narration, game science, provenance)
+//! - This module: `GameSession` struct, core methods, and tests
 
-use serde::{Deserialize, Serialize};
+mod enrichment;
+pub mod types;
+
+pub use types::{
+    ActionKind, ActionRecord, AvailableAction, GameStateSnapshot, NarrationContext,
+    PrimalEnrichment, VoiceEnrichment,
+};
 
 use crate::content::ContentBundle;
 use crate::director::{DirectorOutcome, GameDirector, PlayerInput};
@@ -15,166 +27,12 @@ use crate::state::WorldState;
 
 /// A running game session.
 pub struct GameSession {
-    bundle: ContentBundle,
-    director: GameDirector,
-    state: WorldState,
-    history: Vec<ActionRecord>,
-    turn: u32,
-    /// Optional primal bridge for AI narration, rendering, etc.
-    bridge: Option<PrimalBridge>,
-}
-
-/// One recorded action in the session history.
-#[derive(Debug, Clone, Serialize)]
-pub struct ActionRecord {
-    /// Turn number when this action was taken (1-based after first act).
-    pub turn: u32,
-    /// Human-readable description of the action (e.g. `kind:id`).
-    pub action: String,
-    /// Outcome or narration text returned by the director.
-    pub outcome: String,
-    /// Narrative node id after the action resolved.
-    pub node_after: String,
-}
-
-/// The kind of action a player can take.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum ActionKind {
-    /// Traverse an exit edge to another narrative node.
-    Exit,
-    /// Talk to an NPC in the current scene.
-    Talk,
-    /// Use a named ability.
-    Ability,
-    /// Examine the current scene.
-    Examine,
-}
-
-impl ActionKind {
-    /// Parse an action kind from a string (JSON-RPC boundary).
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the string is not a recognised action kind.
-    pub fn parse(s: &str) -> Result<Self, String> {
-        match s {
-            "exit" => Ok(Self::Exit),
-            "talk" => Ok(Self::Talk),
-            "ability" => Ok(Self::Ability),
-            "examine" => Ok(Self::Examine),
-            _ => Err(format!("unknown action kind: {s}")),
-        }
-    }
-}
-
-impl std::fmt::Display for ActionKind {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Exit => f.write_str("exit"),
-            Self::Talk => f.write_str("talk"),
-            Self::Ability => f.write_str("ability"),
-            Self::Examine => f.write_str("examine"),
-        }
-    }
-}
-
-/// A possible action the player (human or AI) can take.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AvailableAction {
-    /// Action category.
-    pub kind: ActionKind,
-    /// Target identifier (node id, NPC id, ability id, etc.).
-    pub id: String,
-    /// Short label shown in the UI or action list.
-    pub label: String,
-    /// Optional extra text (e.g. ability description or blocked reason).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub detail: Option<String>,
-}
-
-/// Full game state snapshot — everything an AI player needs to decide.
-#[derive(Debug, Clone, Serialize)]
-pub struct GameStateSnapshot {
-    /// Whether the session is still active (always true from [`GameSession::snapshot`]).
-    pub session_active: bool,
-    /// Current turn count.
-    pub turn: u32,
-    /// Current narrative node id.
-    pub current_node: String,
-    /// Text description of the current scene.
-    pub scene_description: String,
-    /// NPC ids present in the current scene.
-    pub scene_npcs: Vec<String>,
-    /// Whether the current node is an ending.
-    pub is_ending: bool,
-    /// Knowledge keys the player has gained, sorted.
-    pub knowledge: Vec<String>,
-    /// Inventory item ids, sorted.
-    pub inventory: Vec<String>,
-    /// Active flag names, sorted.
-    pub flags: Vec<String>,
-    /// Trust values per NPC or entity id.
-    pub trust: std::collections::HashMap<String, i32>,
-    /// Actions the player may take next.
-    pub available_actions: Vec<AvailableAction>,
-}
-
-/// Context for AI narration generation.
-#[derive(Debug, Clone, Serialize)]
-pub struct NarrationContext {
-    /// Scene description before the action (for continuity).
-    pub scene_description: String,
-    /// NPCs that were in the scene before the action.
-    pub scene_npcs: Vec<String>,
-    /// Encoded player action (`kind:id`).
-    pub player_action: String,
-    /// Director outcome or narration text for this step.
-    pub outcome_text: String,
-    /// Knowledge keys after the action, sorted.
-    pub knowledge: Vec<String>,
-    /// Active flags after the action, sorted.
-    pub active_flags: Vec<String>,
-    /// Turn number after this action.
-    pub turn: u32,
-    /// Hints from abilities in the bundle (for model guidance).
-    pub narration_hints: Vec<String>,
-    /// Primal composition enrichments (AI narration, NPC dialogue, game science).
-    pub enrichment: PrimalEnrichment,
-}
-
-/// Enrichments from primal composition applied during [`GameSession::act`].
-///
-/// All fields are best-effort — absent primals result in `None` / empty
-/// values. Gameplay is never blocked by missing primals.
-#[derive(Debug, Clone, Default, Serialize)]
-pub struct PrimalEnrichment {
-    /// AI-generated narration text (via ludoSpring → Squirrel, or direct Squirrel).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub ai_narration: Option<String>,
-    /// NPC dialogue response (for talk actions, via ludoSpring → Squirrel).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub npc_dialogue: Option<String>,
-    /// Internal voice interjections (via ludoSpring game science).
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub voice_notes: Vec<VoiceEnrichment>,
-    /// Flow evaluation score (0.0 = anxiety, 0.5 = flow, 1.0 = boredom).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub flow_score: Option<f64>,
-    /// Whether the player is currently in flow.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub in_flow: Option<bool>,
-    /// Whether the scene was successfully pushed to the UI primal.
-    pub scene_pushed: bool,
-}
-
-/// A voice interjection from the game science primal.
-#[derive(Debug, Clone, Serialize)]
-pub struct VoiceEnrichment {
-    /// Voice identifier (e.g. "logic", "empathy").
-    pub voice_id: String,
-    /// The voice's interjection text.
-    pub text: String,
+    pub(crate) bundle: ContentBundle,
+    pub(crate) director: GameDirector,
+    pub(crate) state: WorldState,
+    pub(crate) history: Vec<ActionRecord>,
+    pub(crate) turn: u32,
+    pub(crate) bridge: Option<PrimalBridge>,
 }
 
 impl GameSession {
@@ -281,131 +139,6 @@ impl GameSession {
         if let Some(id) = session_id {
             tracing::debug!("provenance session created: {id}");
             self.state.session_id = id;
-        }
-    }
-
-    /// Best-effort enrichment via primal composition.
-    ///
-    /// Calls AI and game science primals to enrich the mechanical action
-    /// outcome. All calls degrade silently — gameplay is never blocked.
-    fn enrich_action(
-        &mut self,
-        kind: ActionKind,
-        id: &str,
-        outcome_text: &str,
-    ) -> PrimalEnrichment {
-        let mut enrichment = PrimalEnrichment::default();
-        let turn = self.turn;
-        let action_str = format!("{kind}:{id}");
-
-        let Some(bridge) = self.bridge.as_mut() else {
-            return enrichment;
-        };
-
-        if bridge.has(crate::ipc::DOMAIN_GAME) {
-            let params = serde_json::json!({
-                "action": action_str,
-                "outcome": outcome_text,
-                "turn": turn,
-            });
-            if let Ok(chat) = bridge.narrate_action(&params) {
-                if chat.model != "none" {
-                    enrichment.ai_narration = Some(chat.text);
-                }
-            }
-        }
-
-        if enrichment.ai_narration.is_none() && bridge.has(crate::ipc::DOMAIN_AI) {
-            let prompt =
-                format!("Narrate this RPG moment. Action: {action_str}. Outcome: {outcome_text}");
-            if let Ok(chat) = bridge.ai_narrate(&prompt) {
-                if chat.model != "none" {
-                    enrichment.ai_narration = Some(chat.text);
-                }
-            }
-        }
-
-        if kind == ActionKind::Talk && bridge.has(crate::ipc::DOMAIN_GAME) {
-            let params = serde_json::json!({
-                "npc_id": id,
-                "context": outcome_text,
-                "turn": turn,
-            });
-            if let Ok(dialogue) = bridge.npc_dialogue(&params) {
-                if !dialogue.degraded {
-                    enrichment.npc_dialogue = Some(dialogue.text);
-                }
-                enrichment.voice_notes = dialogue
-                    .voice_notes
-                    .into_iter()
-                    .map(|v| VoiceEnrichment {
-                        voice_id: v.voice_id,
-                        text: v.text,
-                    })
-                    .collect();
-            }
-        }
-
-        if bridge.has(crate::ipc::DOMAIN_GAME) {
-            let params = serde_json::json!({ "turn": turn, "action_kind": kind.to_string() });
-            if let Ok(flow) = bridge.evaluate_flow(&params) {
-                enrichment.flow_score = Some(flow.flow_score);
-                enrichment.in_flow = Some(flow.in_flow);
-            }
-        }
-
-        enrichment
-    }
-
-    /// Push current scene state to petalTongue for rendering.
-    fn push_scene_to_ui(&mut self) -> bool {
-        let npcs = self.current_scene_npcs();
-        let scene_desc = self.director.current_scene_description(&self.bundle);
-        let node_id = self.director.current_node_id().to_owned();
-        let turn = self.turn;
-        let is_ending = self.director.is_at_ending(&self.bundle);
-
-        let Some(bridge) = self.bridge.as_mut() else {
-            return false;
-        };
-
-        let scene = serde_json::json!({
-            "node": node_id,
-            "description": scene_desc,
-            "npcs": npcs,
-            "turn": turn,
-            "is_ending": is_ending,
-        });
-        match bridge.render_scene(&scene) {
-            Ok(()) => true,
-            Err(e) => {
-                tracing::debug!("scene push degraded: {e}");
-                false
-            }
-        }
-    }
-
-    /// Complete the provenance session if the game has reached an ending.
-    fn complete_provenance_if_ended(&mut self) {
-        if !self.director.is_at_ending(&self.bundle) {
-            return;
-        }
-        let session_id = self.state.session_id.clone();
-        if session_id.is_empty() {
-            return;
-        }
-        let turn = self.turn;
-
-        let Some(bridge) = self.bridge.as_mut() else {
-            return;
-        };
-        let params = serde_json::json!({
-            "session_id": session_id,
-            "turns": turn,
-            "completed": true,
-        });
-        if let Err(e) = bridge.dag_session_complete(&params) {
-            tracing::debug!("provenance session completion degraded: {e}");
         }
     }
 
@@ -561,40 +294,6 @@ impl GameSession {
         Ok((outcome_text, ctx))
     }
 
-    /// Record a provenance vertex via the DAG primal if connected.
-    ///
-    /// Provenance is best-effort: failures degrade silently so gameplay
-    /// is never blocked by an unavailable or slow primal.
-    fn record_provenance_vertex(&mut self, action: &str, node_after: &str) {
-        let Some(bridge) = self.bridge.as_mut() else {
-            return;
-        };
-        if !bridge.has(crate::ipc::DOMAIN_DAG) {
-            return;
-        }
-        let parent_ids: Vec<&str> = self
-            .history
-            .len()
-            .checked_sub(2)
-            .and_then(|i| self.history.get(i))
-            .map(|prev| vec![prev.node_after.as_str()])
-            .unwrap_or_default();
-
-        let vertex = serde_json::json!({
-            "session_id": self.state.session_id,
-            "data": {
-                "type": "player_action",
-                "action": action,
-                "node_after": node_after,
-                "turn": self.turn,
-            },
-            "parents": parent_ids,
-        });
-        if let Err(e) = bridge.dag_event_append(&vertex) {
-            tracing::debug!("provenance append degraded: {e}");
-        }
-    }
-
     /// Get the session history.
     #[must_use]
     pub fn history(&self) -> &[ActionRecord] {
@@ -710,7 +409,7 @@ impl GameSession {
         &self.bundle
     }
 
-    fn current_scene_npcs(&self) -> Vec<String> {
+    pub(crate) fn current_scene_npcs(&self) -> Vec<String> {
         self.bundle
             .narrative
             .get(self.director.current_node_id())
@@ -913,7 +612,7 @@ mod tests {
             .iter()
             .filter(|a| a.kind == ActionKind::Examine)
             .count();
-        assert_eq!(exit_count, 1); // only room is accessible (ending gated)
+        assert_eq!(exit_count, 1);
         assert_eq!(ability_count, 1);
         assert_eq!(examine_count, 1);
     }

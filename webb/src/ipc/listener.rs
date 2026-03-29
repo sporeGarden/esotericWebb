@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Unix domain socket listener for Webb's JSON-RPC server.
+//! Unix domain socket and TCP listeners for Webb's JSON-RPC server.
 //!
 //! Accepts connections, reads newline-delimited JSON-RPC requests,
 //! dispatches them through [`super::handlers::dispatch_with_session`],
 //! and writes back newline-delimited JSON-RPC responses.
+//!
+//! Both UDS ([`serve`]) and TCP ([`serve_tcp`]) are supported.
+//! TCP aligns with `UniBin` v1.2 `--listen addr:port`.
 
 use std::io::{BufRead, BufReader, Write};
 use std::os::unix::net::UnixListener;
@@ -55,7 +58,7 @@ pub fn serve(path: &Path, session: &SharedSession) -> Result<(), String> {
         .map_err(|e| format!("register SIGTERM handler: {e}"))?;
 
     let owned_path = path.to_owned();
-    eprintln!("Webb IPC listening on {}", path.display());
+    tracing::info!(path = %path.display(), "Webb IPC listening");
 
     while !shutdown.load(Ordering::Relaxed) {
         match listener.accept() {
@@ -68,14 +71,93 @@ pub fn serve(path: &Path, session: &SharedSession) -> Result<(), String> {
                 std::thread::sleep(std::time::Duration::from_millis(50));
             }
             Err(e) => {
-                eprintln!("accept error: {e}");
+                tracing::warn!(error = %e, "accept error");
             }
         }
     }
 
-    eprintln!("Shutting down Webb IPC server...");
+    tracing::info!("shutting down Webb IPC server");
     let _ = std::fs::remove_file(&owned_path);
     Ok(())
+}
+
+/// Start a TCP listener for Webb's JSON-RPC server.
+///
+/// `UniBin` v1.2 `--listen addr:port` support. Runs until the process is
+/// interrupted.
+///
+/// # Errors
+///
+/// Returns an error if the address cannot be bound.
+pub fn serve_tcp(addr: &str, session: &SharedSession) -> Result<(), String> {
+    let listener =
+        std::net::TcpListener::bind(addr).map_err(|e| format!("bind TCP {addr}: {e}"))?;
+
+    listener
+        .set_nonblocking(true)
+        .map_err(|e| format!("set non-blocking: {e}"))?;
+
+    let shutdown = Arc::new(AtomicBool::new(false));
+
+    signal_hook::flag::register(signal_hook::consts::SIGINT, Arc::clone(&shutdown))
+        .map_err(|e| format!("register SIGINT handler: {e}"))?;
+    signal_hook::flag::register(signal_hook::consts::SIGTERM, Arc::clone(&shutdown))
+        .map_err(|e| format!("register SIGTERM handler: {e}"))?;
+
+    tracing::info!(addr, "Webb TCP IPC listening");
+
+    while !shutdown.load(Ordering::Relaxed) {
+        match listener.accept() {
+            Ok((stream, _addr)) => {
+                let _ = stream.set_nonblocking(false);
+                let sess = Arc::clone(session);
+                std::thread::spawn(move || handle_tcp_connection(stream, &sess));
+            }
+            Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                std::thread::sleep(std::time::Duration::from_millis(50));
+            }
+            Err(e) => {
+                tracing::warn!(error = %e, "TCP accept error");
+            }
+        }
+    }
+
+    tracing::info!("shutting down Webb TCP IPC server");
+    Ok(())
+}
+
+#[allow(clippy::needless_pass_by_value)]
+fn handle_tcp_connection(stream: std::net::TcpStream, session: &SharedSession) {
+    let reader = BufReader::new(&stream);
+    let mut writer = &stream;
+
+    for line in reader.lines() {
+        let Ok(line) = line else { break };
+        let line = line.trim().to_owned();
+        if line.is_empty() {
+            continue;
+        }
+
+        let response = match serde_json::from_str::<JsonRpcRequest>(&line) {
+            Ok(req) => dispatch_with_session(&req, session),
+            Err(e) => super::envelope::JsonRpcResponse {
+                jsonrpc: "2.0".to_owned(),
+                result: None,
+                error: Some(super::envelope::JsonRpcError {
+                    code: -32700,
+                    message: format!("parse error: {e}"),
+                    data: None,
+                }),
+                id: serde_json::Value::Null,
+            },
+        };
+
+        let Ok(resp_json) = serde_json::to_string(&response) else {
+            continue;
+        };
+        let _ = writeln!(writer, "{resp_json}");
+        let _ = writer.flush();
+    }
 }
 
 #[allow(clippy::needless_pass_by_value)] // thread::spawn requires owned values
@@ -166,6 +248,140 @@ mod tests {
 
         assert!(response.contains("parse error"));
         assert!(response.contains("-32700"));
+
+        let _ = std::fs::remove_file(&sock_path);
+        let _ = std::fs::remove_dir(&sock_dir);
+    }
+
+    #[test]
+    fn handle_tcp_connection_valid_request() {
+        let session = super::super::handlers::new_shared_session();
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        let client = std::net::TcpStream::connect(addr).unwrap();
+        let (server_stream, _) = listener.accept().unwrap();
+
+        std::thread::spawn(move || {
+            handle_tcp_connection(server_stream, &session);
+        });
+
+        let mut client_writer = client.try_clone().unwrap();
+        let req = serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": "webb.health",
+            "id": 1
+        });
+        writeln!(client_writer, "{}", serde_json::to_string(&req).unwrap()).unwrap();
+        client_writer.flush().unwrap();
+        client_writer.shutdown(std::net::Shutdown::Write).unwrap();
+
+        let reader = BufReader::new(&client);
+        let mut response = String::new();
+        for line in reader.lines().map_while(Result::ok) {
+            response = line;
+        }
+
+        assert!(response.contains("healthy"));
+        assert!(response.contains("2.0"));
+    }
+
+    #[test]
+    fn handle_tcp_connection_parse_error() {
+        let session = super::super::handlers::new_shared_session();
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        let client = std::net::TcpStream::connect(addr).unwrap();
+        let (server_stream, _) = listener.accept().unwrap();
+
+        std::thread::spawn(move || {
+            handle_tcp_connection(server_stream, &session);
+        });
+
+        let mut client_writer = client.try_clone().unwrap();
+        writeln!(client_writer, "garbage").unwrap();
+        client_writer.flush().unwrap();
+        client_writer.shutdown(std::net::Shutdown::Write).unwrap();
+
+        let reader = BufReader::new(&client);
+        let mut response = String::new();
+        for line in reader.lines().map_while(Result::ok) {
+            response = line;
+        }
+
+        assert!(response.contains("parse error"));
+    }
+
+    #[test]
+    fn handle_tcp_connection_empty_lines_ignored() {
+        let session = super::super::handlers::new_shared_session();
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        let client = std::net::TcpStream::connect(addr).unwrap();
+        let (server_stream, _) = listener.accept().unwrap();
+
+        std::thread::spawn(move || {
+            handle_tcp_connection(server_stream, &session);
+        });
+
+        let mut client_writer = client.try_clone().unwrap();
+        writeln!(client_writer).unwrap();
+        writeln!(client_writer).unwrap();
+        let req = serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": "identity.get",
+            "id": 2
+        });
+        writeln!(client_writer, "{}", serde_json::to_string(&req).unwrap()).unwrap();
+        client_writer.flush().unwrap();
+        client_writer.shutdown(std::net::Shutdown::Write).unwrap();
+
+        let reader = BufReader::new(&client);
+        let mut response = String::new();
+        for line in reader.lines().map_while(Result::ok) {
+            if !line.is_empty() {
+                response = line;
+            }
+        }
+
+        assert!(response.contains("esotericwebb"));
+    }
+
+    #[test]
+    fn handle_connection_valid_request() {
+        let session = super::super::handlers::new_shared_session();
+        let sock_dir = std::env::temp_dir().join("esotericwebb_listener_test2");
+        let _ = std::fs::create_dir_all(&sock_dir);
+        let sock_path = sock_dir.join("valid.sock");
+        let _ = std::fs::remove_file(&sock_path);
+
+        let listener = std::os::unix::net::UnixListener::bind(&sock_path).unwrap();
+        let client = std::os::unix::net::UnixStream::connect(&sock_path).unwrap();
+        let (server_stream, _) = listener.accept().unwrap();
+
+        std::thread::spawn(move || {
+            handle_connection(server_stream, &session);
+        });
+
+        let mut client_writer = client.try_clone().unwrap();
+        let req = serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": "webb.health",
+            "id": 1
+        });
+        writeln!(client_writer, "{}", serde_json::to_string(&req).unwrap()).unwrap();
+        client_writer.flush().unwrap();
+        client_writer.shutdown(std::net::Shutdown::Write).unwrap();
+
+        let reader = BufReader::new(&client);
+        let mut response = String::new();
+        for line in reader.lines().map_while(Result::ok) {
+            response = line;
+        }
+
+        assert!(response.contains("healthy"));
 
         let _ = std::fs::remove_file(&sock_path);
         let _ = std::fs::remove_dir(&sock_dir);

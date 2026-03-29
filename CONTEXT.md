@@ -34,8 +34,8 @@ of spring evolution.
 ## Architecture
 
 - **Main crate**: `esoteric-webb` (library + UniBin binary)
-- **IPC**: JSON-RPC 2.0 over Unix domain sockets (newline-delimited)
-- **Transport**: XDG-compliant socket path resolution, capability-based discovery
+- **IPC**: JSON-RPC 2.0 over TCP and Unix domain sockets (newline-delimited)
+- **Transport**: TCP (default, platform-agnostic) + UDS; `connect_transport()` parses `unix:`, `tcp:`, and implicit formats; XDG-compliant socket path resolution, capability-based discovery
 - **No cross-primal Rust imports**: all coordination via runtime IPC
 - **Content**: YAML-authored worlds, NPCs, abilities, scenes, narrative graphs
 - **Primal resolution**: `plasmidBin/` filesystem probe, Songbird discovery, XDG/biomeOS sockets
@@ -56,7 +56,7 @@ Session: `session.start`, `session.state`, `session.actions`,
 
 MCP: `tools.list`, `tools.call`
 
-## Consumed primal capabilities (V4 — live wired)
+## Consumed primal capabilities (V5 — live wired)
 
 Game science: `game.evaluate_flow`, `game.engagement`,
 `game.difficulty_adjustment`, `game.npc_dialogue`, `game.narrate_action`,
@@ -97,7 +97,7 @@ cargo test --workspace
 - wateringHole PUBLIC_SURFACE_STANDARD
 - wateringHole SPRING_AS_NICHE_DEPLOYMENT_STANDARD
 - ScyBorg Provenance Trio Guidance
-- Semantic Method Naming Standard v2.1
+- Semantic Method Naming Standard v2.2
 - ECOBIN_ARCHITECTURE_STANDARD (zero C deps, pure Rust, cross-compile ready)
 - CAPABILITY_BASED_DISCOVERY_STANDARD (5-tier discovery with degradation)
 - PURE_RUST_SOVEREIGN_STACK_GUIDANCE (`#![forbid(unsafe_code)]`)

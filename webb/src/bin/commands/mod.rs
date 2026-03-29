@@ -11,7 +11,14 @@ use esoteric_webb::state::WorldState;
 ///
 /// With `--launch`, spawns primal binaries from `plasmidBin/` using the
 /// deploy graph before discovering. Without it, connects to running primals.
-pub fn cmd_serve(content_path: &str, launch: bool, graph_path: &str) -> Result<(), String> {
+///
+/// When `listen_addr` is provided, also starts a TCP listener (`UniBin` v1.2).
+pub fn cmd_serve(
+    content_path: &str,
+    launch: bool,
+    graph_path: &str,
+    listen_addr: Option<&str>,
+) -> Result<(), String> {
     // Launcher owns child processes and kills them on Drop — must outlive the server.
     #[allow(clippy::collection_is_never_read)] // held for Drop semantics, not read access
     let _launcher: Option<esoteric_webb::ipc::launcher::PrimalLauncher>;
@@ -87,8 +94,19 @@ pub fn cmd_serve(content_path: &str, launch: bool, graph_path: &str) -> Result<(
         *guard = Some(session);
     }
 
+    if let Some(addr) = listen_addr {
+        let tcp_shared = std::sync::Arc::clone(&shared);
+        let addr_owned = addr.to_owned();
+        std::thread::spawn(move || {
+            if let Err(e) = esoteric_webb::ipc::listener::serve_tcp(&addr_owned, &tcp_shared) {
+                eprintln!("TCP listener error: {e}");
+            }
+        });
+        println!("TCP IPC listening on {addr}");
+    }
+
     let sock = esoteric_webb::ipc::listener::socket_path();
-    println!("Starting IPC server on {}", sock.display());
+    println!("UDS IPC listening on {}", sock.display());
     println!("Session pre-loaded — connect and call session.state to begin");
     esoteric_webb::ipc::listener::serve(&sock, &shared)
 }
@@ -324,11 +342,18 @@ pub fn cmd_graph(
 }
 
 /// Replay a provenance-traced session.
+///
+/// Requires the provenance trio (rhizoCrypt, loamSpine, sweetGrass) to be
+/// fully wired with end-to-end session DAG persistence. See
+/// `EVOLUTION_GAPS.md` gap #003 for tracking.
 pub fn cmd_replay(session_path: &str, content_path: &str) -> Result<(), String> {
     let _bundle = ContentBundle::load(content_path).map_err(|e| format!("load: {e}"))?;
-    println!("Replay session: {session_path}");
-    println!("(provenance replay not yet wired — see EVOLUTION_GAPS.md)");
-    Ok(())
+    Err(format!(
+        "provenance replay not yet implemented for session '{session_path}'. \
+         The provenance trio (rhizoCrypt DAG, loamSpine certificates, sweetGrass attribution) \
+         must be end-to-end wired before sessions can be replayed. \
+         Track progress in EVOLUTION_GAPS.md gap #003."
+    ))
 }
 
 /// Automated playthrough — AI-as-player demonstration.

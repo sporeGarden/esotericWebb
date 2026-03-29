@@ -234,3 +234,39 @@ JSON Schema, sourDough compliance all complete.
 YAML roundtrip tests added for all content types (`WorldMeta`, `SceneContent`,
 `AbilityDef`, `NpcDef`). Scaffold-then-load roundtrip verified. Content
 loader and serde types fully aligned.
+
+### GAP-011: Semantic IpcError classification → RESOLVED (V5, 2026-03-25)
+
+`IpcError` refactored from flat variants to ecosystem-aligned semantic
+classification (`ConnectionRefused`, `Timeout`, `MethodNotFound`,
+`ProtocolError`, `ApplicationError`, `PrimalNotFound`) with helper methods
+`is_retriable()`, `is_recoverable()`, `is_connection_error()`,
+`is_method_not_found()`. Aligns with primalSpring error handling patterns.
+`classify_io_error()` normalizes OS-level errors to semantic types.
+
+### GAP-012: Primal name duplication → RESOLVED (V5, 2026-03-25)
+
+Created canonical `ipc/primal_names.rs` module as single source of truth for
+all primal slugs, display names, domains, and domain→primal mappings.
+Eliminated duplicate KNOWN_PRIMALS and PRIMAL_DOMAINS constants across
+discovery, bridge, and handlers. All consumers now reference one canonical list.
+
+### GAP-013: Session module exceeds 1000-line limit → RESOLVED (V5, 2026-03-25)
+
+Smart refactoring of `session.rs` (1192 lines) into three logical modules:
+`session/mod.rs` (891 lines, core session logic), `session/types.rs` (data
+structures), `session/enrichment.rs` (6-phase primal composition pipeline).
+Preserves cohesion while meeting the 1000-line quality gate.
+
+### GAP-014: println logging → RESOLVED (V5, 2026-03-25)
+
+All `println!`/`eprintln!` in production code replaced with `tracing::info!`
+and `tracing::warn!` for structured observability. Affects launcher.rs,
+commands/mod.rs, and listener.rs.
+
+### GAP-015: No TCP listener for UniBin v1.2 → RESOLVED (V5, 2026-03-25)
+
+Added `serve --listen addr:port` and `serve --port N` CLI arguments. New
+`serve_tcp()` and `handle_tcp_connection()` functions in listener.rs provide
+TCP IPC alongside existing UDS. Compliant with UniBin v1.2 `--listen`
+specification.

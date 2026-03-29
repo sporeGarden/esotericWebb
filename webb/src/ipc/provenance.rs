@@ -80,8 +80,9 @@ impl ProvenanceClient {
         client: Option<&mut PrimalClient>,
     ) -> Result<(), IpcError> {
         if let Some(c) = client {
-            let params = serde_json::to_value(&vertex)
-                .map_err(|e| IpcError::Serialization(e.to_string()))?;
+            let params = serde_json::to_value(&vertex).map_err(|e| IpcError::Serialization {
+                detail: e.to_string(),
+            })?;
             let _ = c.call("dag.event.append", params)?;
         } else if !self.available {
             tracing::debug!("provenance unavailable — logging locally: {}", vertex.id);

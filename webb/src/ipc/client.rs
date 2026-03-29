@@ -3,9 +3,11 @@
 //!
 //! Pure Rust, zero async runtime required. Supports both UDS
 //! (`std::os::unix::net`) and TCP (`std::net`) transports with
-//! line-delimited JSON-RPC 2.0. TCP enables platform-agnostic
-//! connectivity (containers, Graphene, remote hosts); UDS is the
-//! traditional local-machine path.
+//! line-delimited JSON-RPC 2.0.
+//!
+//! Transport priority configurable via `ESOTERICWEBB_TRANSPORT_PRIORITY`
+//! environment variable (`tcp` default for platform portability, `uds`
+//! for biomeOS-first deployments).
 //!
 //! Same wire protocol as all ecoPrimals primals — this is Webb's own
 //! implementation with no Cargo dependency on any spring or primal crate.
@@ -17,7 +19,7 @@ use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
-use super::envelope::{IpcError, JsonRpcRequest, JsonRpcResponse};
+use super::envelope::{IpcError, JsonRpcRequest, JsonRpcResponse, classify_io_error};
 
 /// Default timeout for socket operations.
 ///
@@ -62,6 +64,12 @@ impl Transport {
             Self::Tcp(r) => r.get_mut().write_all(data),
         }
     }
+
+    /// Whether this transport is a TCP socket.
+    #[cfg(test)]
+    const fn is_tcp(&self) -> bool {
+        matches!(self, Self::Tcp(_))
+    }
 }
 
 /// A synchronous JSON-RPC 2.0 client connected to a primal via UDS or TCP.
@@ -76,17 +84,16 @@ impl PrimalClient {
     ///
     /// # Errors
     ///
-    /// Returns [`IpcError::ConnectionFailed`] if the socket is unreachable.
+    /// Returns [`IpcError::ConnectionRefused`] if the socket is unreachable.
     pub fn connect(socket: &Path, primal: &str) -> Result<Self, IpcError> {
-        let stream =
-            UnixStream::connect(socket).map_err(|e| IpcError::ConnectionFailed(e.to_string()))?;
+        let stream = UnixStream::connect(socket).map_err(|e| classify_io_error(&e))?;
         let timeout = default_timeout();
         stream
             .set_read_timeout(Some(timeout))
-            .map_err(|e| IpcError::Io(e.to_string()))?;
+            .map_err(|e| classify_io_error(&e))?;
         stream
             .set_write_timeout(Some(timeout))
-            .map_err(|e| IpcError::Io(e.to_string()))?;
+            .map_err(|e| classify_io_error(&e))?;
         Ok(Self {
             transport: Transport::Uds(BufReader::new(stream)),
             primal: primal.to_owned(),
@@ -97,21 +104,49 @@ impl PrimalClient {
     ///
     /// # Errors
     ///
-    /// Returns [`IpcError::ConnectionFailed`] if the address is unreachable.
+    /// Returns [`IpcError::ConnectionRefused`] if the address is unreachable.
     pub fn connect_tcp(addr: &str, primal: &str) -> Result<Self, IpcError> {
-        let stream =
-            TcpStream::connect(addr).map_err(|e| IpcError::ConnectionFailed(e.to_string()))?;
+        let stream = TcpStream::connect(addr).map_err(|e| classify_io_error(&e))?;
         let timeout = default_timeout();
         stream
             .set_read_timeout(Some(timeout))
-            .map_err(|e| IpcError::Io(e.to_string()))?;
+            .map_err(|e| classify_io_error(&e))?;
         stream
             .set_write_timeout(Some(timeout))
-            .map_err(|e| IpcError::Io(e.to_string()))?;
+            .map_err(|e| classify_io_error(&e))?;
         Ok(Self {
             transport: Transport::Tcp(BufReader::new(stream)),
             primal: primal.to_owned(),
         })
+    }
+
+    /// Connect using a transport address string.
+    ///
+    /// Supports:
+    /// - `unix:/path/to/socket.sock` — Unix domain socket
+    /// - `tcp:127.0.0.1:9100` — TCP socket
+    /// - `/path/to/socket.sock` — implicit Unix socket (path starts with `/`)
+    /// - `127.0.0.1:9100` — implicit TCP (anything else)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IpcError`] if the address cannot be parsed or connection fails.
+    pub fn connect_transport(address: &str, primal: &str) -> Result<Self, IpcError> {
+        address.strip_prefix("unix:").map_or_else(
+            || {
+                address.strip_prefix("tcp:").map_or_else(
+                    || {
+                        if address.starts_with('/') {
+                            Self::connect(Path::new(address), primal)
+                        } else {
+                            Self::connect_tcp(address, primal)
+                        }
+                    },
+                    |addr| Self::connect_tcp(addr, primal),
+                )
+            },
+            |path| Self::connect(Path::new(path), primal),
+        )
     }
 
     /// The primal this client is connected to.
@@ -138,31 +173,38 @@ impl PrimalClient {
             id: serde_json::Value::Number(serde_json::Number::from(id)),
         };
 
-        let mut line =
-            serde_json::to_string(&request).map_err(|e| IpcError::Serialization(e.to_string()))?;
+        let mut line = serde_json::to_string(&request).map_err(|e| IpcError::Serialization {
+            detail: e.to_string(),
+        })?;
         line.push('\n');
 
         self.transport
             .write_all(line.as_bytes())
-            .map_err(|e| IpcError::Io(e.to_string()))?;
+            .map_err(|e| classify_io_error(&e))?;
 
         let mut response_line = String::new();
         self.transport
             .read_line(&mut response_line)
-            .map_err(|e| IpcError::Io(e.to_string()))?;
+            .map_err(|e| classify_io_error(&e))?;
 
         if response_line.is_empty() {
-            return Err(IpcError::Io("empty response from primal".to_owned()));
+            return Err(IpcError::ProtocolError {
+                detail: "empty response from primal".to_owned(),
+            });
         }
 
-        serde_json::from_str::<JsonRpcResponse>(&response_line)
-            .map_err(|e| IpcError::Serialization(e.to_string()))
+        serde_json::from_str::<JsonRpcResponse>(&response_line).map_err(|e| {
+            IpcError::ProtocolError {
+                detail: e.to_string(),
+            }
+        })
     }
 
     /// Send a `health.liveness` probe with fallback chain.
     ///
     /// Tries `health.liveness`, then `health.check`, then `health`,
-    /// then `{primal}.health`.
+    /// then `{primal}.health`. Aligns with `SEMANTIC_METHOD_NAMING_STANDARD`
+    /// v2.2 fallback convention.
     ///
     /// # Errors
     ///
@@ -177,12 +219,16 @@ impl PrimalClient {
         for method in &methods {
             match self.call(method, serde_json::Value::Null) {
                 Ok(resp) => {
-                    if resp.error.as_ref().is_some_and(|e| e.code == -32601) {
+                    if resp
+                        .error
+                        .as_ref()
+                        .is_some_and(|e| e.code == super::envelope::ERROR_METHOD_NOT_FOUND)
+                    {
                         continue;
                     }
                     return Ok(resp.error.is_none());
                 }
-                Err(IpcError::Remote { code: -32601, .. }) => {}
+                Err(IpcError::MethodNotFound { .. }) => {}
                 Err(e) => return Err(e),
             }
         }
@@ -206,31 +252,32 @@ impl PrimalClient {
         for method in methods {
             match self.call(method, serde_json::Value::Null) {
                 Ok(resp) => {
-                    if resp.error.as_ref().is_some_and(|e| e.code == -32601) {
-                        last_err = Some(IpcError::Remote {
-                            code: -32601,
-                            message: "method not found".to_owned(),
+                    if resp
+                        .error
+                        .as_ref()
+                        .is_some_and(|e| e.code == super::envelope::ERROR_METHOD_NOT_FOUND)
+                    {
+                        last_err = Some(IpcError::MethodNotFound {
+                            method: method.to_owned(),
                         });
                         continue;
                     }
                     if let Some(err) = resp.error {
-                        return Err(IpcError::Remote {
-                            code: err.code,
-                            message: err.message,
-                        });
+                        return Err(IpcError::from(err));
                     }
                     return Ok(resp.result.unwrap_or(serde_json::Value::Null));
                 }
-                Err(IpcError::Remote { code: -32601, .. }) => {
-                    last_err = Some(IpcError::Remote {
-                        code: -32601,
-                        message: "method not found".to_owned(),
+                Err(IpcError::MethodNotFound { .. }) => {
+                    last_err = Some(IpcError::MethodNotFound {
+                        method: method.to_owned(),
                     });
                 }
                 Err(e) => return Err(e),
             }
         }
-        Err(last_err.unwrap_or_else(|| IpcError::PrimalNotFound("capabilities.list".to_owned())))
+        Err(last_err.unwrap_or_else(|| IpcError::PrimalNotFound {
+            domain: "capabilities.list".to_owned(),
+        }))
     }
 }
 
@@ -245,12 +292,65 @@ mod tests {
     fn connect_fails_for_nonexistent_socket() {
         let result = PrimalClient::connect(Path::new("/nonexistent/socket.sock"), "test");
         assert!(result.is_err());
+        assert!(result.unwrap_err().is_connection_error());
     }
 
     #[test]
     fn connect_tcp_fails_for_unreachable_addr() {
         let result = PrimalClient::connect_tcp("127.0.0.1:1", "test");
         assert!(result.is_err());
+        assert!(result.unwrap_err().is_connection_error());
+    }
+
+    #[test]
+    fn connect_transport_tcp_implicit() {
+        let result = PrimalClient::connect_transport("127.0.0.1:1", "test");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn connect_transport_tcp_explicit() {
+        let result = PrimalClient::connect_transport("tcp:127.0.0.1:1", "test");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn connect_transport_unix_implicit() {
+        let result = PrimalClient::connect_transport("/nonexistent/socket.sock", "test");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn connect_transport_unix_explicit() {
+        let result = PrimalClient::connect_transport("unix:/nonexistent/socket.sock", "test");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn connect_transport_tcp_creates_tcp_transport() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap().to_string();
+
+        let server = std::thread::spawn(move || {
+            let (stream, _) = listener.accept().unwrap();
+            let mut reader = BufReader::new(&stream);
+            let mut line = String::new();
+            reader.read_line(&mut line).unwrap();
+            let req: serde_json::Value = serde_json::from_str(&line).unwrap();
+            let id = &req["id"];
+            let response =
+                format!("{{\"jsonrpc\":\"2.0\",\"result\":{{\"ok\":true}},\"id\":{id}}}\n");
+            (&stream).write_all(response.as_bytes()).unwrap();
+        });
+
+        let mut client = PrimalClient::connect_transport(&addr, "test").unwrap();
+        assert!(client.transport.is_tcp());
+        let resp = client
+            .call("health.check", serde_json::Value::Null)
+            .unwrap();
+        assert!(resp.is_success());
+
+        server.join().unwrap();
     }
 
     #[test]
@@ -378,6 +478,172 @@ mod tests {
         let mut client = PrimalClient::connect_tcp(&addr, "test").unwrap();
         let result = client.health_liveness().unwrap();
         assert!(result);
+
+        server.join().unwrap();
+    }
+
+    #[test]
+    fn primal_accessor_returns_name() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap().to_string();
+
+        let _server = std::thread::spawn(move || {
+            let (stream, _) = listener.accept().unwrap();
+            let mut reader = BufReader::new(&stream);
+            let mut line = String::new();
+            reader.read_line(&mut line).unwrap();
+            let req: serde_json::Value = serde_json::from_str(&line).unwrap();
+            let id = &req["id"];
+            let response = format!("{{\"jsonrpc\":\"2.0\",\"result\":null,\"id\":{id}}}\n");
+            (&stream).write_all(response.as_bytes()).unwrap();
+        });
+
+        let client = PrimalClient::connect_tcp(&addr, "myprimal").unwrap();
+        assert_eq!(client.primal(), "myprimal");
+    }
+
+    #[test]
+    fn capabilities_returns_list() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap().to_string();
+
+        let server = std::thread::spawn(move || {
+            let (stream, _) = listener.accept().unwrap();
+            let mut reader = BufReader::new(&stream);
+            let mut line = String::new();
+            reader.read_line(&mut line).unwrap();
+            let req: serde_json::Value = serde_json::from_str(&line).unwrap();
+            let id = &req["id"];
+            let response = format!(
+                "{{\"jsonrpc\":\"2.0\",\"result\":{{\"methods\":[\"dag.query\",\"dag.append\"]}},\"id\":{id}}}\n"
+            );
+            (&stream).write_all(response.as_bytes()).unwrap();
+        });
+
+        let mut client = PrimalClient::connect_tcp(&addr, "test").unwrap();
+        let caps = client.capabilities().unwrap();
+        assert!(caps["methods"].is_array());
+
+        server.join().unwrap();
+    }
+
+    #[test]
+    fn capabilities_fallback_to_second_method() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap().to_string();
+
+        let server = std::thread::spawn(move || {
+            let (stream, _) = listener.accept().unwrap();
+            let mut reader = BufReader::new(&stream);
+
+            // First call: method not found
+            let mut line = String::new();
+            reader.read_line(&mut line).unwrap();
+            let req: serde_json::Value = serde_json::from_str(&line).unwrap();
+            let id = &req["id"];
+            let response = format!(
+                "{{\"jsonrpc\":\"2.0\",\"error\":{{\"code\":-32601,\"message\":\"not found\"}},\"id\":{id}}}\n"
+            );
+            (&stream).write_all(response.as_bytes()).unwrap();
+
+            // Second call: success
+            let mut line2 = String::new();
+            reader.read_line(&mut line2).unwrap();
+            let req2: serde_json::Value = serde_json::from_str(&line2).unwrap();
+            let id2 = &req2["id"];
+            let response2 =
+                format!("{{\"jsonrpc\":\"2.0\",\"result\":{{\"caps\":[\"a\"]}},\"id\":{id2}}}\n");
+            (&stream).write_all(response2.as_bytes()).unwrap();
+        });
+
+        let mut client = PrimalClient::connect_tcp(&addr, "test").unwrap();
+        let caps = client.capabilities().unwrap();
+        assert!(caps["caps"].is_array());
+
+        server.join().unwrap();
+    }
+
+    #[test]
+    fn default_timeout_returns_positive_duration() {
+        let t = default_timeout();
+        assert!(t.as_secs() > 0);
+    }
+
+    #[test]
+    fn transport_debug_uds() {
+        let dir = std::env::temp_dir().join("esotericwebb-debug-test");
+        std::fs::create_dir_all(&dir).unwrap();
+        let sock_path = dir.join("debug.sock");
+        let _ = std::fs::remove_file(&sock_path);
+
+        let listener = UnixListener::bind(&sock_path).unwrap();
+        let stream = UnixStream::connect(&sock_path).unwrap();
+        let t = Transport::Uds(BufReader::new(stream));
+        let debug = format!("{t:?}");
+        assert_eq!(debug, "Transport::Uds");
+
+        drop(listener);
+        let _ = std::fs::remove_file(&sock_path);
+    }
+
+    #[test]
+    fn transport_debug_tcp() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+        let stream = TcpStream::connect(addr).unwrap();
+        let t = Transport::Tcp(BufReader::new(stream));
+        let debug = format!("{t:?}");
+        assert_eq!(debug, "Transport::Tcp");
+    }
+
+    #[test]
+    fn health_liveness_all_methods_fail_returns_false() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap().to_string();
+
+        let server = std::thread::spawn(move || {
+            let (stream, _) = listener.accept().unwrap();
+            let mut reader = BufReader::new(&stream);
+            for _ in 0..4 {
+                let mut line = String::new();
+                reader.read_line(&mut line).unwrap();
+                let req: serde_json::Value = serde_json::from_str(&line).unwrap();
+                let id = &req["id"];
+                let response = format!(
+                    "{{\"jsonrpc\":\"2.0\",\"error\":{{\"code\":-32601,\"message\":\"not found\"}},\"id\":{id}}}\n"
+                );
+                (&stream).write_all(response.as_bytes()).unwrap();
+            }
+        });
+
+        let mut client = PrimalClient::connect_tcp(&addr, "test").unwrap();
+        let result = client.health_liveness().unwrap();
+        assert!(!result);
+
+        server.join().unwrap();
+    }
+
+    #[test]
+    fn health_liveness_error_response_returns_false() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap().to_string();
+
+        let server = std::thread::spawn(move || {
+            let (stream, _) = listener.accept().unwrap();
+            let mut reader = BufReader::new(&stream);
+            let mut line = String::new();
+            reader.read_line(&mut line).unwrap();
+            let req: serde_json::Value = serde_json::from_str(&line).unwrap();
+            let id = &req["id"];
+            let response = format!(
+                "{{\"jsonrpc\":\"2.0\",\"error\":{{\"code\":-32000,\"message\":\"internal error\"}},\"id\":{id}}}\n"
+            );
+            (&stream).write_all(response.as_bytes()).unwrap();
+        });
+
+        let mut client = PrimalClient::connect_tcp(&addr, "test").unwrap();
+        let result = client.health_liveness().unwrap();
+        assert!(!result);
 
         server.join().unwrap();
     }

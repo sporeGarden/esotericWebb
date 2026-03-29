@@ -2,6 +2,52 @@
 
 All notable changes to Esoteric Webb are documented here.
 
+## V5 — Deep Debt Resolution + Ecosystem Evolution (March 25, 2026)
+
+- **Coverage gate: 90.84% lines** — enforced via `cargo llvm-cov --fail-under-lines 90`;
+  329 total tests (316 unit + 12 E2E + 1 validation), up from 166 in V4
+- **Canonical `primal_names` module** — single source of truth for all primal
+  slugs, domains, and display names; eliminates duplicate KNOWN_PRIMALS /
+  PRIMAL_DOMAINS constants across discovery, bridge, and handlers
+- **Semantic `IpcError` classification** — `IpcError` refactored to ecosystem
+  pattern (primalSpring alignment): `ConnectionRefused`, `Timeout`,
+  `MethodNotFound`, `ProtocolError`, `ApplicationError`, `PrimalNotFound`;
+  helper methods `is_retriable()`, `is_recoverable()`, `is_method_not_found()`,
+  `is_connection_error()`, and `classify_io_error()` for consistent circuit
+  breaker and retry logic across all consumers
+- **Transport negotiation** — `PrimalClient::connect_transport()` parses
+  `unix:`, `tcp:`, implicit path, and implicit address formats per
+  primalSpring transport priority pattern
+- **Smart session refactor** — `session.rs` (1192 lines) decomposed into
+  `session/mod.rs` (891), `session/types.rs` (data structures),
+  `session/enrichment.rs` (primal composition pipeline); all under 1000-line
+  limit while preserving logical cohesion
+- **Logging modernization** — all `println!`/`eprintln!` replaced with
+  `tracing::info!`/`tracing::warn!` for structured observability
+- **UniBin v1.2 TCP listener** — `serve --listen addr:port` and `serve --port N`
+  for TCP IPC alongside existing UDS; `serve_tcp` and `handle_tcp_connection`
+  in `listener.rs`
+- **`cmd_replay` evolution** — stub replaced with honest error + guidance
+  pointing to `EVOLUTION_GAPS.md` for proper implementation
+- **Content validation coverage** — 14 new tests for missing content_ref,
+  missing NPC, trust reward warnings, ability effects, compound predicates,
+  YAML load paths, worlds/rulesets loading
+- **Launcher test suite** — 15 new tests covering topological sort edge cases,
+  TOML round-trips, deploy graph diamond/cycle/missing-dep, TCP readiness,
+  spawn error paths, struct defaults
+- **Discovery test suite** — 8 new tests for metadata ingestion edge cases,
+  probe_directory socket scanning, unknown domain fallback, TCP address
+  preservation
+- **Client test suite** — 7 new tests for capabilities fallback chain, health
+  liveness edge cases, Transport debug formatting
+- **Handler test expansion** — extensive new tests for session and narrative
+  handlers with active GameSession state (act, history, narrate, graph)
+- **TCP listener tests** — valid request, parse error, and empty line handling
+  for both TCP and UDS connection handlers
+- **Enrichment pipeline tests** — 9 new tests exercising the full 6-phase
+  enrichment pipeline with standalone bridge
+- All 5 quality gates clean: fmt, clippy (pedantic + nursery), test, doc, deny
+
 ## V4 — Wire Live Primal Composition (March 24, 2026)
 
 - **Critical fix: session.start bridge preservation** — IPC `session.start` now preserves the

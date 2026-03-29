@@ -37,6 +37,17 @@ enum Command {
         /// Deploy graph TOML for primal spawn ordering (requires --launch).
         #[arg(long, default_value = "graphs/webb_provenance_trio.toml")]
         graph: String,
+        /// Listen address for TCP IPC (e.g. `127.0.0.1:9500`).
+        ///
+        /// When provided, starts a TCP listener in addition to the UDS socket.
+        /// Aligns with `UniBin` v1.2 `--listen addr:port`.
+        #[arg(long)]
+        listen: Option<String>,
+        /// TCP port for the IPC server (shorthand for `--listen 127.0.0.1:<PORT>`).
+        ///
+        /// `UniBin` mandatory: `server --port <PORT>`.
+        #[arg(long)]
+        port: Option<u16>,
     },
     /// Validate a content directory for correctness.
     Validate {
@@ -114,7 +125,12 @@ fn main() {
             content,
             launch,
             graph,
-        } => commands::cmd_serve(&content, launch, &graph),
+            listen,
+            port,
+        } => {
+            let listen_addr = listen.or_else(|| port.map(|p| format!("127.0.0.1:{p}")));
+            commands::cmd_serve(&content, launch, &graph, listen_addr.as_deref())
+        }
         Command::Validate { content, all } => {
             if all {
                 commands::cmd_validate_all()

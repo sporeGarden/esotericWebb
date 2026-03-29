@@ -16,6 +16,7 @@
 //!
 //! TCP (preferred for platform portability — containers, Graphene) and
 //! Unix domain sockets (XDG-compliant path resolution).
+//! Transport priority configurable via `ESOTERICWEBB_TRANSPORT_PRIORITY`.
 //! Protocol: newline-delimited JSON-RPC 2.0.
 //!
 //! ## Why JSON-RPC only (no tarpc)
@@ -40,47 +41,14 @@ pub mod launcher;
 pub mod listener;
 pub mod ludospring;
 pub mod petaltongue;
+pub mod primal_names;
 pub mod provenance;
 pub mod resilience;
 pub mod squirrel;
 
 pub use envelope::{JsonRpcError, JsonRpcRequest, JsonRpcResponse};
-
-// ── Capability domain identifiers ──────────────────────────
-// Primals are discovered by domain, never by name.
-
-/// AI domain (Squirrel).
-pub const DOMAIN_AI: &str = "ai";
-/// Visualization domain (petalTongue).
-pub const DOMAIN_VISUALIZATION: &str = "visualization";
-/// Compute domain (toadStool).
-pub const DOMAIN_COMPUTE: &str = "compute";
-/// Storage domain (nestGate).
-pub const DOMAIN_STORAGE: &str = "storage";
-/// Game science domain (ludoSpring).
-pub const DOMAIN_GAME: &str = "game";
-/// DAG domain (rhizoCrypt).
-pub const DOMAIN_DAG: &str = "dag";
-/// Lineage domain (loamSpine).
-pub const DOMAIN_LINEAGE: &str = "lineage";
-/// Provenance domain (sweetGrass).
-pub const DOMAIN_PROVENANCE: &str = "provenance";
-
-/// Domain→default primal name mapping for discovery.
-///
-/// The bridge discovers by domain and uses names only for logging.
-/// Primal code only has self-knowledge — these names come from the
-/// ecosystem registry, not from importing primal code.
-pub const PRIMAL_DOMAINS: &[(&str, &str)] = &[
-    (DOMAIN_AI, "squirrel"),
-    (DOMAIN_VISUALIZATION, "petaltongue"),
-    (DOMAIN_COMPUTE, "toadstool"),
-    (DOMAIN_STORAGE, "nestgate"),
-    (DOMAIN_GAME, "ludospring"),
-    (DOMAIN_DAG, "rhizocrypt"),
-    (DOMAIN_LINEAGE, "loamspine"),
-    (DOMAIN_PROVENANCE, "sweetgrass"),
-];
+pub use primal_names::DOMAIN_PRIMAL_MAP;
+pub use primal_names::domain;
 
 // ── Compute domain methods ─────────────────────────────────
 

@@ -166,13 +166,12 @@ impl CircuitBreaker {
 
 /// Whether an [`IpcError`](super::envelope::IpcError) is transient and
 /// worth retrying.
+///
+/// Delegates to [`IpcError::is_recoverable`](super::envelope::IpcError::is_recoverable)
+/// for ecosystem-wide consistency.
 #[must_use]
 pub const fn is_recoverable(err: &super::envelope::IpcError) -> bool {
-    use super::envelope::IpcError;
-    matches!(
-        err,
-        IpcError::Io(_) | IpcError::Timeout(_) | IpcError::ConnectionFailed(_)
-    )
+    err.is_recoverable()
 }
 
 fn epoch_ms() -> u64 {
@@ -257,19 +256,27 @@ mod tests {
     }
 
     #[test]
-    fn is_recoverable_for_io_errors() {
+    fn is_recoverable_aligns_with_ecosystem() {
         use super::super::envelope::IpcError;
-        assert!(is_recoverable(&IpcError::Io("broken pipe".to_owned())));
-        assert!(is_recoverable(&IpcError::Timeout(5000)));
-        assert!(is_recoverable(&IpcError::ConnectionFailed(
+        assert!(is_recoverable(&IpcError::ConnectionRefused(
             "refused".to_owned()
         )));
-        assert!(!is_recoverable(&IpcError::Serialization(
-            "parse".to_owned()
+        assert!(is_recoverable(&IpcError::ConnectionReset(
+            "reset".to_owned()
         )));
-        assert!(!is_recoverable(&IpcError::Remote {
-            code: -32601,
-            message: "not found".to_owned(),
+        assert!(is_recoverable(&IpcError::Timeout { ms: 5000 }));
+        assert!(is_recoverable(&IpcError::ApplicationError {
+            code: -32603,
+            message: "internal".to_owned(),
+        }));
+        assert!(!is_recoverable(&IpcError::MethodNotFound {
+            method: "health.check".to_owned(),
+        }));
+        assert!(!is_recoverable(&IpcError::Serialization {
+            detail: "parse".to_owned(),
+        }));
+        assert!(!is_recoverable(&IpcError::PrimalNotFound {
+            domain: "ai".to_owned(),
         }));
     }
 }

@@ -2,9 +2,10 @@
 
 | | |
 |---|---|
-| **Version** | V4 |
-| **Tests** | 166 |
-| **Rust files** | 32 (~8.5k LOC) |
+| **Version** | V5 |
+| **Tests** | 329 (316 unit + 12 E2E + 1 validation) |
+| **Coverage** | 90.84% lines (`cargo llvm-cov`) |
+| **Rust files** | 35 (~12.5k LOC) |
 | **Experiments** | 5 (exp001–exp005) |
 | **MSRV** | 1.87 (edition 2024) |
 | **License** | AGPL-3.0 + ORC + CC-BY-SA 4.0 |
@@ -12,7 +13,7 @@
 | **C deps** | Zero (ecoBin compliant) |
 | **Bridge methods** | 23 (all domains, all degrading) |
 | **Primals consumed** | 8 domains (ai, game, viz, dag, lineage, compute, storage, provenance) |
-| **Last validation** | 2026-03-24 (V4) |
+| **Last validation** | 2026-03-25 (V5) |
 
 **A [sporeGarden](https://github.com/sporeGarden) project — the primals as a composed CRPG.**
 
@@ -137,6 +138,7 @@ primals become invisible infrastructure inside a creative product.
 ```bash
 make check    # fmt + clippy + test + doc
 make deny     # supply chain audit
+cargo llvm-cov --workspace --lib --fail-under-lines 90  # coverage
 ```
 
 ## License

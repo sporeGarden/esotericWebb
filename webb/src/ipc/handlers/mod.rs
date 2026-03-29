@@ -81,7 +81,7 @@ pub fn dispatch_with_session(request: &JsonRpcRequest, session: &SharedSession) 
         METHOD_SESSION_GRAPH => session::handle_session_graph(session),
 
         _ => Err(JsonRpcError {
-            code: -32601,
+            code: super::envelope::ERROR_METHOD_NOT_FOUND,
             message: format!("method not found: {}", request.method),
             data: None,
         }),

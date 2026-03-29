@@ -24,15 +24,15 @@ use super::ludospring::{
     METHOD_NARRATE_ACTION, METHOD_NPC_DIALOGUE, METHOD_PUSH_SCENE, METHOD_VOICE_CHECK, VoiceNote,
 };
 use super::petaltongue::{InputEvent, METHOD_INTERACTION_POLL, METHOD_RENDER_SCENE};
-use super::resilience::{CircuitBreaker, RetryPolicy, is_recoverable};
+use super::primal_names::DOMAIN_PRIMAL_MAP;
+use super::primal_names::domain;
+use super::resilience::{CircuitBreaker, RetryPolicy};
 use super::squirrel::ChatResponse;
 use super::squirrel::{METHOD_AI_CHAT, METHOD_AI_SUMMARIZE};
 use super::{
-    DOMAIN_AI, DOMAIN_COMPUTE, DOMAIN_DAG, DOMAIN_GAME, DOMAIN_LINEAGE, DOMAIN_STORAGE,
-    DOMAIN_VISUALIZATION, METHOD_CERT_MINT, METHOD_COMPUTE_SUBMIT, METHOD_DAG_EVENT_APPEND,
-    METHOD_DAG_FRONTIER_GET, METHOD_DAG_MERKLE_ROOT, METHOD_DAG_QUERY_VERTICES,
-    METHOD_DAG_SESSION_COMPLETE, METHOD_DAG_SESSION_CREATE, METHOD_STORAGE_RETRIEVE,
-    METHOD_STORAGE_STORE, PRIMAL_DOMAINS,
+    METHOD_CERT_MINT, METHOD_COMPUTE_SUBMIT, METHOD_DAG_EVENT_APPEND, METHOD_DAG_FRONTIER_GET,
+    METHOD_DAG_MERKLE_ROOT, METHOD_DAG_QUERY_VERTICES, METHOD_DAG_SESSION_COMPLETE,
+    METHOD_DAG_SESSION_CREATE, METHOD_STORAGE_RETRIEVE, METHOD_STORAGE_STORE,
 };
 
 /// Maximum characters for degraded summary truncation.
@@ -79,7 +79,7 @@ impl PrimalBridge {
         let mut clients = HashMap::new();
         let mut statuses = Vec::new();
 
-        for &(domain, name) in PRIMAL_DOMAINS {
+        for &(domain, name) in DOMAIN_PRIMAL_MAP {
             let endpoint = registry.by_domain.get(domain);
             let discovered = endpoint.is_some();
             let mut healthy = false;
@@ -120,7 +120,7 @@ impl PrimalBridge {
             });
         }
 
-        let circuits = PRIMAL_DOMAINS
+        let circuits = DOMAIN_PRIMAL_MAP
             .iter()
             .map(|&(domain, _)| (domain.to_owned(), CircuitBreaker::from_env()))
             .collect();
@@ -135,7 +135,7 @@ impl PrimalBridge {
     /// Create an empty bridge with no connections (for standalone mode).
     #[must_use]
     pub fn standalone() -> Self {
-        let statuses = PRIMAL_DOMAINS
+        let statuses = DOMAIN_PRIMAL_MAP
             .iter()
             .map(|&(domain, name)| PrimalStatus {
                 name: name.to_owned(),
@@ -145,7 +145,7 @@ impl PrimalBridge {
                 transport: None,
             })
             .collect();
-        let circuits = PRIMAL_DOMAINS
+        let circuits = DOMAIN_PRIMAL_MAP
             .iter()
             .map(|&(domain, _)| (domain.to_owned(), CircuitBreaker::from_env()))
             .collect();
@@ -206,7 +206,7 @@ impl PrimalBridge {
     ) -> Result<JsonRpcResponse, IpcError> {
         let circuit = self.circuits.get(domain);
         if circuit.is_some_and(|cb| !cb.is_allowed()) {
-            return Err(IpcError::Io(format!(
+            return Err(IpcError::ConnectionRefused(format!(
                 "circuit open for domain {domain} — skipping {method}"
             )));
         }
@@ -214,7 +214,9 @@ impl PrimalBridge {
         let client = self
             .clients
             .get_mut(domain)
-            .ok_or_else(|| IpcError::PrimalNotFound(domain.to_owned()))?;
+            .ok_or_else(|| IpcError::PrimalNotFound {
+                domain: domain.to_owned(),
+            })?;
 
         let mut last_err = None;
         let max = self.retry_policy.max_retries;
@@ -228,7 +230,7 @@ impl PrimalBridge {
                     return Ok(resp);
                 }
                 Err(e) => {
-                    if !is_recoverable(&e) {
+                    if !e.is_recoverable() {
                         if let Some(cb) = self.circuits.get(domain) {
                             cb.record_failure();
                         }
@@ -252,7 +254,8 @@ impl PrimalBridge {
         if let Some(cb) = self.circuits.get(domain) {
             cb.record_failure();
         }
-        Err(last_err.unwrap_or_else(|| IpcError::Io("all retries exhausted".to_owned())))
+        Err(last_err
+            .unwrap_or_else(|| IpcError::ConnectionReset("all retries exhausted".to_owned())))
     }
 
     // ── Generic call helpers ──────────────────────────────────
@@ -354,7 +357,7 @@ impl PrimalBridge {
             model: "none".to_owned(),
             tokens: 0,
         };
-        self.call_or_default(DOMAIN_AI, METHOD_AI_CHAT, params, default)
+        self.call_or_default(domain::AI, METHOD_AI_CHAT, params, default)
     }
 
     /// Summarize context via the AI primal.
@@ -363,9 +366,9 @@ impl PrimalBridge {
     ///
     /// Returns [`IpcError`] if the call fails unexpectedly.
     pub fn ai_summarize(&mut self, context: &str) -> Result<String, IpcError> {
-        if self.has(DOMAIN_AI) {
+        if self.has(domain::AI) {
             let params = serde_json::json!({ "text": context });
-            if let Ok(resp) = self.resilient_call(DOMAIN_AI, METHOD_AI_SUMMARIZE, params) {
+            if let Ok(resp) = self.resilient_call(domain::AI, METHOD_AI_SUMMARIZE, params) {
                 if let Some(serde_json::Value::String(text)) = resp.result {
                     return Ok(text);
                 }
@@ -383,7 +386,7 @@ impl PrimalBridge {
     ///
     /// Returns [`IpcError`] if the call fails unexpectedly.
     pub fn render_scene(&mut self, scene: &serde_json::Value) -> Result<(), IpcError> {
-        self.call_fire(DOMAIN_VISUALIZATION, METHOD_RENDER_SCENE, scene.clone())
+        self.call_fire(domain::VISUALIZATION, METHOD_RENDER_SCENE, scene.clone())
     }
 
     /// Poll for player input events from `petalTongue`.
@@ -393,7 +396,7 @@ impl PrimalBridge {
     /// Returns [`IpcError`] if the call fails unexpectedly.
     pub fn poll_input(&mut self) -> Result<Vec<InputEvent>, IpcError> {
         self.call_or_default(
-            DOMAIN_VISUALIZATION,
+            domain::VISUALIZATION,
             METHOD_INTERACTION_POLL,
             serde_json::Value::Null,
             Vec::new(),
@@ -409,7 +412,7 @@ impl PrimalBridge {
     /// Returns [`IpcError`] if the call fails unexpectedly.
     pub fn compute_submit(&mut self, task: &serde_json::Value) -> Result<Option<String>, IpcError> {
         self.call_extract_id(
-            DOMAIN_COMPUTE,
+            domain::COMPUTE,
             METHOD_COMPUTE_SUBMIT,
             task.clone(),
             &["job_id"],
@@ -424,11 +427,11 @@ impl PrimalBridge {
     ///
     /// Returns [`IpcError`] if the call fails unexpectedly.
     pub fn store(&mut self, key: &str, value: &serde_json::Value) -> Result<bool, IpcError> {
-        if !self.has(DOMAIN_STORAGE) {
+        if !self.has(domain::STORAGE) {
             return Ok(false);
         }
         let params = serde_json::json!({ "key": key, "value": value });
-        let resp = self.resilient_call(DOMAIN_STORAGE, METHOD_STORAGE_STORE, params)?;
+        let resp = self.resilient_call(domain::STORAGE, METHOD_STORAGE_STORE, params)?;
         Ok(resp.error.is_none())
     }
 
@@ -439,7 +442,7 @@ impl PrimalBridge {
     /// Returns [`IpcError`] if the call fails unexpectedly.
     pub fn retrieve(&mut self, key: &str) -> Result<Option<serde_json::Value>, IpcError> {
         self.call_passthrough(
-            DOMAIN_STORAGE,
+            domain::STORAGE,
             METHOD_STORAGE_RETRIEVE,
             serde_json::json!({ "key": key }),
         )
@@ -454,7 +457,7 @@ impl PrimalBridge {
     /// Returns [`IpcError`] if the call fails unexpectedly.
     pub fn evaluate_flow(&mut self, params: &serde_json::Value) -> Result<FlowResult, IpcError> {
         self.call_or_default(
-            DOMAIN_GAME,
+            domain::GAME,
             METHOD_EVALUATE_FLOW,
             params.clone(),
             FlowResult {
@@ -471,7 +474,7 @@ impl PrimalBridge {
     /// Returns [`IpcError`] if the call fails unexpectedly.
     pub fn engagement(&mut self, params: &serde_json::Value) -> Result<EngagementResult, IpcError> {
         self.call_or_default(
-            DOMAIN_GAME,
+            domain::GAME,
             METHOD_ENGAGEMENT,
             params.clone(),
             EngagementResult {
@@ -492,7 +495,7 @@ impl PrimalBridge {
         params: &serde_json::Value,
     ) -> Result<DdaResult, IpcError> {
         self.call_or_default(
-            DOMAIN_GAME,
+            domain::GAME,
             METHOD_DIFFICULTY_ADJUSTMENT,
             params.clone(),
             DdaResult {
@@ -512,7 +515,7 @@ impl PrimalBridge {
         params: &serde_json::Value,
     ) -> Result<DialogueResponse, IpcError> {
         self.call_or_default(
-            DOMAIN_GAME,
+            domain::GAME,
             METHOD_NPC_DIALOGUE,
             params.clone(),
             DialogueResponse {
@@ -531,7 +534,7 @@ impl PrimalBridge {
     /// Returns [`IpcError`] if the call fails unexpectedly.
     pub fn narrate_action(&mut self, params: &serde_json::Value) -> Result<ChatResponse, IpcError> {
         self.call_or_default(
-            DOMAIN_GAME,
+            domain::GAME,
             METHOD_NARRATE_ACTION,
             params.clone(),
             ChatResponse {
@@ -548,7 +551,7 @@ impl PrimalBridge {
     ///
     /// Returns [`IpcError`] if the call fails unexpectedly.
     pub fn voice_check(&mut self, params: &serde_json::Value) -> Result<Vec<VoiceNote>, IpcError> {
-        self.call_or_default(DOMAIN_GAME, METHOD_VOICE_CHECK, params.clone(), Vec::new())
+        self.call_or_default(domain::GAME, METHOD_VOICE_CHECK, params.clone(), Vec::new())
     }
 
     /// Push scene via ludoSpring → `petalTongue` delegation.
@@ -557,7 +560,7 @@ impl PrimalBridge {
     ///
     /// Returns [`IpcError`] if the call fails unexpectedly.
     pub fn game_push_scene(&mut self, params: &serde_json::Value) -> Result<(), IpcError> {
-        self.call_fire(DOMAIN_GAME, METHOD_PUSH_SCENE, params.clone())
+        self.call_fire(domain::GAME, METHOD_PUSH_SCENE, params.clone())
     }
 
     /// Begin a game session in the provenance system via ludoSpring.
@@ -570,7 +573,7 @@ impl PrimalBridge {
         params: &serde_json::Value,
     ) -> Result<Option<String>, IpcError> {
         self.call_extract_id(
-            DOMAIN_GAME,
+            domain::GAME,
             METHOD_BEGIN_SESSION,
             params.clone(),
             &["session_id", "id"],
@@ -583,7 +586,7 @@ impl PrimalBridge {
     ///
     /// Returns [`IpcError`] if the call fails unexpectedly.
     pub fn game_complete_session(&mut self, params: &serde_json::Value) -> Result<(), IpcError> {
-        self.call_fire(DOMAIN_GAME, METHOD_COMPLETE_SESSION, params.clone())
+        self.call_fire(domain::GAME, METHOD_COMPLETE_SESSION, params.clone())
     }
 
     // ── Provenance / DAG domain (rhizoCrypt) ────────────────
@@ -594,10 +597,10 @@ impl PrimalBridge {
     ///
     /// Returns [`IpcError`] if the call fails unexpectedly.
     pub fn provenance_append(&mut self, vertex: &serde_json::Value) -> Result<bool, IpcError> {
-        if !self.has(DOMAIN_DAG) {
+        if !self.has(domain::DAG) {
             return Ok(false);
         }
-        let resp = self.resilient_call(DOMAIN_DAG, METHOD_DAG_EVENT_APPEND, vertex.clone())?;
+        let resp = self.resilient_call(domain::DAG, METHOD_DAG_EVENT_APPEND, vertex.clone())?;
         Ok(resp.error.is_none())
     }
 
@@ -611,7 +614,7 @@ impl PrimalBridge {
         params: &serde_json::Value,
     ) -> Result<Option<String>, IpcError> {
         self.call_extract_id(
-            DOMAIN_DAG,
+            domain::DAG,
             METHOD_DAG_SESSION_CREATE,
             params.clone(),
             &["session_id", "id"],
@@ -627,10 +630,10 @@ impl PrimalBridge {
         &mut self,
         params: &serde_json::Value,
     ) -> Result<Option<String>, IpcError> {
-        if !self.has(DOMAIN_DAG) {
+        if !self.has(domain::DAG) {
             return Ok(None);
         }
-        let resp = self.resilient_call(DOMAIN_DAG, METHOD_DAG_EVENT_APPEND, params.clone())?;
+        let resp = self.resilient_call(domain::DAG, METHOD_DAG_EVENT_APPEND, params.clone())?;
         if let Some(result) = resp.result {
             for field in &["vertex_id", "id"] {
                 if let Some(id) = result.get(*field).and_then(serde_json::Value::as_str) {
@@ -651,7 +654,7 @@ impl PrimalBridge {
         &mut self,
         params: &serde_json::Value,
     ) -> Result<Option<serde_json::Value>, IpcError> {
-        self.call_passthrough(DOMAIN_DAG, METHOD_DAG_FRONTIER_GET, params.clone())
+        self.call_passthrough(domain::DAG, METHOD_DAG_FRONTIER_GET, params.clone())
     }
 
     /// Get the Merkle root of a session DAG.
@@ -664,7 +667,7 @@ impl PrimalBridge {
         params: &serde_json::Value,
     ) -> Result<Option<String>, IpcError> {
         self.call_extract_id(
-            DOMAIN_DAG,
+            domain::DAG,
             METHOD_DAG_MERKLE_ROOT,
             params.clone(),
             &["root", "merkle_root"],
@@ -677,7 +680,7 @@ impl PrimalBridge {
     ///
     /// Returns [`IpcError`] if the call fails unexpectedly.
     pub fn dag_session_complete(&mut self, params: &serde_json::Value) -> Result<(), IpcError> {
-        self.call_fire(DOMAIN_DAG, METHOD_DAG_SESSION_COMPLETE, params.clone())
+        self.call_fire(domain::DAG, METHOD_DAG_SESSION_COMPLETE, params.clone())
     }
 
     /// Query vertices from a session DAG.
@@ -689,7 +692,7 @@ impl PrimalBridge {
         &mut self,
         params: &serde_json::Value,
     ) -> Result<Option<serde_json::Value>, IpcError> {
-        self.call_passthrough(DOMAIN_DAG, METHOD_DAG_QUERY_VERTICES, params.clone())
+        self.call_passthrough(domain::DAG, METHOD_DAG_QUERY_VERTICES, params.clone())
     }
 
     // ── Lineage domain (loamSpine) ──────────────────────────
@@ -703,7 +706,7 @@ impl PrimalBridge {
         &mut self,
         params: &serde_json::Value,
     ) -> Result<Option<serde_json::Value>, IpcError> {
-        self.call_passthrough(DOMAIN_LINEAGE, METHOD_CERT_MINT, params.clone())
+        self.call_passthrough(domain::LINEAGE, METHOD_CERT_MINT, params.clone())
     }
 }
 
@@ -716,11 +719,11 @@ mod tests {
     fn standalone_bridge_has_no_connections() {
         let bridge = PrimalBridge::standalone();
         assert_eq!(bridge.connected_count(), 0);
-        assert!(!bridge.has(DOMAIN_AI));
-        assert!(!bridge.has(DOMAIN_VISUALIZATION));
-        assert!(!bridge.has(DOMAIN_COMPUTE));
-        assert!(!bridge.has(DOMAIN_STORAGE));
-        assert_eq!(bridge.statuses().len(), PRIMAL_DOMAINS.len());
+        assert!(!bridge.has(domain::AI));
+        assert!(!bridge.has(domain::VISUALIZATION));
+        assert!(!bridge.has(domain::COMPUTE));
+        assert!(!bridge.has(domain::STORAGE));
+        assert_eq!(bridge.statuses().len(), DOMAIN_PRIMAL_MAP.len());
     }
 
     #[test]
@@ -929,7 +932,7 @@ mod tests {
     #[test]
     fn discover_with_no_sockets_is_standalone() {
         let bridge = PrimalBridge::discover();
-        assert_eq!(bridge.statuses().len(), PRIMAL_DOMAINS.len());
+        assert_eq!(bridge.statuses().len(), DOMAIN_PRIMAL_MAP.len());
         for s in bridge.statuses() {
             assert!(!s.healthy);
         }
