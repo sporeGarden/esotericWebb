@@ -4,7 +4,7 @@
 **Date:** March 29, 2026
 **Author:** ecoPrimals / sporeGarden
 **Foundation:** V1–V4 bootstrap through live primal composition; V5 deep debt resolution; V5.1 audit evolution
-**Coverage:** 90.84% lines (335 tests)
+**Coverage:** 90.84% lines (341 tests)
 
 ---
 
@@ -228,6 +228,11 @@ This pattern eliminates port collisions without configuration.
 | GAP-008 | Creative content pack format for distribution | esotericWebb (self) |
 | GAP-009 | RulesetCert YAML authoring and per-plane validation | esotericWebb (self) + ludoSpring |
 | GAP-010 | plasmidBin population and deployment automation | biomeOS / primalSpring |
+| GAP-016 | ludoSpring UDS-only transport blocks containers | ludoSpring |
+| GAP-017 | biomeOS neural-api fails to start in benchScale | biomeOS |
+| GAP-018 | neuralAPI executors not exposed on JSON-RPC | biomeOS |
+| GAP-019 | beardog crypto domain not wired into Webb bridge | esotericWebb (self) |
+| GAP-020 | Deploy graph format divergence (TOML vs JSON) | primalSpring / wateringHole |
 
 ---
 
@@ -247,5 +252,5 @@ Springs (science + experiments)  →  produce  →  primals (genomeBin/ecoBin)
                               All phases degrade gracefully → gameplay never blocked
 ```
 
-37 Rust files, ~12.5k LOC, 335 tests, 90.84% coverage, zero unsafe, zero C
+38 Rust files, ~12.8k LOC, 341 tests, 90.84% coverage, zero unsafe, zero C
 dependencies, pure Rust edition 2024.

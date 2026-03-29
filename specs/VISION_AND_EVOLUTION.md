@@ -40,7 +40,7 @@ consumes primals — the same way a real product would.
 
 ### Quality metrics (V5)
 
-- 37 source files, 335 tests (316 unit + 18 e2e integration + 1 validation)
+- 38 source files, 341 tests (322 unit + 18 e2e integration + 1 validation)
 - 90.84% line coverage (`cargo llvm-cov`)
 - Zero clippy warnings (pedantic + nursery), zero unsafe, `forbid(unsafe_code)`
 - All `#[allow]` migrated to `#[expect]` with reasons; zero TODO/FIXME in production
@@ -55,7 +55,7 @@ Webb has IPC clients and bridge methods for 8 capability domains:
 |--------|--------|-------------|--------|
 | ai | Squirrel | `ai.chat`, `ai.summarize` | Bridge ready, degrades to placeholder |
 | game | ludoSpring | `game.*` (flow, engagement, DDA, dialogue, narration, voice) | Bridge ready, degrades |
-| visualization | petalTongue | `visualization.render_scene`, `interaction.poll` | Bridge ready, degrades |
+| visualization | petalTongue | `visualization.render.scene`, `interaction.poll` | Bridge ready, degrades |
 | dag | rhizoCrypt | `dag.session.*`, `dag.event.*`, `dag.frontier.*`, `dag.merkle.*` | Bridge ready, exp004 validates live |
 | lineage | loamSpine | `certificate.mint` | Bridge ready |
 | compute | toadStool | `compute.dispatch.submit` | Bridge ready |
@@ -272,11 +272,16 @@ How the open gaps in EVOLUTION_GAPS.md map to the evolution vectors above.
 | GAP-008 | Content pack format | 3 (creative tool) |
 | GAP-009 | RulesetCert validation | 2 (closed-loop game) |
 | GAP-010 | plasmidBin deployment | 1 (composition proof), 5 (sovereign) |
+| GAP-016 | ludoSpring UDS-only transport | 1 (composition proof) |
+| GAP-017 | biomeOS neural-api health | 1 (composition proof), 5 (sovereign) |
+| GAP-018 | neuralAPI executors not on JSON-RPC | 1 (composition proof), 2 (closed-loop game) |
+| GAP-019 | beardog crypto domain unwired | 4 (multiplayer provenance), 5 (sovereign) |
+| GAP-020 | Deploy graph format divergence | 1 (composition proof) |
 
-The highest-leverage gaps are GAP-004 (provenance trio E2E) and GAP-010
-(plasmidBin deployment) — they unlock the most vectors and have the widest
-ecosystem impact. GAP-010 is addressed by the plasmidBin public
-distribution strategy in [PLASMIBIN_DISTRIBUTION.md](PLASMIBIN_DISTRIBUTION.md).
+The highest-leverage gaps are GAP-017 (biomeOS neural-api health) and
+GAP-016 (ludoSpring TCP) — they are the gates to real composition testing.
+GAP-010 is addressed by the plasmidBin public distribution strategy in
+[PLASMIBIN_DISTRIBUTION.md](PLASMIBIN_DISTRIBUTION.md).
 
 ---
 

@@ -114,15 +114,19 @@ webb/              Main Rust crate (narrative engine + IPC + director + bridge)
   src/narrative/   Graph, validator, predicate, effect, visualization
   src/director/    Game director (outcome evaluation, DDA integration)
   src/content/     YAML content loader, ability/NPC/scene models
+  src/session/     Game session, enrichment pipeline, types
+  src/niche.rs     Self-knowledge (identity, capabilities, socket resolution)
   src/state/       World state (knowledge, trust, inventory, flags, conditions)
 content/           YAML game content (authored by creative teams)
 experiments/       5 standalone validation crates (exp001–exp005)
 graphs/            biomeOS deploy graphs (8 TOML compositions)
-niches/            BYOB niche definitions
+niches/            BYOB niche definitions (2 YAML niche descriptors)
 deploy/            Composition fragment for biomeOS/primalSpring
-specs/             Design specifications (6 documents)
+specs/             Design specifications (7 documents)
 wateringHole/      Handoffs to primal and spring teams
-config/            Launch profiles for primal composition
+config/            Launch profiles for primal composition (aspirational)
+dag_viewer*.html   Standalone D3.js narrative DAG viewers (2D + 3D)
+whitePaper/        baseCamp evolution patterns document
 ```
 
 ## gen4 — The First Consumer

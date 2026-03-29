@@ -21,6 +21,9 @@ lcov.info
 coverage/
 tarpaulin-report.html
 
+# Logs from primal test runs
+audit.log
+
 # Environment overrides
 .env
 .env.local

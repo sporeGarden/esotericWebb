@@ -58,7 +58,7 @@ Session: `session.start`, `session.state`, `session.actions`,
 
 MCP: `tools.list`, `tools.call`
 
-## Consumed primal capabilities (V5 — live wired)
+## Consumed primal capabilities (V5.1 — live wired)
 
 Game science: `game.evaluate_flow`, `game.engagement`,
 `game.difficulty_adjustment`, `game.npc_dialogue`, `game.narrate_action`,

@@ -5,7 +5,7 @@ binary crate that exercises a specific capability or composition pattern.
 Experiments use a **shared validation harness** (`check_bool` / `check_skip`)
 and exit with a summary of pass/fail/skip counts.
 
-**Status**: 5 experiments, all passing (V5, March 29, 2026)
+**Status**: 5 experiments, all passing (V5.1, March 29, 2026)
 
 ## Running
 

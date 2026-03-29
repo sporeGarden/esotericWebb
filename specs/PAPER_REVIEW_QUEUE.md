@@ -5,7 +5,7 @@ Documentation and creative text in this file: CC-BY-SA-4.0
 
 # Paper Review Queue
 
-Esoteric Webb is a **tool spring** (gen4 consumer), not a science spring.
+Esoteric Webb is a **gen4 consumer** (composition tool), not a science spring.
 It does not produce paper-parity experiment suites against published
 baselines. Instead, it exercises the primal stack via BYOB composition and
 feeds discovered gaps back into the science springs that own the primals.
