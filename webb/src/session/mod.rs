@@ -217,9 +217,9 @@ impl GameSession {
     /// Execute an action by kind + id. Returns the outcome text and narration context.
     ///
     /// The full primal composition pipeline runs after mechanical resolution:
-    /// 1. AI narration enrichment (ludoSpring → Squirrel, or direct Squirrel)
-    /// 2. NPC dialogue for talk actions (ludoSpring → Squirrel)
-    /// 3. Flow evaluation (ludoSpring game science)
+    /// 1. AI narration enrichment (Squirrel `ai.query`)
+    /// 2. NPC dialogue for talk actions (Squirrel `ai.query`)
+    /// 3. Flow evaluation (local `science::flow`)
     /// 4. Scene push to UI (`petalTongue` via `render_scene`)
     /// 5. Provenance vertex append (rhizoCrypt DAG)
     /// 6. Session completion check (DAG close on ending)

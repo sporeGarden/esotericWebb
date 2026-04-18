@@ -139,6 +139,7 @@ impl SquirrelClient {
 }
 
 #[cfg(test)]
+#[expect(clippy::unwrap_used, reason = "tests use unwrap for brevity")]
 mod tests {
     use super::*;
 

@@ -348,27 +348,27 @@ mod tests {
     #[test]
     fn registry_find_missing_capability() {
         let registry = PrimalRegistry::default();
-        assert!(registry.find_by_capability("game.evaluate_flow").is_none());
+        assert!(registry.find_by_capability("dag.session.create").is_none());
     }
 
     #[test]
     fn registry_find_registered_capability() {
         let mut registry = PrimalRegistry::default();
         registry.by_domain.insert(
-            "game".to_owned(),
+            "dag".to_owned(),
             PrimalEndpoint {
-                domain: "game".to_owned(),
-                name: "ludospring".to_owned(),
-                socket_path: Some(PathBuf::from("/tmp/game.sock")),
+                domain: "dag".to_owned(),
+                name: "rhizocrypt".to_owned(),
+                socket_path: Some(PathBuf::from("/tmp/rhizocrypt.sock")),
                 tcp_addr: None,
-                capabilities: vec!["game.evaluate_flow".to_owned()],
+                capabilities: vec!["dag.session.create".to_owned()],
                 healthy: true,
             },
         );
         registry
             .capability_index
-            .insert("game.evaluate_flow".to_owned(), "game".to_owned());
-        assert!(registry.find_by_capability("game.evaluate_flow").is_some());
+            .insert("dag.session.create".to_owned(), "dag".to_owned());
+        assert!(registry.find_by_capability("dag.session.create").is_some());
     }
 
     #[test]

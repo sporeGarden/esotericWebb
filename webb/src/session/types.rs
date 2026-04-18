@@ -131,13 +131,13 @@ pub struct NarrationContext {
 /// values. Gameplay is never blocked by missing primals.
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct PrimalEnrichment {
-    /// AI-generated narration text (via ludoSpring → Squirrel, or direct Squirrel).
+    /// AI-generated narration text (via Squirrel `ai.query`).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ai_narration: Option<String>,
-    /// NPC dialogue response (for talk actions, via ludoSpring → Squirrel).
+    /// NPC dialogue response (for talk actions, via Squirrel `ai.query`).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub npc_dialogue: Option<String>,
-    /// Internal voice interjections (via ludoSpring game science).
+    /// Internal voice interjections (via local `science/` module).
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub voice_notes: Vec<VoiceEnrichment>,
     /// Flow evaluation score (0.0 = anxiety, 0.5 = flow, 1.0 = boredom).
@@ -150,7 +150,7 @@ pub struct PrimalEnrichment {
     pub scene_pushed: bool,
 }
 
-/// A voice interjection from the game science primal.
+/// A voice interjection from the local game science module.
 #[derive(Debug, Clone, Serialize)]
 pub struct VoiceEnrichment {
     /// Voice identifier (e.g. "logic", "empathy").

@@ -2,6 +2,46 @@
 
 All notable changes to Esoteric Webb are documented here.
 
+## V7 — Deploy Artifact Alignment + Composition Handoff (April 17, 2026)
+
+### Deploy graph and niche cleanup
+
+- **`graphs/esotericwebb_full.toml`** — removed stale `germinate_ludospring`
+  node (Phase 2); renumbered phases; updated esotericwebb `depends_on` to
+  drop ludospring; aligned Squirrel AI methods to V6 (`ai.query`, `ai.suggest`,
+  `ai.analyze`); fixed validation targets
+- **`graphs/webb_full.toml`** — corrected esotericwebb `by_capability` from
+  `"game"` to `"narrative"`; updated Squirrel capability list
+- **`graphs/webb_ai_viz.toml`** — aligned Squirrel capabilities to V6 methods
+- **`niches/esoteric-webb.yaml`** — removed ludospring organism and
+  interactions; aligned Squirrel capabilities; updated features description
+- **README.md** — primal domain table updated to V6 (7 active domains,
+  game row struck through with GAP-021 pointer)
+
+### Stale code cleanup
+
+- **`config/primal_launch_profiles.toml`** — removed `[profiles.ludospring]`
+  (game domain, port 9420); noted GAP-021 for future game-science primal
+- **`session/types.rs`** — updated doc comments: ludoSpring→Squirrel references
+  corrected to direct Squirrel calls and local `science/` module
+- **`session/mod.rs`** — enrichment pipeline docs updated (no ludoSpring
+  mediation)
+- **`session/enrichment.rs`** — doc comment updated
+- **`discovery.rs` tests** — replaced stale `game.evaluate_flow` / `ludospring`
+  test fixtures with current `dag.session.create` / `rhizocrypt` examples
+
+### Documentation and handoff
+
+- **`EVOLUTION_GAPS.md`** — filed GAP-023 (stale deploy artifacts, resolved)
+- **`whitePaper/baseCamp/`** — evolution document expanded with
+  python→rust→primal composition validation story
+- **`wateringHole/handoffs/`** — V7 handoff: composition patterns, per-primal
+  learnings, NUCLEUS deployment patterns for primal and spring team absorption
+- **`downstream_manifest.toml`** — esotericwebb entry updated: added
+  `node_atomic` to fragments; expanded `depends_on` and
+  `validation_capabilities` to reflect full V6 bridge surface
+- 342 tests, all quality gates clean
+
 ## V6 — ludoSpring Decomposition: Self-Composed via Primal Composition (March 29, 2026)
 
 ### Architecture

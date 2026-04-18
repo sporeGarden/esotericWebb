@@ -21,7 +21,7 @@ use crate::science::flow::flow_channel_metrics;
 impl GameSession {
     /// Best-effort enrichment via primal composition.
     ///
-    /// Calls AI primals directly (no ludoSpring mediation) and uses
+    /// Calls AI primals directly (Squirrel via biomeOS) and uses
     /// local science for flow evaluation. All calls degrade silently.
     pub(crate) fn enrich_action(
         &mut self,

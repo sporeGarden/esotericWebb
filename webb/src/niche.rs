@@ -186,6 +186,10 @@ mod tests {
             name.starts_with(NICHE_NAME),
             "socket name should start with niche name, got: {name}"
         );
-        assert!(name.ends_with(".sock"));
+        assert!(
+            std::path::Path::new(name)
+                .extension()
+                .is_some_and(|ext| ext.eq_ignore_ascii_case("sock"))
+        );
     }
 }

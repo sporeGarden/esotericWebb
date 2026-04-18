@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Version** | V6 |
+| **Version** | V7 |
 | **Tests** | 342 (323 unit + 18 E2E + 1 validation) |
 | **Coverage** | ~91% lines (`cargo llvm-cov`) |
 | **Rust files** | 41 (~13.5k LOC) |
@@ -14,7 +14,7 @@
 | **Bridge methods** | 19 (all domains, all degrading) |
 | **Primals consumed** | 7 domains (ai, viz, dag, lineage, compute, storage, provenance) |
 | **Local science** | flow, engagement, DDA (absorbed from ludoSpring patterns) |
-| **Last validation** | 2026-03-29 (V6) |
+| **Last validation** | 2026-04-17 (V7) |
 
 **A [sporeGarden](https://github.com/sporeGarden) project — the primals as a composed CRPG.**
 

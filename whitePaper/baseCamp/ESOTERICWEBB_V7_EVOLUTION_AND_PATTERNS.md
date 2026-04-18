@@ -1,9 +1,9 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
-# Esoteric Webb V6 — Evolution Patterns and Ecosystem Learnings
+# Esoteric Webb V7 — Evolution Patterns and Ecosystem Learnings
 
-**Date:** March 29, 2026
+**Date:** April 17, 2026 (updated from March 29, 2026)
 **Author:** ecoPrimals / sporeGarden
-**Foundation:** V1–V4 bootstrap through live primal composition; V5 deep debt resolution; V5.1 audit evolution; V6 ludoSpring decomposition
+**Foundation:** V1–V4 bootstrap through live primal composition; V5 deep debt resolution; V5.1 audit evolution; V6 ludoSpring decomposition; V7 deploy artifact alignment + composition handoff
 **Coverage:** ~91% lines (342 tests)
 
 ---
@@ -261,3 +261,105 @@ Springs (science + experiments)  →  produce  →  primals (genomeBin/ecoBin)
 41 Rust files, ~13.5k LOC, 342 tests, ~91% coverage, zero unsafe, zero C
 dependencies, pure Rust edition 2024. No spring dependencies — self-composed
 via primal composition only.
+
+---
+
+## The Three-Generation Validation Story: Python → Rust → Primal Composition
+
+The ecoPrimals ecosystem validates peer-reviewed science through three
+generations of increasing abstraction. Each generation's output becomes
+the next generation's validation target.
+
+### Layer 1: Python Baselines (Springs)
+
+Springs begin with canonical Python implementations of peer-reviewed science.
+These scripts are reproducible, provenance-tracked, and produce golden JSON
+targets:
+
+```
+# ludoSpring example: Fitts's law, flow theory, Perlin noise
+python baselines/python/interaction_laws.py  → combined_baselines.json
+python baselines/python/flow_engagement.py   → combined_baselines.json
+python baselines/python/perlin_noise.py      → combined_baselines.json
+```
+
+Every baseline carries provenance: script name, git commit, date, exact
+command. Tolerances are named, centralized, and justified from the source
+paper's reported precision.
+
+### Layer 2: Rust Validation (Springs → Primals)
+
+Springs re-implement the same algorithms in pure Rust (via barraCuda for
+numerical primitives). Validation binaries compare Rust output against
+Python golden values within documented tolerances:
+
+```
+validate_interaction  — Fitts, Hick, Steering, GOMS laws
+validate_procedural   — Perlin, fBm, BSP, L-system Fibonacci
+validate_engagement   — composite metrics, Four Keys classification
+```
+
+Each binary exits 0 (pass) or 1 (fail). The `validate_all` meta-runner
+aggregates results. This is the "hotSpring pattern" — hardcoded expected
+values with explicit pass/fail. ludoSpring V43 achieved 790+ tests and
+three-layer validation across all game science domains.
+
+### Layer 3: Primal Composition Validation (Springs + Gardens)
+
+The breakthrough: once Rust code is proven against Python, the same values
+become golden targets for **IPC composition validation**. Springs generate
+`composition_targets.json` — the same science, but now the expected outputs
+for JSON-RPC calls through the primal stack:
+
+```
+validate_composition  — calls primals via IPC, compares against golden JSON
+                        exits 0 (pass), 1 (fail), 2 (skip if server absent)
+```
+
+This proves that science works identically whether called as:
+- A Python function (`interaction_laws.fitts_cost(...)`)
+- A Rust library call (`ludospring_barracuda::interaction::fitts::cost(...)`)
+- A primal IPC call (`{"method": "game.fitts_cost", "params": {...}}`)
+
+### Layer 4: Pure Composition (Gardens)
+
+Gardens like Esoteric Webb take this further. They **don't re-prove the
+math at all**. The science was already validated three times over by the
+springs. Gardens are JUST primal compositions:
+
+```
+esotericWebb
+├── science/         ← absorbed pure-math (flow, DDA, engagement)
+│                      no IPC, no validation ladder needed
+├── ipc/bridge/      ← routes to primals by capability
+│                      ai.query → Squirrel
+│                      dag.* → rhizoCrypt
+│                      viz.* → petalTongue
+│                      storage.* → NestGate
+└── deploy graphs    ← biomeOS compositions: phases, ordering, health
+```
+
+Gardens validate **composition correctness** (do primals respond? do
+capabilities degrade gracefully?) not **numerical correctness** (that was
+proven by the springs). This is the gen3→gen4 boundary.
+
+### The Cycle
+
+```
+Python (peer-reviewed)
+    ↓ golden targets
+Rust (barraCuda primitives)
+    ↓ golden targets
+Primal IPC (composition validation)
+    ↓ proven capabilities
+Garden composition (product)
+    ↓ gap discovery
+Spring evolution (absorb gap → new primal capability)
+    ↓ new golden targets
+```
+
+Every gap discovered by a garden feeds back through wateringHole handoffs
+to the spring that produces the relevant primal. The spring evolves, the
+primal absorbs, plasmidBin deploys, and the garden discovers the next gap.
+This is NUCLEUS composition as a validation strategy — not just a deployment
+model.
