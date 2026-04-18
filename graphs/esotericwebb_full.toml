@@ -6,13 +6,12 @@
 #
 # Phases:
 #   1 — Tower primals (crypto → discovery)
-#   2 — Game science primal (depends on discovery)
-#   3 — Visualization primal (depends on discovery)
-#   4 — AI primal (depends on discovery + visualization)
-#   5 — Compute primal (optional, fallback=skip)
-#   6 — Provenance trio (optional, fallback=skip)
-#   7 — esotericWebb (narrative director, depends on game + AI + visualization)
-#   8 — validate (health check on full stack)
+#   2 — Visualization primal (depends on discovery)
+#   3 — AI primal (depends on discovery + visualization)
+#   4 — Compute primal (optional, fallback=skip)
+#   5 — Provenance trio (optional, fallback=skip)
+#   6 — esotericWebb (narrative director, depends on AI + visualization)
+#   7 — validate (health check on full stack)
 #
 # Status: 1.0 — Esoteric Webb CRPG niche full deploy
 
@@ -72,44 +71,10 @@ timeout_ms = 15000
 "discovery.register" = "discovery.register"
 "discovery.query" = "discovery.query"
 
-# ── Phase 2: Game science primal ──────────────────────────────────────────
-
-[[nodes]]
-id = "germinate_ludospring"
-depends_on = ["germinate_songbird"]
-output = "ludospring_genesis"
-capabilities = ["game", "ludology"]
-
-[nodes.primal]
-by_capability = "game"
-
-[nodes.operation]
-name = "start"
-[nodes.operation.params]
-mode = "server"
-domain = "game"
-family_id = "${FAMILY_ID}"
-[nodes.operation.environment]
-BIOMEOS_SOCKET_DIR = "${XDG_RUNTIME_DIR}/biomeos"
-
-[nodes.constraints]
-timeout_ms = 15000
-
-[nodes.capabilities_provided]
-"game.evaluate_flow" = "game.evaluate_flow"
-"game.engagement" = "game.engagement"
-"game.difficulty_adjustment" = "game.difficulty_adjustment"
-"game.npc_dialogue" = "game.npc_dialogue"
-"game.narrate_action" = "game.narrate_action"
-"game.voice_check" = "game.voice_check"
-"game.push_scene" = "game.push_scene"
-"game.begin_session" = "game.begin_session"
-"game.record_action" = "game.record_action"
-"game.complete_session" = "game.complete_session"
-"game.query_vertices" = "game.query_vertices"
-"game.mint_certificate" = "game.mint_certificate"
-
-# ── Phase 3: Visualization primal ─────────────────────────────────────────
+# ── Phase 2: Visualization primal ─────────────────────────────────────────
+# NOTE: ludoSpring removed in V6 — Webb absorbed game science locally
+# (science/flow.rs, science/engagement.rs, science/dda.rs) and routes
+# all primal calls directly. GAP-021 tracks future game-science primal.
 
 [[nodes]]
 id = "germinate_petaltongue"
@@ -165,9 +130,9 @@ BIOMEOS_SOCKET_DIR = "${XDG_RUNTIME_DIR}/biomeos"
 timeout_ms = 30000
 
 [nodes.capabilities_provided]
-"ai.chat" = "ai.chat"
-"ai.inference" = "ai.inference"
-"ai.summarize" = "context.summarize"
+"ai.query" = "ai.query"
+"ai.suggest" = "ai.suggest"
+"ai.analyze" = "ai.analyze"
 "ai.list_providers" = "ai.list_providers"
 
 # ── Phase 5: Compute primal (optional) ────────────────────────────────────
@@ -279,7 +244,7 @@ timeout_ms = 15000
 
 [[nodes]]
 id = "germinate_esotericwebb"
-depends_on = ["germinate_ludospring", "germinate_squirrel", "germinate_petaltongue"]
+depends_on = ["germinate_squirrel", "germinate_petaltongue"]
 output = "esotericwebb_genesis"
 capabilities = ["narrative", "webb"]
 
@@ -323,7 +288,7 @@ output = "esotericwebb_stack_healthy"
 [nodes.operation]
 name = "health_check"
 [nodes.operation.params]
-targets = ["esotericwebb", "ludospring", "squirrel", "petaltongue"]
+targets = ["esotericwebb", "squirrel", "petaltongue"]
 
 [nodes.constraints]
 timeout_ms = 10000

@@ -53,7 +53,7 @@ depends_on = ["beardog", "songbird"]
 health_method = "health.liveness"
 by_capability = "ai"
 capabilities = [
-    "ai.query", "ai.complete", "ai.chat",
+    "ai.query", "ai.suggest", "ai.analyze",
     "tool.list", "tool.execute",
     "context.create", "context.update", "context.summarize",
     "capability.discover",

@@ -396,3 +396,14 @@ Added `serve --listen addr:port` and `serve --port N` CLI arguments. New
 `serve_tcp()` and `handle_tcp_connection()` functions in listener.rs provide
 TCP IPC alongside existing UDS. Compliant with UniBin v1.2 `--listen`
 specification.
+
+### GAP-023: Stale deploy graphs and niche YAML still reference ludoSpring → RESOLVED (V6+, 2026-04-17)
+
+`graphs/esotericwebb_full.toml` still contained `germinate_ludospring` as a
+required Phase 2 node; `niches/esoteric-webb.yaml` listed ludoSpring as a
+required organism with 12 `game.*` capabilities and pre-V6 AI method names
+(`ai.chat`, `ai.summarize`); `graphs/webb_full.toml` and `webb_ai_viz.toml`
+used stale Squirrel capabilities; `esotericwebb` node's `by_capability` was
+`"game"` instead of `"narrative"`. All cleaned: ludoSpring removed from graphs
+and niche definitions, AI methods aligned to V6 (`ai.query`, `ai.suggest`,
+`ai.analyze`), domain corrected. README primal table updated to V6 state.

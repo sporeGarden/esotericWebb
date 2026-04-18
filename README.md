@@ -52,16 +52,16 @@ engine**. It consumes primals via JSON-RPC IPC — zero Rust crate dependencies
 on any spring. Primals are resolved from `plasmidBin/` or discovered via
 Songbird at runtime.
 
-| Domain | Primal | Role | Wired in act() | IPC methods |
-|--------|--------|------|-----------------|-------------|
-| game | ludoSpring | Flow, DDA, engagement, NPC dialogue, narration, voice | Yes (V4) | `game.evaluate_flow`, `game.npc_dialogue`, `game.narrate_action`, `game.voice_check`, `game.push_scene`, `game.begin_session`, `game.complete_session` |
-| ai | Squirrel | Narration fallback, summarization | Yes (V4) | `ai.chat`, `ai.summarize` |
-| visualization | petalTongue | Scene rendering, input polling | Yes (V4) | `visualization.render.scene`, `interaction.poll` |
-| dag | rhizoCrypt | Provenance DAG lifecycle | Yes (V4) | `dag.session.create`, `dag.event.append`, `dag.session.complete`, `dag.frontier.get`, `dag.merkle.root`, `dag.query.vertices` |
+| Domain | Primal | Role | Status (V6) | Key IPC methods |
+|--------|--------|------|-------------|-----------------|
+| ai | Squirrel | AI narration, NPC dialogue, inference | Direct bridge | `ai.query`, `ai.suggest`, `ai.analyze` |
+| visualization | petalTongue | Scene rendering, input polling | Direct bridge | `visualization.render.scene`, `interaction.poll` |
+| dag | rhizoCrypt | Provenance DAG lifecycle | Direct bridge | `dag.session.create`, `dag.event.append`, `dag.merkle.root` |
 | lineage | loamSpine | NPC personality certs | Bridge ready | `certificate.mint` |
 | compute | toadStool | GPU compute dispatch | Bridge ready | `compute.dispatch.submit` |
 | storage | nestGate | Key-value persistence | Bridge ready | `storage.store`, `storage.retrieve` |
-| provenance | sweetGrass | Creative attribution | Discovered, not yet exercised | `attribution.record` (planned) |
+| provenance | sweetGrass | Creative attribution | Bridge ready | `attribution.record` |
+| ~~game~~ | ~~ludoSpring~~ | ~~Flow, DDA, engagement~~ | **Removed V6** | Local `science/` — see GAP-021 |
 
 ## The Core Thesis: Bounded Space, Infinite Exploration
 

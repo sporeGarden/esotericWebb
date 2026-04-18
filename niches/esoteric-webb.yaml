@@ -22,7 +22,7 @@ niche:
 
   features:
     - "Narrative direction (scene, story state, content bounds)"
-    - "Game science integration (flow, engagement, DDA, dialogue, sessions)"
+    - "Game science (local: flow, engagement, DDA — absorbed from ludoSpring research)"
     - "AI-assisted narration and inference"
     - "Visualization and interaction surface (visualization primal)"
     - "Security and discovery tower (crypto + discovery primals)"
@@ -43,35 +43,18 @@ organisms:
         mode: "server"
         domain: "narrative"
 
-    ludospring:
-      type: "ludospring"
-      required: true
-      role: "science"
-      capabilities:
-        - "game.evaluate_flow"
-        - "game.engagement"
-        - "game.difficulty_adjustment"
-        - "game.npc_dialogue"
-        - "game.narrate_action"
-        - "game.voice_check"
-        - "game.push_scene"
-        - "game.begin_session"
-        - "game.record_action"
-        - "game.complete_session"
-        - "game.query_vertices"
-        - "game.mint_certificate"
-      config:
-        mode: "server"
-        domain: "game"
+    # NOTE: ludospring removed in V6 — game science absorbed locally in
+    # webb/src/science/ (flow, engagement, DDA). Webb routes AI/viz/compute
+    # directly to primals. GAP-021 tracks future game-science primal.
 
     squirrel:
       type: "squirrel"
       required: true
       role: "ai"
       capabilities:
-        - "ai.chat"
-        - "ai.inference"
-        - "ai.summarize"
+        - "ai.query"
+        - "ai.suggest"
+        - "ai.analyze"
 
     petaltongue:
       type: "petaltongue"
@@ -138,29 +121,10 @@ organisms:
 
 interactions:
   - from: "esotericwebb"
-    to: "ludospring"
-    type: "capability_call"
-    config:
-      capabilities:
-        - "game.evaluate_flow"
-        - "game.engagement"
-        - "game.difficulty_adjustment"
-        - "game.npc_dialogue"
-        - "game.narrate_action"
-        - "game.voice_check"
-        - "game.push_scene"
-        - "game.begin_session"
-        - "game.record_action"
-        - "game.complete_session"
-        - "game.query_vertices"
-        - "game.mint_certificate"
-      description: "Game science and session lifecycle for CRPG substrate"
-
-  - from: "esotericwebb"
     to: "squirrel"
     type: "capability_call"
     config:
-      capabilities: ["ai.chat", "ai.inference", "ai.summarize"]
+      capabilities: ["ai.query", "ai.suggest", "ai.analyze"]
       description: "AI narration and inference for narrative layer"
 
   - from: "esotericwebb"
@@ -173,20 +137,6 @@ interactions:
         - "interaction.subscribe"
         - "interaction.poll"
       description: "Scene rendering and player interaction"
-
-  - from: "ludospring"
-    to: "beardog"
-    type: "capability_call"
-    config:
-      capabilities: ["crypto.sign", "crypto.hash"]
-      description: "Session signing and data integrity"
-
-  - from: "ludospring"
-    to: "songbird"
-    type: "capability_call"
-    config:
-      capabilities: ["discovery.query"]
-      description: "Peer primal discovery by capability"
 
 customization:
   options:
