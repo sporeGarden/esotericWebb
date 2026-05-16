@@ -1,10 +1,10 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
-# Esoteric Webb V7 — Evolution Patterns and Ecosystem Learnings
+# Esoteric Webb V8 — Evolution Patterns and Ecosystem Learnings
 
-**Date:** April 17, 2026 (updated from March 29, 2026)
+**Date:** May 16, 2026 (updated from April 17, 2026)
 **Author:** ecoPrimals / sporeGarden
-**Foundation:** V1–V4 bootstrap through live primal composition; V5 deep debt resolution; V5.1 audit evolution; V6 ludoSpring decomposition; V7 deploy artifact alignment + composition handoff
-**Coverage:** ~91% lines (342 tests)
+**Foundation:** V1–V4 bootstrap; V5 deep debt; V5.1 audit; V6 ludoSpring decomposition; V7 deploy alignment; V8 Wave 17 signal adoption + deep debt + smart refactoring
+**Coverage:** ~91% lines (357 tests)
 
 ---
 
@@ -216,29 +216,82 @@ This pattern eliminates port collisions without configuration.
 
 ---
 
-## Remaining Open Gaps
+## Pattern 9: Signal Dispatch — Collapsing Multi-Call Sequences (V8)
 
-| GAP | Summary | Owner |
-|-----|---------|-------|
-| GAP-002 | Visualization primal lacks CRPG dialogue tree scene type | petalTongue |
-| GAP-003 | AI primal NPC dialogue constraint enforcement | Squirrel |
-| GAP-004 | Provenance trio end-to-end (wiring complete, live validation pending) | rhizoCrypt / loamSpine / sweetGrass |
-| GAP-006 | Discovery primal capability-filtered queries (tier-5) | Songbird |
-| GAP-007 | Voice interjection preview without live AI | esotericWebb (self) + Squirrel |
-| GAP-008 | Creative content pack format for distribution | esotericWebb (self) |
-| GAP-009 | RulesetCert YAML authoring and per-plane validation | esotericWebb (self) |
-| GAP-010 | plasmidBin population and deployment automation | biomeOS / primalSpring |
-| GAP-016 | ~~ludoSpring UDS-only transport~~ | superseded (V6) |
-| GAP-017 | biomeOS neural-api fails to start in benchScale | biomeOS |
-| GAP-018 | neuralAPI executors not exposed on JSON-RPC | biomeOS |
-| GAP-019 | beardog crypto domain not wired into Webb bridge | esotericWebb (self) |
-| GAP-020 | Deploy graph format divergence (TOML vs JSON) | primalSpring / wateringHole |
-| GAP-021 | Game science has no standalone primal | primalSpring / wateringHole |
-| GAP-022 | AI method alignment with biomeOS registry | resolved (V6) |
+**Problem.** Provenance requires four sequential IPC calls: `content.put` →
+`dag.event.append` → `spine.seal` → `braid.create`. Each can fail
+independently, creating a combinatorial error space. Network round-trips
+accumulate latency.
+
+**Solution.** biomeOS Wave 17 introduced atomic signals: `nest.store` and
+`nest.commit`. A single `ctx.dispatch("nest.store", payload)` tells the
+orchestration layer to execute the full 4-call sequence internally. The
+caller receives one result.
+
+**Implementation in Webb.** Bridge methods `nest_store()` and `nest_commit()`
+check for Neural API availability first. If present, they dispatch the
+atomic signal. If absent, they fall back to direct domain calls
+(`dag.event.append` and `dag.session.complete` respectively). The enrichment
+pipeline calls `bridge.nest_store()` — it neither knows nor cares which
+path executed.
+
+**Key insight.** Signal dispatch is a *transparent optimization*. Callers
+don't change their error handling, retry logic, or degradation patterns.
+The bridge absorbs the complexity.
+
+**Ecosystem relevance.** Any garden or spring that coordinates multiple
+primals for a single logical operation should adopt signal dispatch when
+biomeOS is available. The fallback-to-direct pattern ensures standalone
+mode continues to work.
 
 ---
 
-## Architecture Summary (V6)
+## Pattern 10: Self-Announcement at Startup (V8)
+
+**Problem.** Primals discover each other via filesystem socket probes. This
+works for clients discovering servers, but servers have no way to broadcast
+their availability or capability set proactively.
+
+**Solution.** On serve startup, call `primal.announce` via the Neural API
+with the full list of exposed methods and the socket path. biomeOS routes
+this to Songbird for registration in the capability registry.
+
+**Implementation in Webb.** `announce_to_biomeos()` is called between
+bridge construction and IPC server start. It passes 24 method names and
+the UDS socket path. If Neural API is unavailable, it degrades silently —
+the existing filesystem probe discovery continues to work.
+
+**Key insight.** Self-announcement turns composition from "pull-only" (who
+is out there?) to "push-pull" (I'm here, and here's what I can do). This
+is critical for dynamic composition where primals start and stop.
+
+---
+
+## Remaining Open Gaps
+
+| GAP | Summary | Owner | Status |
+|-----|---------|-------|--------|
+| GAP-002 | Visualization primal lacks CRPG dialogue tree scene type | petalTongue | Open |
+| GAP-003 | AI primal NPC dialogue constraint enforcement | Squirrel | Open |
+| GAP-004 | Provenance trio end-to-end (wiring complete, live validation pending) | rhizoCrypt / loamSpine / sweetGrass | Open |
+| GAP-006 | Discovery primal capability-filtered queries (tier-5) | Songbird | Open |
+| GAP-007 | Voice interjection preview without live AI | esotericWebb (self) + Squirrel | Open |
+| GAP-008 | Creative content pack format for distribution | esotericWebb (self) | Open |
+| GAP-009 | RulesetCert YAML authoring and per-plane validation | esotericWebb (self) | Open |
+| GAP-010 | plasmidBin population and deployment automation | biomeOS / primalSpring | Open |
+| GAP-016 | ~~ludoSpring UDS-only transport~~ | superseded (V6) | Absorbed |
+| GAP-017 | biomeOS neural-api fails to start in benchScale | biomeOS | Open |
+| GAP-018 | neuralAPI executors not exposed on JSON-RPC | biomeOS | Open |
+| GAP-019 | beardog crypto domain not wired into Webb bridge | esotericWebb (self) | Open |
+| GAP-020 | Deploy graph format divergence (TOML vs JSON) | primalSpring / wateringHole | Open |
+| GAP-021 | Game science has no standalone primal | primalSpring / wateringHole | Open |
+| GAP-022 | AI method alignment with biomeOS registry | resolved (V6) | Absorbed |
+| GAP-024 | Signal dispatch not exercised E2E against live biomeOS | esotericWebb / biomeOS | Open |
+| GAP-025 | `primal.announce` outbound not wired into serve startup | esotericWebb (self) | **Resolved V8** |
+
+---
+
+## Architecture Summary (V8)
 
 ```
 Springs (science + experiments)  →  produce  →  primals (genomeBin/ecoBin)
@@ -247,20 +300,23 @@ Springs (science + experiments)  →  produce  →  primals (genomeBin/ecoBin)
                                                        ↓
                               Webb discovers + composes via JSON-RPC IPC
                                      (TCP default, UDS for biomeOS)
+                                                       ↓
+                              On startup: primal.announce → biomeOS (24 capabilities)
                                         ↓                    ↓
-                              local science/         direct primal calls
-                              (flow, engagement,     (ai.query, dag.*, viz.*,
-                               DDA — no IPC)          storage.*, etc.)
+                              local science/         signal-first primal calls
+                              (flow, engagement,     nest.store → (fallback: dag.*)
+                               DDA — no IPC)         nest.commit → (fallback: dag.session.complete)
                                         ↓                    ↓
                               6-phase enrichment pipeline per action:
-                                narrate → dialogue → flow → scene → DAG → close
+                                narrate → dialogue → flow → scene → nest.store → nest.commit
                                                        ↓
                               All phases degrade gracefully → gameplay never blocked
+                              Signal dispatch collapses multi-call sequences when biomeOS present
 ```
 
-41 Rust files, ~13.5k LOC, 342 tests, ~91% coverage, zero unsafe, zero C
+43 Rust files, ~13.2k LOC, 357 tests, ~91% coverage, zero unsafe, zero C
 dependencies, pure Rust edition 2024. No spring dependencies — self-composed
-via primal composition only.
+via primal composition only. 24 capabilities exposed, Wave 17 signal adoption.
 
 ---
 

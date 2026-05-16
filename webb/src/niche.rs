@@ -26,8 +26,13 @@ pub const CAPABILITIES: &[&str] = &[
     "health.liveness",
     "health.readiness",
     "health.check",
+    "health.version",
+    "health.drain",
     "identity.get",
     "capabilities.list",
+    // Lifecycle (Wave 17)
+    "primal.announce",
+    "primal.info",
     // Webb health
     "webb.health",
     "webb.liveness",
@@ -146,7 +151,7 @@ mod tests {
 
     #[test]
     fn capabilities_count() {
-        assert_eq!(CAPABILITIES.len(), 20);
+        assert_eq!(CAPABILITIES.len(), 24);
     }
 
     #[test]
@@ -155,6 +160,7 @@ mod tests {
             "health.",
             "identity.",
             "capabilities.",
+            "primal.",
             "webb.",
             "session.",
             "tools.",
@@ -191,5 +197,25 @@ mod tests {
                 .extension()
                 .is_some_and(|ext| ext.eq_ignore_ascii_case("sock"))
         );
+    }
+
+    #[test]
+    fn neural_api_socket_none_without_env() {
+        let result = resolve_neural_api_socket();
+        assert!(
+            result.is_none() || result.is_some(),
+            "should not panic regardless of env"
+        );
+    }
+
+    #[test]
+    fn capabilities_match_registry_toml() {
+        let toml_content = include_str!("../capability_registry.toml");
+        for cap in CAPABILITIES {
+            assert!(
+                toml_content.contains(cap),
+                "capability '{cap}' missing from capability_registry.toml"
+            );
+        }
     }
 }

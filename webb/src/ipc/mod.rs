@@ -81,6 +81,28 @@ pub const METHOD_DAG_QUERY_VERTICES: &str = "dag.query.vertices";
 /// Mint a certificate.
 pub const METHOD_CERT_MINT: &str = "certificate.mint";
 
+// ── Signal dispatch (Wave 17 Neural API — orchestration collapse) ──
+
+/// Atomic provenance step: content.put + dag.event.append + spine.seal + braid.create.
+pub const SIGNAL_NEST_STORE: &str = "nest.store";
+/// Atomic session finalization: dehydrate + sign + store + seal.
+pub const SIGNAL_NEST_COMMIT: &str = "nest.commit";
+/// Meta-tier observation (analytics without live renderer).
+pub const SIGNAL_META_OBSERVE: &str = "meta.observe";
+/// Meta-tier rendering intent declaration.
+pub const SIGNAL_META_INTENT: &str = "meta.intent";
+
+// ── Lifecycle / announce (Wave 17) ────────────────────────────
+
+/// Single-call primal registration (replaces 3-call lifecycle pattern).
+pub const METHOD_PRIMAL_ANNOUNCE: &str = "primal.announce";
+/// Read-only niche metadata query.
+pub const METHOD_PRIMAL_INFO: &str = "primal.info";
+/// Detailed version/build info.
+pub const METHOD_HEALTH_VERSION: &str = "health.version";
+/// Graceful shutdown acknowledgment.
+pub const METHOD_HEALTH_DRAIN: &str = "health.drain";
+
 // ── Webb's own methods ─────────────────────────────────────
 
 /// Webb health method.

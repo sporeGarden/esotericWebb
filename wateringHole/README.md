@@ -38,13 +38,14 @@ wateringHole/
 
 | Handoff | Direction | Summary |
 |---------|-----------|---------|
-| `ESOTERICWEBB_V7_COMPOSITION_PATTERNS_HANDOFF_APR17_2026.md` | Outbound | **Current** — V7 composition patterns, per-primal learnings, NUCLEUS deployment for primal/spring absorption |
-| `ESOTERICWEBB_V6_PRIMAL_CAPABILITY_GAPS_HANDOFF_MAR29_2026.md` | Outbound | V6 metadata vs expectations gap matrix for all consumed primals |
+| `ESOTERICWEBB_V8_SIGNAL_ADOPTION_HANDOFF_MAY16_2026.md` | Outbound | **Current** — V8 Wave 17 signal dispatch, primal.announce, deep debt, per-primal feedback |
 
 ## Archived handoffs (fossil record)
 
 | Handoff | Direction | Summary |
 |---------|-----------|---------|
+| `ESOTERICWEBB_V7_COMPOSITION_PATTERNS_HANDOFF_APR17_2026.md` | Outbound | V7 composition patterns, NUCLEUS deployment patterns |
+| `ESOTERICWEBB_V6_PRIMAL_CAPABILITY_GAPS_HANDOFF_MAR29_2026.md` | Outbound | V6 metadata vs expectations gap matrix |
 | `ESOTERICWEBB_V51_AUDIT_EVOLUTION_HANDOFF_MAR29_2026.md` | Outbound | V5.1 use-case gaps (GAP-016–020), niche.rs, audit evolution |
 | `ESOTERICWEBB_V4_LIVE_PRIMAL_COMPOSITION_HANDOFF_MAR24_2026.md` | Outbound | V4 bridge methods, composition pipeline, provenance lifecycle |
 | `ESOTERICWEBB_V4_ECOSYSTEM_REVIEW_ABSORPTION_HANDOFF_MAR24_2026.md` | Inbound | Absorption opportunities from 8 sibling springs |

@@ -34,6 +34,57 @@ pub(super) fn handle_identity() -> Value {
     })
 }
 
+/// `health.version` — detailed version, build target, and signal tier info.
+pub(super) fn handle_health_version() -> Value {
+    serde_json::json!({
+        "primal": "esotericwebb",
+        "version": env!("CARGO_PKG_VERSION"),
+        "build_target": option_env!("TARGET").unwrap_or("unknown"),
+        "edition": "2024",
+        "signal_tiers": ["nest", "meta"],
+    })
+}
+
+/// `health.drain` — acknowledge graceful shutdown intent.
+pub(super) fn handle_health_drain() -> Value {
+    tracing::info!("health.drain received — shutdown acknowledged");
+    serde_json::json!({
+        "acknowledged": true,
+        "primal": "esotericwebb",
+    })
+}
+
+/// `primal.announce` — accept inbound registration from another primal.
+pub(super) fn handle_primal_announce(params: Option<&Value>) -> Value {
+    let primal = params
+        .and_then(|p| p.get("primal"))
+        .and_then(Value::as_str)
+        .unwrap_or("unknown");
+    let version = params
+        .and_then(|p| p.get("version"))
+        .and_then(Value::as_str)
+        .unwrap_or("unknown");
+    tracing::info!(primal, version, "primal.announce received");
+    serde_json::json!({
+        "accepted": true,
+        "primal": primal,
+    })
+}
+
+/// `primal.info` — return Webb's niche metadata (identity, capabilities, signal tiers).
+pub(super) fn handle_primal_info() -> Value {
+    let registry_toml = include_str!("../../../capability_registry.toml");
+    let method_count = registry_toml.matches("method = ").count();
+    serde_json::json!({
+        "primal": "esotericwebb",
+        "version": env!("CARGO_PKG_VERSION"),
+        "domain": "narrative",
+        "capabilities": method_count,
+        "signal_tiers": ["nest", "meta"],
+        "guidestone_level": 0,
+    })
+}
+
 /// `capabilities.list` — parsed from the embedded capability registry.
 pub(super) fn handle_capabilities_list() -> Value {
     let registry_toml = include_str!("../../../capability_registry.toml");
@@ -98,5 +149,52 @@ mod tests {
         let v = handle_capabilities_list();
         let caps = v["capabilities"].as_array().unwrap();
         assert!(!caps.is_empty());
+    }
+
+    #[test]
+    fn health_version_returns_build_info() {
+        let v = handle_health_version();
+        assert_eq!(v["primal"], "esotericwebb");
+        assert!(v.get("version").is_some());
+        assert!(v.get("build_target").is_some());
+        let tiers = v["signal_tiers"].as_array().unwrap();
+        assert!(tiers.contains(&Value::from("nest")));
+        assert!(tiers.contains(&Value::from("meta")));
+    }
+
+    #[test]
+    fn health_drain_acknowledges() {
+        let v = handle_health_drain();
+        assert_eq!(v["acknowledged"], true);
+        assert_eq!(v["primal"], "esotericwebb");
+    }
+
+    #[test]
+    fn primal_announce_accepts_inbound() {
+        let params = serde_json::json!({
+            "primal": "squirrel",
+            "version": "1.2.3",
+            "capabilities": ["ai"],
+        });
+        let v = handle_primal_announce(Some(&params));
+        assert_eq!(v["accepted"], true);
+        assert_eq!(v["primal"], "squirrel");
+    }
+
+    #[test]
+    fn primal_announce_handles_missing_params() {
+        let v = handle_primal_announce(None);
+        assert_eq!(v["accepted"], true);
+        assert_eq!(v["primal"], "unknown");
+    }
+
+    #[test]
+    fn primal_info_returns_metadata() {
+        let v = handle_primal_info();
+        assert_eq!(v["primal"], "esotericwebb");
+        assert_eq!(v["domain"], "narrative");
+        assert!(v["capabilities"].as_u64().unwrap() > 0);
+        let tiers = v["signal_tiers"].as_array().unwrap();
+        assert!(tiers.contains(&Value::from("nest")));
     }
 }

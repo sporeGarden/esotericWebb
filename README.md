@@ -2,19 +2,21 @@
 
 | | |
 |---|---|
-| **Version** | V7 |
-| **Tests** | 342 (323 unit + 18 E2E + 1 validation) |
+| **Version** | V8 |
+| **Tests** | 357 (338 unit + 18 E2E + 1 validation) |
 | **Coverage** | ~91% lines (`cargo llvm-cov`) |
-| **Rust files** | 41 (~13.5k LOC) |
+| **Rust files** | 43 (~13.2k LOC) |
 | **Experiments** | 5 (exp001–exp005) |
 | **MSRV** | 1.87 (edition 2024) |
 | **License** | AGPL-3.0 + ORC + CC-BY-SA 4.0 |
 | **Unsafe** | `#![forbid(unsafe_code)]` |
 | **C deps** | Zero (ecoBin compliant) |
-| **Bridge methods** | 19 (all domains, all degrading) |
+| **Bridge methods** | 22 (all domains, all degrading, signal-first) |
+| **Capabilities exposed** | 24 (sourDough + lifecycle + narrative + session + MCP) |
 | **Primals consumed** | 7 domains (ai, viz, dag, lineage, compute, storage, provenance) |
+| **Signal adoption** | Wave 17 — `nest.store`, `nest.commit`, `primal.announce` |
 | **Local science** | flow, engagement, DDA (absorbed from ludoSpring patterns) |
-| **Last validation** | 2026-04-17 (V7) |
+| **Last validation** | 2026-05-16 (V8) |
 
 **A [sporeGarden](https://github.com/sporeGarden) project — the primals as a composed CRPG.**
 
@@ -52,15 +54,16 @@ engine**. It consumes primals via JSON-RPC IPC — zero Rust crate dependencies
 on any spring. Primals are resolved from `plasmidBin/` or discovered via
 Songbird at runtime.
 
-| Domain | Primal | Role | Status (V6) | Key IPC methods |
+| Domain | Primal | Role | Status (V8) | Key IPC methods |
 |--------|--------|------|-------------|-----------------|
 | ai | Squirrel | AI narration, NPC dialogue, inference | Direct bridge | `ai.query`, `ai.suggest`, `ai.analyze` |
 | visualization | petalTongue | Scene rendering, input polling | Direct bridge | `visualization.render.scene`, `interaction.poll` |
-| dag | rhizoCrypt | Provenance DAG lifecycle | Direct bridge | `dag.session.create`, `dag.event.append`, `dag.merkle.root` |
-| lineage | loamSpine | NPC personality certs | Bridge ready | `certificate.mint` |
+| dag | rhizoCrypt | Provenance DAG lifecycle | Signal-first (`nest.store`) | `dag.session.create`, `dag.event.append`, `dag.merkle.root` |
+| lineage | loamSpine | NPC personality certs | Signal-first (`nest.commit`) | `certificate.mint` |
 | compute | toadStool | GPU compute dispatch | Bridge ready | `compute.dispatch.submit` |
 | storage | nestGate | Key-value persistence | Bridge ready | `storage.store`, `storage.retrieve` |
-| provenance | sweetGrass | Creative attribution | Bridge ready | `attribution.record` |
+| provenance | sweetGrass | Creative attribution | Signal-first (`nest.store`) | `attribution.record` |
+| orchestration | biomeOS | Neural API, signal dispatch | Lifecycle wired | `primal.announce`, `health.version`, `health.drain` |
 | ~~game~~ | ~~ludoSpring~~ | ~~Flow, DDA, engagement~~ | **Removed V6** | Local `science/` — see GAP-021 |
 
 ## The Core Thesis: Bounded Space, Infinite Exploration
@@ -114,10 +117,11 @@ webb/              Main Rust crate (narrative engine + IPC + director + bridge)
   src/ipc/         JSON-RPC client, bridge, discovery, launcher, resilience
   src/narrative/   Graph, validator, predicate, effect, visualization
   src/director/    Game director (outcome evaluation, DDA integration)
-  src/content/     YAML content loader, ability/NPC/scene models
-  src/session/     Game session, enrichment pipeline, types
-  src/niche.rs     Self-knowledge (identity, capabilities, socket resolution)
+  src/content/     YAML content loader, ability/NPC/scene models (tests in tests.rs)
+  src/session/     Game session, enrichment pipeline, types (tests in tests.rs)
+  src/niche.rs     Self-knowledge (identity, 24 capabilities, socket resolution)
   src/state/       World state (knowledge, trust, inventory, flags, conditions)
+  capability_registry.toml   All 24 exposed JSON-RPC methods
 content/           YAML game content (authored by creative teams)
 experiments/       5 standalone validation crates (exp001–exp005)
 graphs/            biomeOS deploy graphs (8 TOML compositions)
@@ -125,8 +129,6 @@ niches/            BYOB niche definitions (2 YAML niche descriptors)
 deploy/            Composition fragment for biomeOS/primalSpring
 specs/             Design specifications (7 documents)
 wateringHole/      Handoffs to primal and spring teams
-config/            Launch profiles for primal composition (aspirational)
-dag_viewer*.html   Standalone D3.js narrative DAG viewers (2D + 3D)
 whitePaper/        baseCamp evolution patterns document
 ```
 
@@ -141,8 +143,9 @@ primals become invisible infrastructure inside a creative product.
 ## Quality gates
 
 ```bash
-make check    # fmt + clippy + test + doc
-make deny     # supply chain audit
+cargo fmt --check && cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace --lib --tests
+cargo doc --workspace --no-deps
 cargo llvm-cov --workspace --lib --fail-under-lines 90  # coverage
 ```
 

@@ -143,7 +143,7 @@ impl NarrativeGraph {
             .iter()
             .filter(|edge| edge.conditions.iter().all(&evaluate))
             .collect();
-        exits.sort_by(|a, b| b.priority.cmp(&a.priority));
+        exits.sort_by_key(|e| std::cmp::Reverse(e.priority));
         exits
     }
 

@@ -26,7 +26,7 @@ pub fn cmd_serve(
     )]
     let _launcher: Option<esoteric_webb::ipc::launcher::PrimalLauncher>;
 
-    let bridge = if launch {
+    let mut bridge = if launch {
         println!("BYOB composition: launching primals from plasmidBin/ ...");
         let mut launcher = esoteric_webb::ipc::launcher::PrimalLauncher::new();
 
@@ -79,6 +79,9 @@ pub fn cmd_serve(
         }
     );
 
+    let sock = esoteric_webb::ipc::listener::socket_path();
+    announce_to_biomeos(&mut bridge, &sock);
+
     let session = esoteric_webb::session::GameSession::with_bridge(content_path, Some(bridge))?;
     let b = session.bundle();
     println!(
@@ -108,10 +111,40 @@ pub fn cmd_serve(
         println!("TCP IPC listening on {addr}");
     }
 
-    let sock = esoteric_webb::ipc::listener::socket_path();
     println!("UDS IPC listening on {}", sock.display());
     println!("Session pre-loaded — connect and call session.state to begin");
     esoteric_webb::ipc::listener::serve(&sock, &shared)
+}
+
+/// Self-announce to biomeOS so other primals can discover Webb.
+fn announce_to_biomeos(
+    bridge: &mut esoteric_webb::ipc::bridge::PrimalBridge,
+    sock: &std::path::Path,
+) {
+    const WEBB_METHODS: &[&str] = &[
+        "health.liveness",
+        "health.readiness",
+        "health.version",
+        "health.drain",
+        "identity.get",
+        "capabilities.list",
+        "primal.announce",
+        "primal.info",
+        "webb.health",
+        "webb.scene.current",
+        "webb.narrative.status",
+        "webb.content.list",
+        "session.start",
+        "session.state",
+        "session.actions",
+        "session.act",
+        "session.history",
+        "session.narrate",
+        "session.graph",
+        "tools.list",
+        "tools.call",
+    ];
+    bridge.announce_self(&sock.display().to_string(), WEBB_METHODS);
 }
 
 /// Validate a content directory for correctness.
@@ -348,14 +381,14 @@ pub fn cmd_graph(
 ///
 /// Requires the provenance trio (rhizoCrypt, loamSpine, sweetGrass) to be
 /// fully wired with end-to-end session DAG persistence. See
-/// `EVOLUTION_GAPS.md` gap #003 for tracking.
+/// `EVOLUTION_GAPS.md` GAP-004 for tracking.
 pub fn cmd_replay(session_path: &str, content_path: &str) -> Result<(), String> {
     let _bundle = ContentBundle::load(content_path).map_err(|e| format!("load: {e}"))?;
     Err(format!(
         "provenance replay not yet implemented for session '{session_path}'. \
          The provenance trio (rhizoCrypt DAG, loamSpine certificates, sweetGrass attribution) \
          must be end-to-end wired before sessions can be replayed. \
-         Track progress in EVOLUTION_GAPS.md gap #003."
+         Track progress in EVOLUTION_GAPS.md GAP-004."
     ))
 }
 

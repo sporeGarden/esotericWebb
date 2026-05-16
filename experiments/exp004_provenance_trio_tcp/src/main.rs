@@ -8,8 +8,7 @@
 fn allocate_port() -> u16 {
     std::net::TcpListener::bind("127.0.0.1:0")
         .and_then(|l| l.local_addr())
-        .map(|a| a.port())
-        .unwrap_or(19404)
+        .map_or(19404, |a| a.port())
 }
 
 fn main() {

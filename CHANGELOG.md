@@ -2,6 +2,81 @@
 
 All notable changes to Esoteric Webb are documented here.
 
+## V8 — Wave 17 Signal Adoption + Deep Debt Resolution (May 16, 2026)
+
+### Signal dispatch adoption (primalSpring Wave 17)
+
+- **`nest.store` signal dispatch** — atomic provenance step that collapses
+  NestGate.content.put → rhizoCrypt.dag.event.append → loamSpine.spine.seal →
+  sweetGrass.braid.create into a single biomeOS-routed signal. Falls back
+  to direct `dag.event.append` when biomeOS is unavailable.
+- **`nest.commit` signal dispatch** — atomic session finalization (dehydrate →
+  sign → store → seal). Falls back to `dag.session.complete`.
+- **Signal constants declared** — `nest.store`, `nest.commit`, `meta.observe`,
+  `meta.intent` ready for biomeOS orchestration collapse.
+- **Enrichment pipeline rewired** — `record_provenance_vertex()` now calls
+  `bridge.nest_store()` (signal-first with DAG fallback) instead of direct
+  `dag.event.append`. `complete_provenance_if_ended()` calls `bridge.nest_commit()`
+  instead of direct `dag.session.complete`.
+
+### Lifecycle / Neural API alignment
+
+- **`primal.announce` inbound handler** — accepts registration announcements
+  from other ecosystem primals. Backward-compatible with `lifecycle.register`.
+- **`primal.announce` outbound wired** — `cmd_serve` now calls
+  `announce_to_biomeos()` at startup, broadcasting 24 capabilities via
+  `primal.announce` before starting the IPC server (GAP-025 resolved).
+- **`primal.info` handler** — returns niche metadata (version, capabilities,
+  signal tiers, guidestone level).
+- **`health.version` handler** — detailed version, build target, signal tier info.
+- **`health.drain` handler** — acknowledges graceful shutdown intent.
+
+### Smart refactoring (>800 LOC files)
+
+- **`session/mod.rs`** 891→425 LOC — extracted 470-line test suite to
+  `session/tests.rs` (idiomatic Rust companion file pattern).
+- **`content/mod.rs`** 873→290 LOC — extracted 582-line test suite to
+  `content/tests.rs`.
+- All production files now under 800 LOC. Largest: `launcher.rs` at 764.
+
+### Niche self-knowledge evolved
+
+- **Capability list expanded** — added `health.version`, `health.drain`,
+  `primal.announce`, `primal.info` to `niche::CAPABILITIES` (20→24).
+- **Cross-validation test** — new test verifies `niche::CAPABILITIES`
+  entries are all present in `capability_registry.toml`.
+
+### Deep debt resolution
+
+- **Clippy clean** — fixed `unnecessary_sort_by` (narrative/mod.rs) and
+  `map().unwrap_or()` → `map_or()` (exp004, validation_experiments).
+- **GAP reference fix** — `cmd_replay` cited wrong gap number (GAP-003 → GAP-004).
+- **GAP-022 re-filed** — moved from "Open gaps" to "Absorbed gaps" (was already
+  resolved in V6 but misplaced in document structure).
+- **External dep audit** — `yaml_serde → libyaml-rs` confirmed pure Rust
+  (no C FFI, no `-sys` crate). ecoBin compliant.
+- **Hardcoded path audit** — production code uses env-var-driven, XDG-compliant
+  discovery with `plasmidBin/` search-order fallback. Already capability-based.
+- **Production stub audit** — all degradation patterns are intentional 4-pattern
+  graceful degradation per ecosystem standard. Zero mocks outside `#[cfg(test)]`.
+
+### Metrics
+
+- 338 unit tests + 18 E2E + 1 integration (357 total, up from 342)
+- Zero clippy warnings (pedantic + nursery)
+- Zero unsafe, zero `#[allow()]`, zero `unwrap()`/`expect()` in production
+- Zero `TODO`/`FIXME` in production code
+- All production files under 800 LOC
+- `cargo deny check` PASS
+- `cargo doc` PASS (zero warnings)
+
+### Evolution gaps
+
+- **GAP-024** (filed) — signal dispatch not exercised E2E against live biomeOS
+- **GAP-025** (resolved) — `primal.announce` outbound now wired into serve startup
+
+---
+
 ## V7 — Deploy Artifact Alignment + Composition Handoff (April 17, 2026)
 
 ### Deploy graph and niche cleanup

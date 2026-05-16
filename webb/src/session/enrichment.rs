@@ -153,6 +153,10 @@ impl GameSession {
     }
 
     /// Complete the provenance session if the game has reached an ending.
+    ///
+    /// Uses `nest.commit` signal dispatch when biomeOS is available (collapses
+    /// dehydrate → sign → store → seal into one orchestrated signal). Falls
+    /// back to direct `dag.session.complete` otherwise.
     pub(crate) fn complete_provenance_if_ended(&mut self) {
         if !self.director.is_at_ending(&self.bundle) {
             return;
@@ -171,12 +175,16 @@ impl GameSession {
             "turns": turn,
             "completed": true,
         });
-        if let Err(e) = bridge.dag_session_complete(&params) {
+        if let Err(e) = bridge.nest_commit(&params) {
             tracing::debug!("provenance session completion degraded: {e}");
         }
     }
 
-    /// Record a provenance vertex via the DAG primal if connected.
+    /// Record a provenance vertex via signal dispatch or direct DAG call.
+    ///
+    /// Uses `nest.store` signal when biomeOS is available (collapses content.put +
+    /// dag.event.append + spine.seal + braid.create into one orchestrated signal).
+    /// Falls back to direct `dag.event.append` otherwise.
     ///
     /// Provenance is best-effort: failures degrade silently so gameplay
     /// is never blocked by an unavailable or slow primal.
@@ -184,7 +192,7 @@ impl GameSession {
         let Some(bridge) = self.bridge.as_mut() else {
             return;
         };
-        if !bridge.has(crate::ipc::domain::DAG) {
+        if !bridge.has(crate::ipc::domain::DAG) && !bridge.has_neural_api() {
             return;
         }
         let parent_ids: Vec<&str> = self
@@ -205,7 +213,7 @@ impl GameSession {
             },
             "parents": parent_ids,
         });
-        if let Err(e) = bridge.dag_event_append(&vertex) {
+        if let Err(e) = bridge.nest_store(&vertex) {
             tracing::debug!("provenance append degraded: {e}");
         }
     }

@@ -13,8 +13,7 @@ use esoteric_webb::ipc::launcher::{PrimalLauncher, discover_binary};
 fn allocate_port() -> u16 {
     std::net::TcpListener::bind("127.0.0.1:0")
         .and_then(|l| l.local_addr())
-        .map(|a| a.port())
-        .unwrap_or(19401)
+        .map_or(19401, |a| a.port())
 }
 
 /// exp008: Live round-trip with rhizoCrypt from plasmidBin.

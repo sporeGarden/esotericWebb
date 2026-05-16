@@ -12,8 +12,9 @@ use std::sync::{Arc, Mutex};
 use super::envelope::{JsonRpcError, JsonRpcRequest, JsonRpcResponse};
 use super::{
     METHOD_CAPABILITIES_LIST, METHOD_CONTENT_LIST, METHOD_HEALTH, METHOD_HEALTH_CHECK,
-    METHOD_HEALTH_LIVENESS, METHOD_HEALTH_READINESS, METHOD_IDENTITY_GET, METHOD_LIVENESS,
-    METHOD_NARRATIVE_STATUS, METHOD_READINESS, METHOD_SCENE_CURRENT, METHOD_TOOLS_CALL,
+    METHOD_HEALTH_DRAIN, METHOD_HEALTH_LIVENESS, METHOD_HEALTH_READINESS, METHOD_HEALTH_VERSION,
+    METHOD_IDENTITY_GET, METHOD_LIVENESS, METHOD_NARRATIVE_STATUS, METHOD_PRIMAL_ANNOUNCE,
+    METHOD_PRIMAL_INFO, METHOD_READINESS, METHOD_SCENE_CURRENT, METHOD_TOOLS_CALL,
     METHOD_TOOLS_LIST,
 };
 use crate::session::GameSession;
@@ -62,8 +63,12 @@ pub fn dispatch_with_session(request: &JsonRpcRequest, session: &SharedSession) 
         | METHOD_HEALTH_LIVENESS
         | METHOD_HEALTH_CHECK => Ok(lifecycle::handle_health()),
         METHOD_HEALTH_READINESS => Ok(lifecycle::handle_readiness(session)),
+        METHOD_HEALTH_VERSION => Ok(lifecycle::handle_health_version()),
+        METHOD_HEALTH_DRAIN => Ok(lifecycle::handle_health_drain()),
         METHOD_IDENTITY_GET => Ok(lifecycle::handle_identity()),
         METHOD_CAPABILITIES_LIST => Ok(lifecycle::handle_capabilities_list()),
+        METHOD_PRIMAL_ANNOUNCE => Ok(lifecycle::handle_primal_announce(request.params.as_ref())),
+        METHOD_PRIMAL_INFO => Ok(lifecycle::handle_primal_info()),
 
         METHOD_SCENE_CURRENT => Ok(narrative::handle_scene_current(session)),
         METHOD_NARRATIVE_STATUS => Ok(narrative::handle_narrative_status(session)),
@@ -358,5 +363,60 @@ mod tests {
     fn new_shared_session_is_none() {
         let session = new_shared_session();
         assert!(session.lock().unwrap().is_none());
+    }
+
+    #[test]
+    fn health_version_dispatches() {
+        let req = JsonRpcRequest::new("health.version", None);
+        let resp = dispatch(&req);
+        assert!(resp.error.is_none());
+        let primal = resp
+            .result
+            .as_ref()
+            .and_then(|r| r.get("primal"))
+            .and_then(Value::as_str);
+        assert_eq!(primal, Some("esotericwebb"));
+    }
+
+    #[test]
+    fn health_drain_dispatches() {
+        let req = JsonRpcRequest::new("health.drain", None);
+        let resp = dispatch(&req);
+        assert!(resp.error.is_none());
+        let ack = resp
+            .result
+            .as_ref()
+            .and_then(|r| r.get("acknowledged"))
+            .and_then(Value::as_bool);
+        assert_eq!(ack, Some(true));
+    }
+
+    #[test]
+    fn primal_announce_dispatches() {
+        let req = JsonRpcRequest::new(
+            "primal.announce",
+            Some(serde_json::json!({"primal": "toadstool", "version": "0.5.0"})),
+        );
+        let resp = dispatch(&req);
+        assert!(resp.error.is_none());
+        let accepted = resp
+            .result
+            .as_ref()
+            .and_then(|r| r.get("accepted"))
+            .and_then(Value::as_bool);
+        assert_eq!(accepted, Some(true));
+    }
+
+    #[test]
+    fn primal_info_dispatches() {
+        let req = JsonRpcRequest::new("primal.info", None);
+        let resp = dispatch(&req);
+        assert!(resp.error.is_none());
+        let domain = resp
+            .result
+            .as_ref()
+            .and_then(|r| r.get("domain"))
+            .and_then(Value::as_str);
+        assert_eq!(domain, Some("narrative"));
     }
 }

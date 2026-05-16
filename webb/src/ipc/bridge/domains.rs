@@ -32,7 +32,8 @@ use crate::ipc::squirrel::{
 use crate::ipc::{
     METHOD_CERT_MINT, METHOD_COMPUTE_SUBMIT, METHOD_DAG_EVENT_APPEND, METHOD_DAG_FRONTIER_GET,
     METHOD_DAG_MERKLE_ROOT, METHOD_DAG_QUERY_VERTICES, METHOD_DAG_SESSION_COMPLETE,
-    METHOD_DAG_SESSION_CREATE, METHOD_STORAGE_RETRIEVE, METHOD_STORAGE_STORE,
+    METHOD_DAG_SESSION_CREATE, METHOD_STORAGE_RETRIEVE, METHOD_STORAGE_STORE, SIGNAL_NEST_COMMIT,
+    SIGNAL_NEST_STORE,
 };
 
 use super::{PrimalBridge, degraded_summary_limit};
@@ -367,5 +368,90 @@ impl PrimalBridge {
         params: &serde_json::Value,
     ) -> Result<Option<serde_json::Value>, IpcError> {
         self.call_passthrough(domain::LINEAGE, METHOD_CERT_MINT, params.clone())
+    }
+
+    // ── Signal dispatch (Wave 17 orchestration collapse) ─────
+
+    /// Atomic provenance step via `nest.store` signal.
+    ///
+    /// When biomeOS routes the signal, it decomposes into:
+    /// `NestGate.content.put → rhizoCrypt.dag.event.append → loamSpine.spine.seal → sweetGrass.braid.create`
+    ///
+    /// Falls back to direct `dag.event.append` if the signal is unavailable.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IpcError`] if all paths fail.
+    pub fn nest_store(&mut self, params: &serde_json::Value) -> Result<bool, IpcError> {
+        if self.has_neural_api() {
+            let signal_params = serde_json::json!({
+                "signal": SIGNAL_NEST_STORE,
+                "payload": params,
+            });
+            match self.neural_api_call("nest", SIGNAL_NEST_STORE, signal_params) {
+                Ok(resp) if resp.error.is_none() => return Ok(true),
+                Ok(_) | Err(_) => {
+                    tracing::debug!(
+                        "nest.store signal unavailable — falling back to dag.event.append"
+                    );
+                }
+            }
+        }
+        self.provenance_append(params)
+    }
+
+    /// Atomic session finalization via `nest.commit` signal.
+    ///
+    /// When biomeOS routes the signal, it decomposes into:
+    /// `rhizoCrypt.dehydrate → bearDog.sign → NestGate.store → loamSpine.seal`
+    ///
+    /// Falls back to direct `dag.session.complete` if the signal is unavailable.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IpcError`] if all paths fail.
+    pub fn nest_commit(&mut self, params: &serde_json::Value) -> Result<(), IpcError> {
+        if self.has_neural_api() {
+            let signal_params = serde_json::json!({
+                "signal": SIGNAL_NEST_COMMIT,
+                "payload": params,
+            });
+            match self.neural_api_call("nest", SIGNAL_NEST_COMMIT, signal_params) {
+                Ok(resp) if resp.error.is_none() => return Ok(()),
+                Ok(_) | Err(_) => {
+                    tracing::debug!(
+                        "nest.commit signal unavailable — falling back to dag.session.complete"
+                    );
+                }
+            }
+        }
+        self.dag_session_complete(params)
+    }
+
+    /// Self-announce to biomeOS (outbound `primal.announce`).
+    ///
+    /// Registers esotericWebb's socket, capabilities, methods, and signal tiers
+    /// with the orchestration layer. Falls back silently if biomeOS is unavailable.
+    pub fn announce_self(&mut self, socket: &str, methods: &[&str]) {
+        if !self.has_neural_api() {
+            tracing::debug!("No neural-api connection — skipping primal.announce");
+            return;
+        }
+        let params = serde_json::json!({
+            "primal": "esotericwebb",
+            "socket": socket,
+            "capabilities": ["narrative", "session", "mcp"],
+            "methods": methods,
+            "signal_tiers": ["nest", "meta"],
+            "version": env!("CARGO_PKG_VERSION"),
+        });
+        match self.neural_api_call("lifecycle", "primal.announce", params) {
+            Ok(resp) if resp.error.is_none() => {
+                tracing::info!("primal.announce accepted by biomeOS");
+            }
+            Ok(_) | Err(_) => {
+                tracing::debug!("primal.announce not accepted — operating without registration");
+            }
+        }
     }
 }

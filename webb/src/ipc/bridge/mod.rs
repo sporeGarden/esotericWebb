@@ -593,4 +593,36 @@ mod tests {
             assert!(!s.healthy);
         }
     }
+
+    #[test]
+    fn standalone_nest_store_falls_back_to_false() {
+        let mut bridge = PrimalBridge::standalone();
+        let result = bridge
+            .nest_store(&serde_json::json!({"session_id": "s1", "data": {"action": "test"}}))
+            .unwrap();
+        assert!(!result);
+    }
+
+    #[test]
+    fn standalone_nest_commit_falls_back_to_noop() {
+        let mut bridge = PrimalBridge::standalone();
+        assert!(
+            bridge
+                .nest_commit(&serde_json::json!({"session_id": "s1"}))
+                .is_ok()
+        );
+    }
+
+    #[test]
+    fn standalone_announce_self_is_noop() {
+        let mut bridge = PrimalBridge::standalone();
+        bridge.announce_self("/tmp/test.sock", &["webb.health", "session.start"]);
+        assert!(!bridge.has_neural_api());
+    }
+
+    #[test]
+    fn standalone_has_no_neural_api() {
+        let bridge = PrimalBridge::standalone();
+        assert!(!bridge.has_neural_api());
+    }
 }

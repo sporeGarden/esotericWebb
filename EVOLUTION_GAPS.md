@@ -327,25 +327,52 @@ Webb exercises primal composition -> discovers gap in a primal capability
 - **Handoff**: primalSpring / wateringHole for game-science primal design.
 - **Status**: open
 
-### GAP-022: Webb AI method alignment with biomeOS capability registry
+### GAP-024: Signal dispatch not yet exercised E2E against live biomeOS
 
-- **Primal**: AI (`ai.query`, `ai.suggest`, `ai.analyze`)
-- **Spring (producer)**: esotericWebb (self) — resolved in V6
-- **Severity**: critical (was blocking all AI composition)
-- **Evidence**: Webb V5 called `ai.chat`, `ai.summarize`, `ai.inference` —
-  none of which exist in biomeOS's capability registry or Squirrel's native
-  methods. biomeOS routes `ai.query` → Squirrel `query`, `ai.suggest` →
-  `suggest`, `ai.analyze` → `analyze`. Webb's AI calls silently failed
-  because capability.call found no translation for the wrong method names.
-- **Resolution**: V6 aligned all AI methods: `ai.chat` → `ai.query`,
-  `ai.summarize` → `ai.suggest`, added `ai.analyze`. NPC dialogue and
-  narration now route directly to Squirrel via biomeOS semantic methods
-  instead of through ludoSpring delegation.
-- **Status**: resolved (V6, 2026-03-29)
+- **Primal**: biomeOS (signal orchestration layer)
+- **Spring (producer)**: biomeOS
+- **Severity**: low
+- **Evidence**: Webb V8 declares `nest.store` and `nest.commit` signal dispatch
+  methods with automatic fallback to domain calls. However, biomeOS
+  `neural-api` has not been validated as routing these signals on ironGate.
+  The fallback to `dag.event.append` / `dag.session.complete` works, but
+  the orchestration collapse (content.put + dag.append + spine.seal + braid.create
+  in a single signal) has not been exercised live.
+- **Expected**: `nest.store` dispatched via biomeOS decomposes into the full
+  provenance pipeline. `nest.commit` decomposes into session finalization.
+- **Workaround**: Fallback to direct domain calls (functional, just not collapsed).
+- **Handoff**: Validate on ironGate once biomeOS neural-api is healthy (GAP-017).
+- **Status**: open
+
+### GAP-025: `primal.announce` outbound not wired into serve startup
+
+- **Primal**: biomeOS (signal orchestration layer)
+- **Spring (producer)**: esotericWebb (self)
+- **Severity**: low
+- **Evidence**: `PrimalBridge::announce_self()` method exists but is not
+  called from `cmd_serve`. When Webb starts its IPC server, it should
+  announce its capabilities to biomeOS so other primals can discover it.
+- **Expected**: On serve startup, if Neural API is available, call
+  `announce_self(socket_path, &methods)`.
+- **Workaround**: Other primals discover Webb via filesystem socket probe.
+- **Status**: **RESOLVED** V8 — `cmd_serve` now calls `announce_to_biomeos()`
+  before starting the IPC server, broadcasting all 24 capabilities via
+  `primal.announce`.
+- **Handoff**: Self-owned (Webb startup wiring).
+- **Status**: open
 
 ---
 
 ## Absorbed gaps
+
+### GAP-022: Webb AI method alignment with biomeOS capability registry → RESOLVED (V6, 2026-03-29)
+
+Webb V5 called `ai.chat`, `ai.summarize`, `ai.inference` — none of which
+exist in biomeOS's capability registry or Squirrel's native methods. V6
+aligned all AI methods: `ai.chat` → `ai.query`, `ai.summarize` →
+`ai.suggest`, added `ai.analyze`. NPC dialogue and narration now route
+directly to Squirrel via biomeOS semantic methods instead of through
+ludoSpring delegation.
 
 ### GAP-001: IPC clients are degradation stubs → RESOLVED (V4, 2026-03-24)
 

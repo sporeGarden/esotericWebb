@@ -32,6 +32,24 @@ description = "Self-identification — primal name, version, domain"
 method = "capabilities.list"
 description = "Return this capability registry"
 
+# ── Lifecycle / Neural API (Wave 17) ──
+
+[[capabilities]]
+method = "health.version"
+description = "Detailed version, build target, and signal tier information"
+
+[[capabilities]]
+method = "health.drain"
+description = "Acknowledge graceful shutdown intent"
+
+[[capabilities]]
+method = "primal.announce"
+description = "Accept inbound primal registration announcements"
+
+[[capabilities]]
+method = "primal.info"
+description = "Return niche metadata — version, capabilities, signal tiers"
+
 # ── Webb domain methods ──
 
 [[capabilities]]
