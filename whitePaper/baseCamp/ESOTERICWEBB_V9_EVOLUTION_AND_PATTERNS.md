@@ -1,9 +1,9 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
-# Esoteric Webb V8 — Evolution Patterns and Ecosystem Learnings
+# Esoteric Webb V9 — Evolution Patterns and Ecosystem Learnings
 
-**Date:** May 16, 2026 (updated from April 17, 2026)
+**Date:** May 17, 2026 (updated from May 16, 2026)
 **Author:** ecoPrimals / sporeGarden
-**Foundation:** V1–V4 bootstrap; V5 deep debt; V5.1 audit; V6 ludoSpring decomposition; V7 deploy alignment; V8 Wave 17 signal adoption + deep debt + smart refactoring
+**Foundation:** V1–V4 bootstrap; V5 deep debt; V5.1 audit; V6 ludoSpring decomposition; V7 deploy alignment; V8 Wave 17 signal adoption + deep debt + smart refactoring; V9 Wave 20-21 canonical schema absorption + stability tiers + degradation contracts + trio tracking
 **Coverage:** ~91% lines (357 tests)
 
 ---
@@ -267,6 +267,93 @@ is critical for dynamic composition where primals start and stop.
 
 ---
 
+## Pattern 11: Canonical Schema Consumption — Wave 20 Envelope Normalization (V9)
+
+**Problem.** The ecosystem has two generations of `capability.list` responses:
+pre-Wave-20 primals return raw arrays, while Wave 20+ primals return the
+canonical envelope `{ capabilities, count, primal }`. A consumer that calls
+`capabilities.list` on arbitrary primals must handle both.
+
+**Solution.** Add an envelope normalization layer (`unwrap_capabilities_envelope`)
+between the raw IPC response and consumer code. If the response has the
+canonical `capabilities` + `count` keys, pass it through. If it's a raw array,
+wrap it in the canonical shape. Consumers always see a consistent envelope.
+
+**Implementation in Webb.** `PrimalClient::capabilities()` calls three method
+name variants (`capabilities.list`, `capability.list`, `primal.capabilities`),
+then passes the result through `unwrap_capabilities_envelope()`. Webb's own
+`handle_capabilities_list()` now emits the canonical shape with `count`.
+
+**Key insight.** Normalization at the consumer boundary — not at the producer
+or the wire — is the least disruptive way to handle schema evolution in a
+heterogeneous ecosystem where primals ship at different Wave levels.
+
+---
+
+## Pattern 12: Stability Tier Awareness — Method Lifetime Contracts (V9)
+
+**Problem.** Consumers hardcode method names in dispatch maps without knowing
+whether those names are frozen or evolving. A renamed `evolving` method breaks
+consumers silently.
+
+**Solution.** Annotate method groups in `capability_registry.toml` with
+stability tiers: `stable` (wire name frozen), `evolving` (may change with
+deprecation cycle), `internal` (implementation detail).
+
+**Implementation in Webb.** All sourDough, lifecycle, session, and domain
+methods are annotated `stable`. MCP tools are `evolving` (the MCP spec is
+still evolving). The annotation is documentation, not runtime enforcement —
+consumers reference it when deciding which methods to hardcode.
+
+**Key insight.** Stability tiers are the ecosystem's equivalent of semver for
+individual methods. They enable informed dependency decisions without requiring
+full versioned APIs.
+
+---
+
+## Pattern 13: Degradation Behavior Contracts — Written Failure Modes (V9)
+
+**Problem.** Each primal domain degrades differently when unreachable, but the
+behavior was implicit in code paths. Consumers and upstream teams had to read
+Rust source to understand failure modes.
+
+**Solution.** Document per-domain degradation in `docs/DEGRADATION_BEHAVIOR.md`
+as a formal contract: domain, primal, unreachable behavior, consumer impact.
+This aligns with the ecosystem invariant from Wave 20: "Science is never gated
+behind primal availability."
+
+**Implementation in Webb.** 9 domain degradation contracts, signal dispatch
+fallback table, trio partial completion state table, standalone vs composition
+mode documentation.
+
+**Key insight.** Written degradation contracts are more valuable than the code
+that implements them. They let upstream teams (springs, other gardens) design
+for Webb's failure envelope without reading Rust source.
+
+---
+
+## Pattern 14: Trio Partial Completion Tracking (V9)
+
+**Problem.** The provenance trio (rhizoCrypt DAG, loamSpine spine, sweetGrass
+braid) is not atomic. In real deployments, some primals may be unreachable.
+Without tracking which primals responded, consumers cannot distinguish
+"full provenance" from "DAG only" from "standalone."
+
+**Solution.** Add `primals_reached: Vec<String>` to `WorldState`. Populate it
+during provenance operations: `["dag"]` for DAG only, `["dag", "spine", "braid"]`
+for full trio. Empty means standalone.
+
+**Implementation in Webb.** `record_provenance_vertex()` pushes `"dag"` to
+`primals_reached` on successful `nest.store`. Future spine and braid
+integration will add their entries. Session state serialization exposes this
+to API consumers.
+
+**Key insight.** Partial provenance is valid provenance. The consumer decides
+whether partial is acceptable — not the producer. This is the trio integration
+guide's core insight: "no rollback on partial."
+
+---
+
 ## Remaining Open Gaps
 
 | GAP | Summary | Owner | Status |
@@ -285,13 +372,17 @@ is critical for dynamic composition where primals start and stop.
 | GAP-019 | beardog crypto domain not wired into Webb bridge | esotericWebb (self) | Open |
 | GAP-020 | Deploy graph format divergence (TOML vs JSON) | primalSpring / wateringHole | Open |
 | GAP-021 | Game science has no standalone primal | primalSpring / wateringHole | Open |
-| GAP-022 | AI method alignment with biomeOS registry | resolved (V6) | Absorbed |
 | GAP-024 | Signal dispatch not exercised E2E against live biomeOS | esotericWebb / biomeOS | Open |
-| GAP-025 | `primal.announce` outbound not wired into serve startup | esotericWebb (self) | **Resolved V8** |
+| GAP-025 | `primal.announce` outbound wiring | esotericWebb (self) | **Resolved V8** |
+| GAP-026 | `capabilities.list` canonical envelope | esotericWebb (self) | **Resolved V9** |
+| GAP-027 | Stability tier annotations | esotericWebb (self) | **Resolved V9** |
+| GAP-028 | Degradation behavior documentation | esotericWebb (self) | **Resolved V9** |
+| GAP-029 | Trio partial completion tracking | esotericWebb (self) | **Resolved V9** |
+| GAP-030 | Bridge canonical envelope parsing | esotericWebb (self) | **Resolved V9** |
 
 ---
 
-## Architecture Summary (V8)
+## Architecture Summary (V9)
 
 ```
 Springs (science + experiments)  →  produce  →  primals (genomeBin/ecoBin)
@@ -312,11 +403,16 @@ Springs (science + experiments)  →  produce  →  primals (genomeBin/ecoBin)
                                                        ↓
                               All phases degrade gracefully → gameplay never blocked
                               Signal dispatch collapses multi-call sequences when biomeOS present
+                                                       ↓
+                              primals_reached tracks trio partial completion per session
+                              capabilities.list emits canonical Wave 20 envelope
+                              capability_registry.toml annotated with stability tiers
 ```
 
 43 Rust files, ~13.2k LOC, 357 tests, ~91% coverage, zero unsafe, zero C
 dependencies, pure Rust edition 2024. No spring dependencies — self-composed
-via primal composition only. 24 capabilities exposed, Wave 17 signal adoption.
+via primal composition only. 24 capabilities exposed, Wave 17 signal adoption,
+Wave 20 canonical schema compliance, stability tier awareness.
 
 ---
 

@@ -38,12 +38,13 @@ wateringHole/
 
 | Handoff | Direction | Summary |
 |---------|-----------|---------|
-| `ESOTERICWEBB_V8_SIGNAL_ADOPTION_HANDOFF_MAY16_2026.md` | Outbound | **Current** — V8 Wave 17 signal dispatch, primal.announce, deep debt, per-primal feedback |
+| `ESOTERICWEBB_V9_WAVE20_ABSORPTION_HANDOFF_MAY17_2026.md` | Outbound | **Current** — V9 Wave 20 canonical schemas, stability tiers, degradation contracts, trio tracking |
 
 ## Archived handoffs (fossil record)
 
 | Handoff | Direction | Summary |
 |---------|-----------|---------|
+| `ESOTERICWEBB_V8_SIGNAL_ADOPTION_HANDOFF_MAY16_2026.md` | Outbound | V8 Wave 17 signal dispatch, primal.announce, deep debt, per-primal feedback |
 | `ESOTERICWEBB_V7_COMPOSITION_PATTERNS_HANDOFF_APR17_2026.md` | Outbound | V7 composition patterns, NUCLEUS deployment patterns |
 | `ESOTERICWEBB_V6_PRIMAL_CAPABILITY_GAPS_HANDOFF_MAR29_2026.md` | Outbound | V6 metadata vs expectations gap matrix |
 | `ESOTERICWEBB_V51_AUDIT_EVOLUTION_HANDOFF_MAR29_2026.md` | Outbound | V5.1 use-case gaps (GAP-016–020), niche.rs, audit evolution |

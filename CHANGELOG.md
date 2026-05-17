@@ -2,6 +2,64 @@
 
 All notable changes to Esoteric Webb are documented here.
 
+## V9 — Wave 20-21 Canonical Schema Absorption + Degradation Contracts (May 17, 2026)
+
+### Wave 20 canonical schema compliance
+
+- **`capabilities.list` canonical envelope** — response now emits
+  `{ capabilities, count, primal }` per the Wave 20 schema standard
+  (`primalSpring/ecoPrimal/src/validation/scenarios/s_schema_standard.rs`).
+  GAP-026 resolved.
+- **Bridge envelope normalization** — `PrimalClient::capabilities()` now unwraps
+  the Wave 20 envelope or wraps raw arrays from pre-Wave-20 primals into the
+  canonical shape. Consumers always see `{ capabilities, count, primal }`.
+  GAP-030 resolved.
+
+### Stability tier awareness
+
+- **`capability_registry.toml` annotated** — method groups now carry
+  `stability = "stable" | "evolving"` per Wave 20 convention. sourDough,
+  lifecycle, session, and domain methods are `stable`. MCP tools are `evolving`.
+  GAP-027 resolved.
+
+### Degradation behavior contracts
+
+- **`docs/DEGRADATION_BEHAVIOR.md`** — formal per-domain degradation contracts
+  covering all 9 consumed primal domains, signal dispatch fallbacks, trio
+  partial completion states, and standalone/composition mode spectrum.
+  GAP-028 resolved.
+
+### Trio partial completion tracking
+
+- **`primals_reached` in `WorldState`** — tracks which trio primals responded
+  during provenance operations. Follows `PROVENANCE_TRIO_INTEGRATION_GUIDE.md`
+  partial completion rules. GAP-029 resolved.
+- **`record_provenance_vertex()` populates tracking** — pushes `"dag"` to
+  `primals_reached` on successful `nest.store`.
+
+### Documentation
+
+- **`whitePaper/baseCamp/` renamed** — V8 → V9 with 4 new evolution patterns:
+  canonical schema consumption, stability tier awareness, degradation contracts,
+  trio partial completion.
+- **`EVOLUTION_GAPS.md`** — 6 new gaps (GAP-025 through GAP-030) all resolved V9.
+  GAP-025 status corrected from conflicting state to absorbed.
+- **Root `README.md`** — V9 metrics: Wave 20 schema compliance, degradation
+  contracts, trio tracking.
+
+### Metrics
+
+| Metric | V8 | V9 |
+|--------|----|----|
+| Tests | 357 | 357 |
+| Rust files | 43 | 43 |
+| Capabilities exposed | 24 | 24 |
+| Wave compliance | 17 | 20 |
+| Stability tiers | none | annotated |
+| Degradation docs | implicit | `docs/DEGRADATION_BEHAVIOR.md` |
+| Trio tracking | none | `primals_reached` in `WorldState` |
+| Resolved gaps | 25 | 30 |
+
 ## V8 — Wave 17 Signal Adoption + Deep Debt Resolution (May 16, 2026)
 
 ### Signal dispatch adoption (primalSpring Wave 17)

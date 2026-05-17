@@ -213,8 +213,16 @@ impl GameSession {
             },
             "parents": parent_ids,
         });
-        if let Err(e) = bridge.nest_store(&vertex) {
-            tracing::debug!("provenance append degraded: {e}");
+        match bridge.nest_store(&vertex) {
+            Ok(true) => {
+                if !self.state.primals_reached.contains(&"dag".to_owned()) {
+                    self.state.primals_reached.push("dag".to_owned());
+                }
+            }
+            Ok(false) => {}
+            Err(e) => {
+                tracing::debug!("provenance append degraded: {e}");
+            }
         }
     }
 }

@@ -4,13 +4,21 @@
 #
 # Source of truth for all JSON-RPC methods Webb exposes.
 # This file is read by `capabilities.list` and validated by primalSpring.
+#
+# Stability tiers (Wave 20, per primalSpring registry standard):
+#   stable   — wire name frozen; safe to hardcode in dispatch maps and gate TOMLs
+#   evolving — may change with deprecation cycle; document dependency
+#   internal — implementation detail; do not depend externally
 
 [registry]
 primal = "esotericwebb"
 version = "0.1.0"
 domain = "narrative"
 
-# ── sourDough compliance ──
+# ── sourDough compliance (stable) ──
+
+[health]
+stability = "stable"
 
 [[capabilities]]
 method = "health.liveness"
@@ -25,22 +33,31 @@ method = "health.check"
 description = "Health check (sourDough alias)"
 
 [[capabilities]]
-method = "identity.get"
-description = "Self-identification — primal name, version, domain"
-
-[[capabilities]]
-method = "capabilities.list"
-description = "Return this capability registry"
-
-# ── Lifecycle / Neural API (Wave 17) ──
-
-[[capabilities]]
 method = "health.version"
 description = "Detailed version, build target, and signal tier information"
 
 [[capabilities]]
 method = "health.drain"
 description = "Acknowledge graceful shutdown intent"
+
+[identity]
+stability = "stable"
+
+[[capabilities]]
+method = "identity.get"
+description = "Self-identification — primal name, version, domain"
+
+[capabilities_meta]
+stability = "stable"
+
+[[capabilities]]
+method = "capabilities.list"
+description = "Return canonical capability registry (Wave 20 envelope: capabilities, count, primal)"
+
+# ── Lifecycle / Neural API (stable — Wave 17+) ──
+
+[lifecycle]
+stability = "stable"
 
 [[capabilities]]
 method = "primal.announce"
@@ -50,7 +67,10 @@ description = "Accept inbound primal registration announcements"
 method = "primal.info"
 description = "Return niche metadata — version, capabilities, signal tiers"
 
-# ── Webb domain methods ──
+# ── Webb domain methods (stable) ──
+
+[webb]
+stability = "stable"
 
 [[capabilities]]
 method = "webb.health"
@@ -76,7 +96,10 @@ description = "Narrative DAG status — node count, edge count, start/end nodes"
 method = "webb.content.list"
 description = "List loaded content (scenes, abilities, NPCs)"
 
-# ── Session methods ──
+# ── Session methods (stable) ──
+
+[session]
+stability = "stable"
 
 [[capabilities]]
 method = "session.start"
@@ -108,7 +131,10 @@ description = "Narration context for AI-as-generator"
 method = "session.graph"
 description = "Narrative DAG as DOT with live session overlay"
 
-# ── MCP tools ──
+# ── MCP tools (evolving) ──
+
+[tools]
+stability = "evolving"
 
 [[capabilities]]
 method = "tools.list"

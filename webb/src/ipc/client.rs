@@ -238,6 +238,8 @@ impl PrimalClient {
     /// Request the primal's capability list.
     ///
     /// Tries `capabilities.list`, then `capability.list`, then `primal.capabilities`.
+    /// Unwraps the Wave 20 canonical envelope `{ capabilities, count, primal }`
+    /// and falls back to raw array responses from pre-Wave-20 primals.
     ///
     /// # Errors
     ///
@@ -265,7 +267,8 @@ impl PrimalClient {
                     if let Some(err) = resp.error {
                         return Err(IpcError::from(err));
                     }
-                    return Ok(resp.result.unwrap_or(serde_json::Value::Null));
+                    let raw = resp.result.unwrap_or(serde_json::Value::Null);
+                    return Ok(unwrap_capabilities_envelope(raw));
                 }
                 Err(IpcError::MethodNotFound { .. }) => {
                     last_err = Some(IpcError::MethodNotFound {
@@ -279,6 +282,41 @@ impl PrimalClient {
             domain: "capabilities.list".to_owned(),
         }))
     }
+}
+
+/// Unwrap the Wave 20 canonical envelope `{ capabilities, count, primal }`.
+///
+/// If the response is the canonical shape, returns it as-is. If the response
+/// is a raw array (pre-Wave-20), wraps it in the canonical envelope. This
+/// ensures consumers always see a consistent shape.
+fn unwrap_capabilities_envelope(value: serde_json::Value) -> serde_json::Value {
+    if value
+        .get("capabilities")
+        .is_some_and(serde_json::Value::is_array)
+    {
+        if value.get("count").is_some() {
+            return value;
+        }
+        let count = value["capabilities"].as_array().map_or(0, Vec::len);
+        let primal = value
+            .get("primal")
+            .cloned()
+            .unwrap_or(serde_json::Value::Null);
+        return serde_json::json!({
+            "capabilities": value["capabilities"],
+            "count": count,
+            "primal": primal,
+        });
+    }
+    if value.is_array() {
+        let count = value.as_array().map_or(0, Vec::len);
+        return serde_json::json!({
+            "capabilities": value,
+            "count": count,
+            "primal": serde_json::Value::Null,
+        });
+    }
+    value
 }
 
 #[cfg(test)]

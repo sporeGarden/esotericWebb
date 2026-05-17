@@ -85,7 +85,10 @@ pub(super) fn handle_primal_info() -> Value {
     })
 }
 
-/// `capabilities.list` — parsed from the embedded capability registry.
+/// `capabilities.list` — canonical Wave 20 envelope.
+///
+/// Returns `{ capabilities, count, primal }` per the ecosystem schema standard
+/// (`primalSpring/ecoPrimal/src/validation/scenarios/s_schema_standard.rs`).
 pub(super) fn handle_capabilities_list() -> Value {
     let registry_toml = include_str!("../../../capability_registry.toml");
     let table: toml::Value =
@@ -107,10 +110,11 @@ pub(super) fn handle_capabilities_list() -> Value {
                 .collect()
         });
 
+    let count = capabilities.len();
     serde_json::json!({
-        "primal": "esotericwebb",
-        "version": env!("CARGO_PKG_VERSION"),
         "capabilities": capabilities,
+        "count": count,
+        "primal": "esotericwebb",
     })
 }
 
@@ -145,10 +149,12 @@ mod tests {
     }
 
     #[test]
-    fn capabilities_list_is_nonempty() {
+    fn capabilities_list_canonical_envelope() {
         let v = handle_capabilities_list();
         let caps = v["capabilities"].as_array().unwrap();
         assert!(!caps.is_empty());
+        assert_eq!(v["count"].as_u64().unwrap(), caps.len() as u64);
+        assert_eq!(v["primal"], "esotericwebb");
     }
 
     #[test]

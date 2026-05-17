@@ -344,26 +344,51 @@ Webb exercises primal composition -> discovers gap in a primal capability
 - **Handoff**: Validate on ironGate once biomeOS neural-api is healthy (GAP-017).
 - **Status**: open
 
-### GAP-025: `primal.announce` outbound not wired into serve startup
-
-- **Primal**: biomeOS (signal orchestration layer)
-- **Spring (producer)**: esotericWebb (self)
-- **Severity**: low
-- **Evidence**: `PrimalBridge::announce_self()` method exists but is not
-  called from `cmd_serve`. When Webb starts its IPC server, it should
-  announce its capabilities to biomeOS so other primals can discover it.
-- **Expected**: On serve startup, if Neural API is available, call
-  `announce_self(socket_path, &methods)`.
-- **Workaround**: Other primals discover Webb via filesystem socket probe.
-- **Status**: **RESOLVED** V8 — `cmd_serve` now calls `announce_to_biomeos()`
-  before starting the IPC server, broadcasting all 24 capabilities via
-  `primal.announce`.
-- **Handoff**: Self-owned (Webb startup wiring).
-- **Status**: open
-
 ---
 
 ## Absorbed gaps
+
+### GAP-025: `primal.announce` outbound not wired into serve startup → RESOLVED (V8, 2026-05-16)
+
+`cmd_serve` now calls `announce_to_biomeos()` before starting the IPC
+server, broadcasting all 24 capabilities via `primal.announce`. Filesystem
+socket probe still works as fallback.
+
+### GAP-026: `capabilities.list` response missing canonical Wave 20 envelope → RESOLVED (V9, 2026-05-17)
+
+Webb's `capabilities.list` handler returned `{ capabilities, primal, version }`
+but lacked the `count` field required by the Wave 20 canonical schema
+(`primalSpring/ecoPrimal/src/validation/scenarios/s_schema_standard.rs`).
+V9 adds `count` and drops `version` from the envelope to match the canonical
+shape: `{ capabilities, count, primal }`.
+
+### GAP-027: No stability tier annotations in capability_registry.toml → RESOLVED (V9, 2026-05-17)
+
+All 8 springs annotate method groups with `stability = "stable" | "evolving" |
+"internal"` per Wave 20. Webb V9 adds group-level stability annotations to
+`capability_registry.toml`. All sourDough, lifecycle, session, and domain
+methods are `stable`. MCP tools are `evolving`.
+
+### GAP-028: No formal degradation behavior documentation → RESOLVED (V9, 2026-05-17)
+
+Springs document per-primal degradation in `docs/DEGRADATION_BEHAVIOR.md`.
+Webb V9 adds `docs/DEGRADATION_BEHAVIOR.md` documenting per-domain unreachable
+behavior, signal dispatch fallbacks, trio partial completion states, and the
+standalone/composition mode spectrum.
+
+### GAP-029: Trio partial completion not tracked in session state → RESOLVED (V9, 2026-05-17)
+
+Per `PROVENANCE_TRIO_INTEGRATION_GUIDE.md`, consumers must report which trio
+primals were reached. Webb V9 adds `primals_reached: Vec<String>` to
+`WorldState` and populates it during provenance operations. Consumers can
+inspect partial provenance state.
+
+### GAP-030: Bridge `capabilities.list` parsing assumes raw arrays → RESOLVED (V9, 2026-05-17)
+
+Webb's bridge introspection code parsed `capability.list` responses as flat
+arrays. Wave 20 guarantees the canonical envelope `{ capabilities, count, primal }`.
+V9 evolves the bridge to unwrap the canonical envelope, with fallback to raw
+array parsing for pre-Wave-20 primals.
 
 ### GAP-022: Webb AI method alignment with biomeOS capability registry → RESOLVED (V6, 2026-03-29)
 

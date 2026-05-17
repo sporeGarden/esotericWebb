@@ -33,6 +33,11 @@ pub struct WorldState {
     pub current_node: String,
     /// Provenance session ID.
     pub session_id: String,
+    /// Trio primals reached during provenance operations (per `PROVENANCE_TRIO_INTEGRATION_GUIDE`).
+    ///
+    /// Tracks partial completion: `["dag"]` means only rhizoCrypt responded,
+    /// `["dag", "spine", "braid"]` means full trio. Empty means no provenance.
+    pub primals_reached: Vec<String>,
     /// Turn counter.
     pub turn: u32,
 }
