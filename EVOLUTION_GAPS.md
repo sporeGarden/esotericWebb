@@ -390,6 +390,25 @@ arrays. Wave 20 guarantees the canonical envelope `{ capabilities, count, primal
 V9 evolves the bridge to unwrap the canonical envelope, with fallback to raw
 array parsing for pre-Wave-20 primals.
 
+### GAP-031: Scattered bare env var strings → RESOLVED (V10, 2026-05-23)
+
+20+ `std::env::var("...")` calls scattered across 9 files with string literals.
+Wave 46 mandates centralized `env_keys.rs` (per primalSpring convention). V10
+creates `src/env_keys.rs` with all env constants and rewires every call site.
+Zero bare env strings remain in production code.
+
+### GAP-032: Deploy graphs missing Wave 46 metadata → RESOLVED (V10, 2026-05-23)
+
+All 8 deploy graphs lacked `secure_by_default = true` and `[graph.metadata]`
+(owner, domain, wave) required by the Dark Forest Gate standard and
+`DOWNSTREAM_PATTERN_GUIDE.md` §4. V10 adds these to all graphs.
+
+### GAP-033: `primal.announce` missing Wave 45 hints → RESOLVED (V10, 2026-05-23)
+
+`announce_self()` sent capabilities/methods/signal_tiers but no `cost_hints`
+or `latency_estimates`. Wave 45 (Songbird/BearDog announce schema) requires
+these for routing weight decisions. V10 adds per-method cost and latency hints.
+
 ### GAP-022: Webb AI method alignment with biomeOS capability registry → RESOLVED (V6, 2026-03-29)
 
 Webb V5 called `ai.chat`, `ai.summarize`, `ai.inference` — none of which

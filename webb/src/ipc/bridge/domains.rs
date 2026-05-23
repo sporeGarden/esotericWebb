@@ -430,8 +430,10 @@ impl PrimalBridge {
 
     /// Self-announce to biomeOS (outbound `primal.announce`).
     ///
-    /// Registers esotericWebb's socket, capabilities, methods, and signal tiers
-    /// with the orchestration layer. Falls back silently if biomeOS is unavailable.
+    /// Registers esotericWebb's socket, capabilities, methods, signal tiers,
+    /// cost hints, and latency estimates with the orchestration layer.
+    /// Aligned with Wave 45 announce schema (Songbird/BearDog key alignment).
+    /// Falls back silently if biomeOS is unavailable.
     pub fn announce_self(&mut self, socket: &str, methods: &[&str]) {
         if !self.has_neural_api() {
             tracing::debug!("No neural-api connection — skipping primal.announce");
@@ -444,6 +446,18 @@ impl PrimalBridge {
             "methods": methods,
             "signal_tiers": ["nest", "meta"],
             "version": env!("CARGO_PKG_VERSION"),
+            "cost_hints": {
+                "session.act": "low",
+                "session.start": "medium",
+                "tools.call": "medium",
+                "webb.scene.current": "low",
+            },
+            "latency_estimates": {
+                "session.act": "< 10ms",
+                "session.start": "< 50ms",
+                "tools.call": "< 100ms",
+                "webb.scene.current": "< 5ms",
+            },
         });
         match self.neural_api_call("lifecycle", "primal.announce", params) {
             Ok(resp) if resp.error.is_none() => {

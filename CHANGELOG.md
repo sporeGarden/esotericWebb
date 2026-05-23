@@ -2,6 +2,48 @@
 
 All notable changes to Esoteric Webb are documented here.
 
+## V10 — Wave 46 Absorption: env_keys, deploy graphs, announce hints (May 23, 2026)
+
+### env_keys centralization (Wave 46 pattern)
+
+- **`src/env_keys.rs` created** — single source of truth for all environment
+  variable names (17 constants). Aligned with primalSpring `env_keys.rs`
+  convention. All 20+ bare `std::env::var("...")` calls rewired to use
+  constants. Zero bare env strings remain in production code. GAP-031 resolved.
+
+### Deploy graph evolution (Wave 46 / Dark Forest Gate)
+
+- **`secure_by_default = true`** added to all 8 deploy graphs per
+  `DARK_FOREST_GLACIAL_GATE_STANDARD.md`.
+- **`[graph.metadata]`** added with `owner`, `domain`, `wave` fields per
+  `DOWNSTREAM_PATTERN_GUIDE.md` §4.
+- All graph versions bumped to 0.1.1 / 1.1. GAP-032 resolved.
+
+### primal.announce Wave 45 alignment
+
+- **`cost_hints`** and **`latency_estimates`** added to `announce_self()`
+  per Songbird/BearDog announce schema (Wave 45). Enables routing weight
+  decisions by biomeOS. GAP-033 resolved.
+
+### IPC error system validation
+
+- Webb's `IpcError` already uses `#[derive(thiserror::Error)]` with semantic
+  classification (`is_retriable()`, `is_recoverable()`, `classify_io_error()`).
+  Aligned with primalSpring `PhasedIpcError` pattern. No further evolution
+  needed — typed error system confirmed compliant.
+
+### Metrics
+
+| Metric | V9 | V10 |
+|--------|----|----|
+| Tests | 357 | 357 |
+| Rust files | 43 | 44 (+env_keys.rs) |
+| Bare env strings | 20+ | 0 |
+| Deploy graphs with metadata | 0/8 | 8/8 |
+| Announce schema | v1 (no hints) | v2 (cost_hints + latency_estimates) |
+| Wave compliance | 20 | 46 |
+| Resolved gaps | 30 | 33 |
+
 ## V9 — Wave 20-21 Canonical Schema Absorption + Degradation Contracts (May 17, 2026)
 
 ### Wave 20 canonical schema compliance

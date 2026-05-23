@@ -12,8 +12,14 @@
 [graph]
 name = "webb_full"
 description = "Full composition: Tower + Nest + Node + AI + Viz + Provenance + Webb"
-version = "0.1.0"
+version = "0.1.1"
 coordination = "sequential"
+secure_by_default = true
+
+[graph.metadata]
+owner = "esotericwebb"
+domain = "narrative"
+wave = 46
 
 # ── Phase 1: Tower Atomic ──
 

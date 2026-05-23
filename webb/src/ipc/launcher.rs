@@ -85,7 +85,7 @@ pub struct GraphSection {
 
 /// Readiness timeout — overridable via `ESOTERICWEBB_READINESS_TIMEOUT_SECS`.
 fn readiness_timeout() -> Duration {
-    let secs = std::env::var("ESOTERICWEBB_READINESS_TIMEOUT_SECS")
+    let secs = std::env::var(crate::env_keys::ESOTERICWEBB_READINESS_TIMEOUT_SECS)
         .ok()
         .and_then(|v| v.parse::<u64>().ok())
         .unwrap_or(10);
@@ -96,7 +96,7 @@ const READINESS_POLL_INTERVAL: Duration = Duration::from_millis(100);
 
 /// Port base for auto-assigned ports — overridable via `ESOTERICWEBB_PORT_BASE`.
 fn default_port_base() -> u16 {
-    std::env::var("ESOTERICWEBB_PORT_BASE")
+    std::env::var(crate::env_keys::ESOTERICWEBB_PORT_BASE)
         .ok()
         .and_then(|v| v.parse::<u16>().ok())
         .unwrap_or(9401)
@@ -242,10 +242,10 @@ impl Drop for PrimalLauncher {
 /// is not found in any candidate location.
 pub fn discover_binary(primal: &str) -> Result<PathBuf, String> {
     let base_dirs: Vec<Option<PathBuf>> = vec![
-        std::env::var("ECOPRIMALS_PLASMID_BIN")
+        std::env::var(crate::env_keys::ECOPRIMALS_PLASMID_BIN)
             .ok()
             .map(PathBuf::from),
-        std::env::var("BIOMEOS_PLASMID_BIN_DIR")
+        std::env::var(crate::env_keys::BIOMEOS_PLASMID_BIN_DIR)
             .ok()
             .map(PathBuf::from),
         Some(PathBuf::from("./plasmidBin")),

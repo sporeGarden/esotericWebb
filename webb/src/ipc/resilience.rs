@@ -39,9 +39,9 @@ impl RetryPolicy {
     /// - `ESOTERICWEBB_IPC_RETRY_MAX_MS` (default 2000)
     #[must_use]
     pub fn from_env() -> Self {
-        let max_retries = env_parse("ESOTERICWEBB_IPC_RETRY_MAX", 2);
-        let initial_ms: u64 = env_parse("ESOTERICWEBB_IPC_RETRY_INITIAL_MS", 50);
-        let max_ms: u64 = env_parse("ESOTERICWEBB_IPC_RETRY_MAX_MS", 2000);
+        let max_retries = env_parse(crate::env_keys::ESOTERICWEBB_IPC_RETRY_MAX, 2);
+        let initial_ms: u64 = env_parse(crate::env_keys::ESOTERICWEBB_IPC_RETRY_INITIAL_MS, 50);
+        let max_ms: u64 = env_parse(crate::env_keys::ESOTERICWEBB_IPC_RETRY_MAX_MS, 2000);
         Self {
             max_retries,
             initial_delay: Duration::from_millis(initial_ms),
@@ -123,8 +123,8 @@ impl CircuitBreaker {
     /// - `ESOTERICWEBB_IPC_CB_COOLDOWN_SECS` (default 5)
     #[must_use]
     pub fn from_env() -> Self {
-        let threshold = env_parse("ESOTERICWEBB_IPC_CB_THRESHOLD", 5);
-        let cooldown_secs = env_parse::<u64>("ESOTERICWEBB_IPC_CB_COOLDOWN_SECS", 5);
+        let threshold = env_parse(crate::env_keys::ESOTERICWEBB_IPC_CB_THRESHOLD, 5);
+        let cooldown_secs = env_parse::<u64>(crate::env_keys::ESOTERICWEBB_IPC_CB_COOLDOWN_SECS, 5);
         Self::new(threshold, Duration::from_secs(cooldown_secs))
     }
 

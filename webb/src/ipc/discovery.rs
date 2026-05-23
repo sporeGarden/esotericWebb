@@ -97,14 +97,16 @@ impl PrimalRegistry {
         for &(domain, name) in DOMAIN_PRIMAL_MAP {
             let upper = name.to_uppercase();
 
-            let addr = std::env::var(format!("{upper}_ADDRESS"))
+            let addr = std::env::var(format!("{upper}{}", crate::env_keys::ADDR_SUFFIX))
                 .ok()
                 .or_else(|| {
-                    std::env::var(format!("{upper}_JSONRPC_PORT"))
+                    std::env::var(format!("{upper}{}", crate::env_keys::PORT_SUFFIX))
                         .ok()
                         .map(|port| format!("127.0.0.1:{port}"))
                 })
-                .or_else(|| std::env::var(format!("{upper}_HTTP_ADDRESS")).ok());
+                .or_else(|| {
+                    std::env::var(format!("{upper}{}", crate::env_keys::HTTP_ADDR_SUFFIX)).ok()
+                });
 
             if let Some(tcp_addr) = addr {
                 let ep =
@@ -255,11 +257,11 @@ impl PrimalRegistry {
 fn socket_directories() -> Vec<PathBuf> {
     let mut dirs = Vec::new();
 
-    if let Ok(dir) = std::env::var("BIOMEOS_SOCKET_DIR") {
+    if let Ok(dir) = std::env::var(crate::env_keys::BIOMEOS_SOCKET_DIR) {
         dirs.push(PathBuf::from(dir));
     }
 
-    if let Ok(xdg) = std::env::var("XDG_RUNTIME_DIR") {
+    if let Ok(xdg) = std::env::var(crate::env_keys::XDG_RUNTIME_DIR) {
         dirs.push(PathBuf::from(xdg).join("biomeos"));
     }
 
@@ -274,7 +276,7 @@ fn socket_directories() -> Vec<PathBuf> {
 fn plasmid_bin_directories() -> Vec<PathBuf> {
     let mut dirs = Vec::new();
 
-    if let Ok(dir) = std::env::var("ECOPRIMALS_PLASMID_BIN") {
+    if let Ok(dir) = std::env::var(crate::env_keys::ECOPRIMALS_PLASMID_BIN) {
         dirs.push(PathBuf::from(dir));
     }
 
@@ -315,7 +317,7 @@ fn uid_from_proc_status() -> Option<u32> {
 
 /// Fall back to `$UID` environment variable.
 fn uid_from_env() -> Option<u32> {
-    std::env::var("UID").ok()?.parse().ok()
+    std::env::var(crate::env_keys::UID).ok()?.parse().ok()
 }
 
 #[cfg(test)]

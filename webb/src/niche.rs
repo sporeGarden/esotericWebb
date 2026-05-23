@@ -60,8 +60,9 @@ pub const CAPABILITIES: &[&str] = &[
 /// Priority: `FAMILY_ID` → `BIOMEOS_FAMILY_ID` → `"default"`.
 #[must_use]
 pub fn family_id() -> String {
-    std::env::var("FAMILY_ID")
-        .or_else(|_| std::env::var("BIOMEOS_FAMILY_ID"))
+    use crate::env_keys;
+    std::env::var(env_keys::FAMILY_ID)
+        .or_else(|_| std::env::var(env_keys::BIOMEOS_FAMILY_ID))
         .unwrap_or_else(|_| "default".to_owned())
 }
 
@@ -73,16 +74,17 @@ pub fn family_id() -> String {
 /// 4. platform `temp_dir()` — last resort
 #[must_use]
 pub fn socket_dirs() -> Vec<std::path::PathBuf> {
+    use crate::env_keys;
     use std::path::PathBuf;
     let mut dirs = Vec::new();
 
-    if let Ok(d) = std::env::var("BIOMEOS_SOCKET_DIR") {
+    if let Ok(d) = std::env::var(env_keys::BIOMEOS_SOCKET_DIR) {
         dirs.push(PathBuf::from(d));
     }
-    if let Ok(xdg) = std::env::var("XDG_RUNTIME_DIR") {
+    if let Ok(xdg) = std::env::var(env_keys::XDG_RUNTIME_DIR) {
         dirs.push(PathBuf::from(xdg).join(ECOSYSTEM_SOCKET_DIR));
     }
-    let user = std::env::var("USER").unwrap_or_else(|_| "unknown".to_owned());
+    let user = std::env::var(env_keys::USER).unwrap_or_else(|_| "unknown".to_owned());
     dirs.push(std::env::temp_dir().join(format!("{ECOSYSTEM_SOCKET_DIR}-{user}")));
     dirs.push(std::env::temp_dir());
     dirs
@@ -94,9 +96,10 @@ pub fn socket_dirs() -> Vec<std::path::PathBuf> {
 /// XDG-compliant directory chain with family-scoped naming.
 #[must_use]
 pub fn resolve_server_socket() -> std::path::PathBuf {
+    use crate::env_keys;
     use std::path::PathBuf;
 
-    if let Ok(explicit) = std::env::var("ESOTERICWEBB_SOCK") {
+    if let Ok(explicit) = std::env::var(env_keys::ESOTERICWEBB_SOCK) {
         return PathBuf::from(explicit);
     }
 
@@ -120,7 +123,8 @@ pub fn resolve_server_socket() -> std::path::PathBuf {
 /// Follows convention: `neural-api-{family_id}.sock` in socket dirs.
 #[must_use]
 pub fn resolve_neural_api_socket() -> Option<std::path::PathBuf> {
-    if let Ok(explicit) = std::env::var("NEURAL_API_SOCKET") {
+    use crate::env_keys;
+    if let Ok(explicit) = std::env::var(env_keys::NEURAL_API_SOCKET) {
         let p = std::path::PathBuf::from(&explicit);
         if p.exists() {
             return Some(p);

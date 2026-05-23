@@ -13,8 +13,14 @@
 [graph]
 name = "webb_provenance_trio"
 description = "Provenance trio: rhizoCrypt (DAG) → loamSpine (lineage) + sweetGrass (attribution)"
-version = "0.1.0"
+version = "0.1.1"
 coordination = "sequential"
+secure_by_default = true
+
+[graph.metadata]
+owner = "esotericwebb"
+domain = "provenance"
+wave = 46
 
 # ── Phase 1: rhizoCrypt — DAG engine ──
 [[graph.node]]

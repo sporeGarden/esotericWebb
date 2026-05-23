@@ -30,6 +30,7 @@
 pub mod autoplay;
 pub mod content;
 pub mod director;
+pub mod env_keys;
 pub mod experiment;
 pub mod ipc;
 pub mod narrative;

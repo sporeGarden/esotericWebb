@@ -11,8 +11,14 @@
 [graph]
 name = "webb_nest"
 description = "Nest Atomic + Esoteric Webb (persistent CRPG)"
-version = "0.1.0"
+version = "0.1.1"
 coordination = "sequential"
+secure_by_default = true
+
+[graph.metadata]
+owner = "esotericwebb"
+domain = "narrative"
+wave = 46
 
 # ── Phase 1: Tower Atomic ──
 

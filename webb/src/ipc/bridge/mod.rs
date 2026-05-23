@@ -32,7 +32,7 @@ use super::resilience::{CircuitBreaker, RetryPolicy};
 ///
 /// Overridable via `ESOTERICWEBB_SUMMARY_LIMIT` environment variable.
 fn degraded_summary_limit() -> usize {
-    std::env::var("ESOTERICWEBB_SUMMARY_LIMIT")
+    std::env::var(crate::env_keys::ESOTERICWEBB_SUMMARY_LIMIT)
         .ok()
         .and_then(|v| v.parse().ok())
         .unwrap_or(200)

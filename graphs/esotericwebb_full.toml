@@ -19,7 +19,14 @@
 id = "esotericwebb_full"
 description = "Esoteric Webb: narrative director composing game science, AI, and visualization primals from plasmidBin/ with optional compute and provenance"
 coordination = "Sequential"
-version = "1.0"
+version = "1.1"
+secure_by_default = true
+
+[graph.metadata]
+owner = "esotericwebb"
+domain = "narrative"
+wave = 46
+last_validated = "2026-05-23"
 
 # ── Phase 1: Tower Atomic (security + discovery) ──────────────────────────
 

@@ -188,7 +188,7 @@ fn print_human(name: &str, pass: usize, fail: usize, skip: usize) {
 }
 
 fn json_mode() -> bool {
-    std::env::var("ESOTERICWEBB_JSON")
+    std::env::var(crate::env_keys::ESOTERICWEBB_JSON)
         .ok()
         .is_some_and(|v| v == "1" || v == "true")
 }

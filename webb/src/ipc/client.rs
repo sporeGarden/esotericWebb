@@ -25,7 +25,7 @@ use super::envelope::{IpcError, JsonRpcRequest, JsonRpcResponse, classify_io_err
 ///
 /// Overridable via `ESOTERICWEBB_IPC_TIMEOUT_SECS` environment variable.
 fn default_timeout() -> Duration {
-    let secs = std::env::var("ESOTERICWEBB_IPC_TIMEOUT_SECS")
+    let secs = std::env::var(crate::env_keys::ESOTERICWEBB_IPC_TIMEOUT_SECS)
         .ok()
         .and_then(|v| v.parse::<u64>().ok())
         .unwrap_or(5);

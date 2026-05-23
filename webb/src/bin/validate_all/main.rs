@@ -19,7 +19,7 @@ fn main() {
     println!("=== Esoteric Webb — validate_all ===");
     println!();
 
-    let json_mode = std::env::var("ESOTERICWEBB_JSON")
+    let json_mode = std::env::var(esoteric_webb::env_keys::ESOTERICWEBB_JSON)
         .ok()
         .is_some_and(|v| v == "1" || v == "true");
 
