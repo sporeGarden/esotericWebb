@@ -96,7 +96,7 @@ by_capability = "visualization"
 name = "start"
 [nodes.operation.params]
 mode = "server"
-domain = "game"
+domain = "visualization"
 family_id = "${FAMILY_ID}"
 [nodes.operation.environment]
 BIOMEOS_SOCKET_DIR = "${XDG_RUNTIME_DIR}/biomeos"

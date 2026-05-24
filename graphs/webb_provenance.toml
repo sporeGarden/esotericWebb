@@ -119,7 +119,7 @@ order = 10
 required = true
 depends_on = ["beardog", "songbird", "nestgate"]
 health_method = "health.liveness"
-by_capability = "game"
+by_capability = "narrative"
 capabilities = [
     "webb.health", "webb.liveness", "webb.readiness",
     "webb.scene.current", "webb.narrative.status", "webb.content.list",

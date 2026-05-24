@@ -57,7 +57,7 @@ engine**. It consumes primals via JSON-RPC IPC — zero Rust crate dependencies
 on any spring. Primals are resolved from `plasmidBin/` or discovered via
 Songbird at runtime.
 
-| Domain | Primal | Role | Status (V8) | Key IPC methods |
+| Domain | Primal | Role | Status (V10) | Key IPC methods |
 |--------|--------|------|-------------|-----------------|
 | ai | Squirrel | AI narration, NPC dialogue, inference | Direct bridge | `ai.query`, `ai.suggest`, `ai.analyze` |
 | visualization | petalTongue | Scene rendering, input polling | Direct bridge | `visualization.render.scene`, `interaction.poll` |
@@ -127,8 +127,8 @@ webb/              Main Rust crate (narrative engine + IPC + director + bridge)
   capability_registry.toml   All 24 exposed JSON-RPC methods
 content/           YAML game content (authored by creative teams)
 experiments/       5 standalone validation crates (exp001–exp005)
-graphs/            biomeOS deploy graphs (8 TOML compositions)
-niches/            BYOB niche definitions (2 YAML niche descriptors)
+graphs/            biomeOS deploy graphs (8 TOML compositions, secure_by_default)
+niches/            BYOB niche definition (esoteric-webb.yaml)
 deploy/            Composition fragment for biomeOS/primalSpring
 specs/             Design specifications (7 documents)
 wateringHole/      Handoffs to primal and spring teams

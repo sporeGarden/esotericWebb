@@ -88,17 +88,16 @@ organisms:
       required: false
       role: "compute"
       capabilities:
-        - "compute.execute"
-        - "compute.capabilities"
+        - "compute.dispatch.submit"
 
     rhizocrypt:
       type: "rhizocrypt"
       required: false
       role: "provenance"
       capabilities:
-        - "provenance.session_create"
-        - "provenance.vertex_append"
-        - "provenance.vertex_query"
+        - "dag.session.create"
+        - "dag.event.append"
+        - "dag.merkle.root"
 
     loamspine:
       type: "loamspine"
