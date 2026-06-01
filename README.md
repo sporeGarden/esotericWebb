@@ -2,24 +2,25 @@
 
 | | |
 |---|---|
-| **Version** | V10 |
-| **Tests** | 357 (338 unit + 18 E2E + 1 validation) |
+| **Version** | V11 |
+| **Tests** | 355 (336 unit + 18 E2E + 1 validation) |
 | **Coverage** | ~91% lines (`cargo llvm-cov`) |
-| **Rust files** | 44 (~13.4k LOC) |
+| **Rust files** | 43 (~13.2k LOC) |
 | **Experiments** | 5 (exp001–exp005) |
 | **MSRV** | 1.87 (edition 2024) |
 | **License** | AGPL-3.0 + ORC + CC-BY-SA 4.0 |
-| **Unsafe** | `#![forbid(unsafe_code)]` |
+| **Unsafe** | `#![forbid(unsafe_code)]` (crate-level) |
 | **C deps** | Zero (ecoBin compliant) |
-| **Bridge methods** | 22 (all domains, all degrading, signal-first) |
+| **Bridge methods** | 22 (all domains, all degrading, composition-first) |
 | **Capabilities exposed** | 24 (sourDough + lifecycle + narrative + session + MCP) |
 | **Primals consumed** | 7 domains (ai, viz, dag, lineage, compute, storage, provenance) |
-| **Signal adoption** | Wave 17 — `nest.store`, `nest.commit`, `primal.announce` |
-| **Wave compliance** | Wave 46 — env_keys, deploy graph metadata, announce hints |
+| **Composition adoption** | Wave 17 — `nest.store`, `nest.commit`, `primal.announce` |
+| **Wave compliance** | Wave 67 — vocabulary aligned, dead code removed, `#![forbid(unsafe_code)]` |
 | **Degradation contracts** | Written per-domain in `docs/DEGRADATION_BEHAVIOR.md` |
 | **Trio tracking** | `primals_reached` in session state per `PROVENANCE_TRIO_INTEGRATION_GUIDE` |
 | **Local science** | flow, engagement, DDA (absorbed from ludoSpring patterns) |
-| **Last validation** | 2026-05-23 (V10) |
+| **Ecosystem registry** | 490 methods (primalSpring v0.9.31) |
+| **Last validation** | 2026-06-01 (V11) |
 
 **A [sporeGarden](https://github.com/sporeGarden) project — the primals as a composed CRPG.**
 
@@ -57,16 +58,16 @@ engine**. It consumes primals via JSON-RPC IPC — zero Rust crate dependencies
 on any spring. Primals are resolved from `plasmidBin/` or discovered via
 Songbird at runtime.
 
-| Domain | Primal | Role | Status (V10) | Key IPC methods |
+| Domain | Primal | Role | Status (V11) | Key IPC methods |
 |--------|--------|------|-------------|-----------------|
 | ai | Squirrel | AI narration, NPC dialogue, inference | Direct bridge | `ai.query`, `ai.suggest`, `ai.analyze` |
 | visualization | petalTongue | Scene rendering, input polling | Direct bridge | `visualization.render.scene`, `interaction.poll` |
-| dag | rhizoCrypt | Provenance DAG lifecycle | Signal-first (`nest.store`) | `dag.session.create`, `dag.event.append`, `dag.merkle.root` |
-| lineage | loamSpine | NPC personality certs | Signal-first (`nest.commit`) | `certificate.mint` |
+| dag | rhizoCrypt | Provenance DAG lifecycle | Composition-first (`nest.store`) | `dag.session.create`, `dag.event.append`, `dag.merkle.root` |
+| lineage | loamSpine | NPC personality certs | Composition-first (`nest.commit`) | `certificate.mint` |
 | compute | toadStool | GPU compute dispatch | Bridge ready | `compute.dispatch.submit` |
 | storage | nestGate | Key-value persistence | Bridge ready | `storage.store`, `storage.retrieve` |
-| provenance | sweetGrass | Creative attribution | Signal-first (`nest.store`) | `attribution.record` |
-| orchestration | biomeOS | Neural API, signal dispatch | Lifecycle wired | `primal.announce`, `health.version`, `health.drain` |
+| provenance | sweetGrass | Creative attribution | Composition-first (`nest.store`) | `attribution.record` |
+| orchestration | biomeOS | Neural API, composition dispatch | Lifecycle wired | `primal.announce`, `health.version`, `health.drain` |
 | ~~game~~ | ~~ludoSpring~~ | ~~Flow, DDA, engagement~~ | **Removed V6** | Local `science/` — see GAP-021 |
 
 ## The Core Thesis: Bounded Space, Infinite Exploration

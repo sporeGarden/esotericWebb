@@ -34,7 +34,7 @@ description = "Health check (sourDough alias)"
 
 [[capabilities]]
 method = "health.version"
-description = "Detailed version, build target, and signal tier information"
+description = "Detailed version, build target, and composition tier information"
 
 [[capabilities]]
 method = "health.drain"
@@ -65,7 +65,7 @@ description = "Accept inbound primal registration announcements"
 
 [[capabilities]]
 method = "primal.info"
-description = "Return niche metadata — version, capabilities, signal tiers"
+description = "Return niche metadata — version, capabilities, composition tiers"
 
 # ── Webb domain methods (stable) ──
 

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+#![forbid(unsafe_code)]
 //! Esoteric Webb — working tool for CRPG composition.
 //!
 //! A standalone cross-evolution substrate that composes deployed primals

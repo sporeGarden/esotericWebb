@@ -34,7 +34,7 @@ pub(super) fn handle_identity() -> Value {
     })
 }
 
-/// `health.version` — detailed version, build target, and signal tier info.
+/// `health.version` — detailed version, build target, and composition tier info.
 pub(super) fn handle_health_version() -> Value {
     serde_json::json!({
         "primal": "esotericwebb",
@@ -71,7 +71,7 @@ pub(super) fn handle_primal_announce(params: Option<&Value>) -> Value {
     })
 }
 
-/// `primal.info` — return Webb's niche metadata (identity, capabilities, signal tiers).
+/// `primal.info` — return Webb's niche metadata (identity, capabilities, composition tiers).
 pub(super) fn handle_primal_info() -> Value {
     let registry_toml = include_str!("../../../capability_registry.toml");
     let method_count = registry_toml.matches("method = ").count();

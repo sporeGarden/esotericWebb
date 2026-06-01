@@ -77,10 +77,10 @@ Webb exercises primal composition -> discovers gap in a primal capability
 
 - **Primal**: provenance (`dag.*`), lineage (`spine.*`, `entry.*`), attribution (`braid.*`, `provenance.*`)
 - **Spring (producer)**: rhizoCrypt, loamSpine, sweetGrass
-- **Severity**: low (structure ready; blocked on `provenance-trio-types` shared crate)
-- **Evidence**: Webb uses a local `ProvenanceClient` fallback that records
-  vertices in-memory. exp005 validates vertex recording works locally.
-  Webb now has BFS depth layers (`NarrativeGraph::bfs_depths()`) and edge
+- **Severity**: low (structure ready; signal-first architecture wired)
+- **Evidence**: Webb uses signal-first composition dispatch (`nest.store` /
+  `nest.commit`) with automatic fallback to direct `dag.*` domain calls.
+  Webb has BFS depth layers (`NarrativeGraph::bfs_depths()`) and edge
   classification (forward/back/lateral) that serve as the local projection
   of what rhizoCrypt does at runtime — the cyclic navigation graph gets
   projected onto an acyclic temporal trace. The BFS engine is the test
@@ -104,8 +104,8 @@ Webb exercises primal composition -> discovers gap in a primal capability
 - **Local readiness**: Webb's BFS depth layers, edge classification
   (forward/back/lateral), `DagOverlay`, and `to_graph_json()` provide
   the structural vocabulary that maps directly to rhizoCrypt operations.
-  The local `ProvenanceClient` vertex log is exportable for batch import
-  via `dag.event.append_batch` when the primal is deployed.
+  Session provenance flows through `nest.store` (composition dispatch)
+  with `dag.event.append` fallback when biomeOS is unavailable.
 - **Blocker**: ~~`provenance-trio-types` shared crate~~ — resolved. The
   shared types crate was an interconnect relic from the compile-time
   coupling era. All three primals have evolved to standalone projects
@@ -327,17 +327,18 @@ Webb exercises primal composition -> discovers gap in a primal capability
 - **Handoff**: primalSpring / wateringHole for game-science primal design.
 - **Status**: open
 
-### GAP-024: Signal dispatch not yet exercised E2E against live biomeOS
+### GAP-024: Composition dispatch not yet exercised E2E against live biomeOS
 
-- **Primal**: biomeOS (signal orchestration layer)
+- **Primal**: biomeOS (composition orchestration layer)
 - **Spring (producer)**: biomeOS
 - **Severity**: low
-- **Evidence**: Webb V8 declares `nest.store` and `nest.commit` signal dispatch
-  methods with automatic fallback to domain calls. However, biomeOS
-  `neural-api` has not been validated as routing these signals on ironGate.
+- **Evidence**: Webb V8 declares `nest.store` and `nest.commit` composition
+  dispatch methods with automatic fallback to domain calls. However, biomeOS
+  `neural-api` has not been validated as routing these compositions on ironGate.
   The fallback to `dag.event.append` / `dag.session.complete` works, but
   the orchestration collapse (content.put + dag.append + spine.seal + braid.create
-  in a single signal) has not been exercised live.
+  in a single composition) has not been exercised live.
+  primalSpring `s_nest_commit_live` scenario validates the wire contract (Wave 67).
 - **Expected**: `nest.store` dispatched via biomeOS decomposes into the full
   provenance pipeline. `nest.commit` decomposes into session finalization.
 - **Workaround**: Fallback to direct domain calls (functional, just not collapsed).
@@ -405,7 +406,7 @@ All 8 deploy graphs lacked `secure_by_default = true` and `[graph.metadata]`
 
 ### GAP-033: `primal.announce` missing Wave 45 hints → RESOLVED (V10, 2026-05-23)
 
-`announce_self()` sent capabilities/methods/signal_tiers but no `cost_hints`
+`announce_self()` sent capabilities/methods/composition_tiers but no `cost_hints`
 or `latency_estimates`. Wave 45 (Songbird/BearDog announce schema) requires
 these for routing weight decisions. V10 adds per-method cost and latency hints.
 

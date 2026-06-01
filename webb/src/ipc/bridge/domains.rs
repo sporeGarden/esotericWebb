@@ -430,7 +430,7 @@ impl PrimalBridge {
 
     /// Self-announce to biomeOS (outbound `primal.announce`).
     ///
-    /// Registers esotericWebb's socket, capabilities, methods, signal tiers,
+    /// Registers esotericWebb's socket, capabilities, methods, composition tiers,
     /// cost hints, and latency estimates with the orchestration layer.
     /// Aligned with Wave 45 announce schema (Songbird/BearDog key alignment).
     /// Falls back silently if biomeOS is unavailable.

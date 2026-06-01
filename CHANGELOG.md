@@ -2,6 +2,36 @@
 
 All notable changes to Esoteric Webb are documented here.
 
+## V11 — Wave 67 Polish: dead code removal, vocabulary alignment, safety (Jun 1, 2026)
+
+### Dead code removal
+
+- **`ipc/provenance.rs` deleted** — superseded legacy module with old `provenance.*`
+  method constants and unused `ProvenanceClient`/`ProvenanceVertex` types. Production
+  code uses signal-first `nest.store`/`nest.commit` architecture (V8) and modern
+  `METHOD_DAG_*` constants from `ipc/mod.rs`. 2 dead tests removed (355 remain).
+
+### Vocabulary alignment (Wave 67)
+
+- Ecosystem vocabulary evolved `signal` → `composition` (wire names preserved as
+  biomeOS contract). Updated doc comments, `capability_registry.toml` descriptions,
+  and `EVOLUTION_GAPS.md` to use "composition" vocabulary while preserving JSON wire
+  field `signal_tiers` (frozen contract).
+
+### Safety escalation
+
+- **`#![forbid(unsafe_code)]`** added to `lib.rs` (crate-level enforcement). Aligns
+  with primalSpring Wave 66-67 ecosystem standard (`#![forbid(unsafe_code)]` on all
+  88 crate roots). Webb already had zero unsafe — this makes it a compile-time
+  guarantee.
+
+### Ecosystem sync
+
+- Registry methods updated: 458 → 490 (primalSpring v0.9.31, Wave 67).
+- `EVOLUTION_GAPS.md` GAP-004 and GAP-024 updated to reflect current architecture
+  (signal-first provenance, `s_nest_commit_live` scenario availability).
+- README metrics updated to V11 posture.
+
 ## V10 — Wave 46 Absorption: env_keys, deploy graphs, announce hints (May 23, 2026)
 
 ### env_keys centralization (Wave 46 pattern)

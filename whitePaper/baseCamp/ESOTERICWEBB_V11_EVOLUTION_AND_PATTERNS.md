@@ -1,10 +1,10 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
-# Esoteric Webb V9 — Evolution Patterns and Ecosystem Learnings
+# Esoteric Webb V11 — Evolution Patterns and Ecosystem Learnings
 
-**Date:** May 17, 2026 (updated from May 16, 2026)
+**Date:** Jun 1, 2026 (updated from May 17, 2026)
 **Author:** ecoPrimals / sporeGarden
-**Foundation:** V1–V4 bootstrap; V5 deep debt; V5.1 audit; V6 ludoSpring decomposition; V7 deploy alignment; V8 Wave 17 signal adoption + deep debt + smart refactoring; V9 Wave 20-21 canonical schema absorption + stability tiers + degradation contracts + trio tracking
-**Coverage:** ~91% lines (357 tests)
+**Foundation:** V1–V4 bootstrap; V5 deep debt; V5.1 audit; V6 ludoSpring decomposition; V7 deploy alignment; V8 Wave 17 composition adoption + deep debt + smart refactoring; V9 Wave 20-21 canonical schema absorption + stability tiers + degradation contracts + trio tracking; V10 Wave 46 env_keys + deploy metadata + announce hints; V11 Wave 67 dead code removal + vocabulary alignment + safety escalation
+**Coverage:** ~91% lines (355 tests)
 
 ---
 
@@ -515,3 +515,72 @@ to the spring that produces the relevant primal. The spring evolves, the
 primal absorbs, plasmidBin deploys, and the garden discovers the next gap.
 This is NUCLEUS composition as a validation strategy — not just a deployment
 model.
+
+---
+
+## Pattern 15: Environment Key Centralization (V10)
+
+Every `std::env::var("...")` call is a potential typo and a grep-invisible
+dependency. Wave 46 mandates a single `env_keys.rs` module with named
+constants. All call sites import the constant instead of repeating strings.
+
+**Result**: Zero bare env strings in production code. `rg 'env::var\("' src/`
+returns nothing. All configuration surface is discoverable from one file.
+
+## Pattern 16: Vocabulary Tracking Without Wire Breaking (V11)
+
+The ecosystem evolves vocabulary (e.g., "signal" → "composition") but
+preserves wire format contracts. The pattern:
+
+1. Wire names (JSON field `signal_tiers`, method `signal.dispatch`) — FROZEN
+2. Doc comments, capability descriptions — evolve to current vocabulary
+3. Internal variable names — evolve when touched
+4. README, CHANGELOG, whitePaper — evolve immediately
+
+This prevents breaking biomeOS consumers while keeping documentation
+intelligible to new team members reading current ecosystem docs.
+
+## Pattern 17: Dead Code as Architectural Fossil (V11)
+
+When architecture evolves (e.g., `ProvenanceClient` → `nest.store` signal-first),
+the old module may compile without warnings because its exports are `pub` but
+nobody imports them. Detection:
+
+```
+rg 'use.*module_name::' src/   # zero hits = dead
+rg 'module_name::' src/         # zero hits = dead
+```
+
+Dead modules should be deleted, not gated behind features. The fossil record
+lives in git history and CHANGELOG, not in compiled artifacts.
+
+## Pattern 18: Safety as Crate-Level Invariant (V11)
+
+`#![forbid(unsafe_code)]` in `lib.rs` is stronger than per-file `#![deny()]`:
+- It applies transitively to all modules
+- It cannot be overridden with `#[allow()]`
+- It's a compile-time guarantee, not a CI check
+
+For garden codebases that never need unsafe (all hot paths are in consumed
+primals or their dependencies), `forbid` communicates architectural intent.
+
+---
+
+## Architecture Summary (V11)
+
+```
+esotericWebb V11
+├── 355 tests (clippy -D warnings, #![forbid(unsafe_code)])
+├── 43 Rust files (~13.2k LOC, zero C deps)
+├── 24 JSON-RPC capabilities (sourDough + lifecycle + narrative + session + MCP)
+├── 7 primal domains consumed (composition-first with graceful degradation)
+├── 490 ecosystem methods tracked (primalSpring v0.9.31, Wave 67)
+├── Wave compliance: 67 (vocabulary, safety, dead code)
+├── 12 open evolution gaps (consumer pressure on ecosystem)
+├── ipc/bridge/   (all domains, retry, circuit breaker, composition dispatch)
+├── ipc/handlers/ (sourDough + lifecycle + capability registry)
+├── science/      (absorbed pure-math: flow, engagement, DDA)
+├── env_keys.rs   (zero bare env strings)
+├── niche.rs      (24 capabilities, cross-validated against registry TOML)
+└── deploy graphs (8 TOML, secure_by_default, metadata, composition-first)
+```

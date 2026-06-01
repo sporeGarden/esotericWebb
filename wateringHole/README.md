@@ -38,12 +38,13 @@ wateringHole/
 
 | Handoff | Direction | Summary |
 |---------|-----------|---------|
-| `ESOTERICWEBB_V10_WAVE46_ABSORPTION_HANDOFF_MAY23_2026.md` | Outbound | **Current** — V10 Wave 46 env_keys, deploy graph metadata, announce hints |
+| `ESOTERICWEBB_V11_WAVE67_POLISH_HANDOFF_JUN01_2026.md` | Outbound | **Current** — V11 dead code removal, vocabulary alignment, `#![forbid(unsafe_code)]` |
 
 ## Archived handoffs (fossil record)
 
 | Handoff | Direction | Summary |
 |---------|-----------|---------|
+| `ESOTERICWEBB_V10_WAVE46_ABSORPTION_HANDOFF_MAY23_2026.md` | Outbound | V10 Wave 46 env_keys, deploy graph metadata, announce hints |
 | `ESOTERICWEBB_V9_WAVE20_ABSORPTION_HANDOFF_MAY17_2026.md` | Outbound | V9 Wave 20 canonical schemas, stability tiers, degradation contracts, trio tracking |
 | `ESOTERICWEBB_V8_SIGNAL_ADOPTION_HANDOFF_MAY16_2026.md` | Outbound | V8 Wave 17 signal dispatch, primal.announce, deep debt, per-primal feedback |
 | `ESOTERICWEBB_V7_COMPOSITION_PATTERNS_HANDOFF_APR17_2026.md` | Outbound | V7 composition patterns, NUCLEUS deployment patterns |

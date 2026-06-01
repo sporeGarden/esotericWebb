@@ -41,7 +41,6 @@ pub mod launcher;
 pub mod listener;
 pub mod petaltongue;
 pub mod primal_names;
-pub mod provenance;
 pub mod resilience;
 pub mod squirrel;
 
@@ -81,7 +80,8 @@ pub const METHOD_DAG_QUERY_VERTICES: &str = "dag.query.vertices";
 /// Mint a certificate.
 pub const METHOD_CERT_MINT: &str = "certificate.mint";
 
-// ── Signal dispatch (Wave 17 Neural API — orchestration collapse) ──
+// ── Composition dispatch (Wave 17 Neural API — atomic orchestration) ──
+// Ecosystem vocabulary: "compositions" (Wire names preserved as biomeOS contract)
 
 /// Atomic provenance step: content.put + dag.event.append + spine.seal + braid.create.
 pub const SIGNAL_NEST_STORE: &str = "nest.store";
