@@ -56,11 +56,11 @@ impl GameDirector {
     /// # Errors
     ///
     /// Returns an error if the content has no start node.
-    pub fn new(bundle: &ContentBundle) -> Result<Self, String> {
+    pub fn new(bundle: &ContentBundle) -> crate::error::Result<Self> {
         let start = bundle
             .narrative
             .start_node()
-            .ok_or_else(|| "no start node in narrative graph".to_owned())?;
+            .ok_or(crate::error::WebbError::NoStartNode)?;
         Ok(Self {
             current_node: start.id.clone(),
         })

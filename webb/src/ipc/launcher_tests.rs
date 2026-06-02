@@ -6,7 +6,7 @@ use super::*;
 fn discover_binary_fails_for_nonexistent() {
     let result = discover_binary("nonexistent_primal_xyz");
     assert!(result.is_err());
-    assert!(result.unwrap_err().contains("binary not found"));
+    assert!(result.unwrap_err().to_string().contains("binary not found"));
 }
 
 #[test]
@@ -136,7 +136,7 @@ fn topological_waves_detects_cycle() {
     };
     let result = topological_waves(&graph);
     assert!(result.is_err());
-    assert!(result.unwrap_err().contains("cycle"));
+    assert!(result.unwrap_err().to_string().contains("cycle"));
 }
 
 #[test]
@@ -194,7 +194,7 @@ fn topological_waves_missing_dependency() {
     };
     let result = topological_waves(&graph);
     assert!(result.is_err());
-    assert!(result.unwrap_err().contains("not in the graph"));
+    assert!(result.unwrap_err().to_string().contains("not in the graph"));
 }
 
 #[test]
@@ -308,7 +308,7 @@ fn spawn_from_graph_bad_toml_file() {
     let mut launcher = PrimalLauncher::new();
     let result = launcher.spawn_from_graph(path.to_str().unwrap());
     assert!(result.is_err());
-    assert!(result.unwrap_err().contains("parse"));
+    assert!(result.unwrap_err().to_string().contains("parse"));
 
     let _ = std::fs::remove_dir_all(&dir);
 }
@@ -318,7 +318,8 @@ fn spawn_from_graph_missing_file() {
     let mut launcher = PrimalLauncher::new();
     let result = launcher.spawn_from_graph("/nonexistent/graph.toml");
     assert!(result.is_err());
-    assert!(result.unwrap_err().contains("read"));
+    let msg = result.unwrap_err().to_string();
+    assert!(msg.contains("io:") || msg.contains("No such file"));
 }
 
 #[test]
@@ -326,7 +327,7 @@ fn spawn_fails_for_missing_binary() {
     let mut launcher = PrimalLauncher::new();
     let result = launcher.spawn("nonexistent_primal_xyz", 9999, "test");
     assert!(result.is_err());
-    assert!(result.unwrap_err().contains("binary not found"));
+    assert!(result.unwrap_err().to_string().contains("binary not found"));
 }
 
 #[test]

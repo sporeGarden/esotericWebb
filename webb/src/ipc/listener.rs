@@ -34,28 +34,25 @@ pub fn socket_path() -> PathBuf {
 /// # Errors
 ///
 /// Returns an error if the socket cannot be bound.
-pub fn serve(path: &Path, session: &SharedSession) -> Result<(), String> {
+pub fn serve(path: &Path, session: &SharedSession) -> crate::error::Result<()> {
     if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent).map_err(|e| format!("create socket dir: {e}"))?;
+        std::fs::create_dir_all(parent)?;
     }
 
     if path.exists() {
-        std::fs::remove_file(path).map_err(|e| format!("remove stale socket: {e}"))?;
+        std::fs::remove_file(path)?;
     }
 
-    let listener =
-        UnixListener::bind(path).map_err(|e| format!("bind socket {}: {e}", path.display()))?;
+    let listener = UnixListener::bind(path)?;
 
-    listener
-        .set_nonblocking(true)
-        .map_err(|e| format!("set non-blocking: {e}"))?;
+    listener.set_nonblocking(true)?;
 
     let shutdown = Arc::new(AtomicBool::new(false));
 
     signal_hook::flag::register(signal_hook::consts::SIGINT, Arc::clone(&shutdown))
-        .map_err(|e| format!("register SIGINT handler: {e}"))?;
+        .map_err(|e| crate::error::WebbError::Signal(format!("register SIGINT: {e}")))?;
     signal_hook::flag::register(signal_hook::consts::SIGTERM, Arc::clone(&shutdown))
-        .map_err(|e| format!("register SIGTERM handler: {e}"))?;
+        .map_err(|e| crate::error::WebbError::Signal(format!("register SIGTERM: {e}")))?;
 
     let owned_path = path.to_owned();
     tracing::info!(path = %path.display(), "Webb IPC listening");
@@ -89,20 +86,17 @@ pub fn serve(path: &Path, session: &SharedSession) -> Result<(), String> {
 /// # Errors
 ///
 /// Returns an error if the address cannot be bound.
-pub fn serve_tcp(addr: &str, session: &SharedSession) -> Result<(), String> {
-    let listener =
-        std::net::TcpListener::bind(addr).map_err(|e| format!("bind TCP {addr}: {e}"))?;
+pub fn serve_tcp(addr: &str, session: &SharedSession) -> crate::error::Result<()> {
+    let listener = std::net::TcpListener::bind(addr)?;
 
-    listener
-        .set_nonblocking(true)
-        .map_err(|e| format!("set non-blocking: {e}"))?;
+    listener.set_nonblocking(true)?;
 
     let shutdown = Arc::new(AtomicBool::new(false));
 
     signal_hook::flag::register(signal_hook::consts::SIGINT, Arc::clone(&shutdown))
-        .map_err(|e| format!("register SIGINT handler: {e}"))?;
+        .map_err(|e| crate::error::WebbError::Signal(format!("register SIGINT: {e}")))?;
     signal_hook::flag::register(signal_hook::consts::SIGTERM, Arc::clone(&shutdown))
-        .map_err(|e| format!("register SIGTERM handler: {e}"))?;
+        .map_err(|e| crate::error::WebbError::Signal(format!("register SIGTERM: {e}")))?;
 
     tracing::info!(addr, "Webb TCP IPC listening");
 

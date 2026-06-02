@@ -39,13 +39,15 @@ impl ActionKind {
     /// # Errors
     ///
     /// Returns an error if the string is not a recognised action kind.
-    pub fn parse(s: &str) -> Result<Self, String> {
+    pub fn parse(s: &str) -> crate::error::Result<Self> {
         match s {
             "exit" => Ok(Self::Exit),
             "talk" => Ok(Self::Talk),
             "ability" => Ok(Self::Ability),
             "examine" => Ok(Self::Examine),
-            _ => Err(format!("unknown action kind: {s}")),
+            _ => Err(crate::error::WebbError::Other(format!(
+                "unknown action kind: {s}"
+            ))),
         }
     }
 }

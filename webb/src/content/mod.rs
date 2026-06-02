@@ -48,10 +48,10 @@ impl ContentBundle {
     ///
     /// Returns an error if the directory doesn't exist or required files
     /// are missing/malformed.
-    pub fn load(path: &str) -> Result<Self, String> {
+    pub fn load(path: &str) -> crate::error::Result<Self> {
         let base = Path::new(path);
         if !base.exists() {
-            return Err(format!("content directory not found: {path}"));
+            return Err(crate::error::WebbError::ContentNotFound(base.to_path_buf()));
         }
 
         let mut warnings = Vec::new();
@@ -137,7 +137,7 @@ impl ContentBundle {
 /// # Errors
 ///
 /// Returns an error if directory creation or file writing fails.
-pub fn scaffold(output_path: &str) -> Result<(), String> {
+pub fn scaffold(output_path: &str) -> crate::error::Result<()> {
     let base = Path::new(output_path);
 
     create_dir(base)?;
@@ -170,13 +170,15 @@ pub fn scaffold(output_path: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn create_dir(path: &Path) -> Result<(), String> {
-    std::fs::create_dir_all(path).map_err(|e| format!("create dir {}: {e}", path.display()))
+fn create_dir(path: &Path) -> crate::error::Result<()> {
+    std::fs::create_dir_all(path)?;
+    Ok(())
 }
 
-fn write_yaml<T: Serialize>(base: &Path, name: &str, value: &T) -> Result<(), String> {
-    let content = serde_yaml::to_string(value).map_err(|e| format!("serialize {name}: {e}"))?;
-    std::fs::write(base.join(name), content).map_err(|e| format!("write {name}: {e}"))
+fn write_yaml<T: Serialize>(base: &Path, name: &str, value: &T) -> crate::error::Result<()> {
+    let content = serde_yaml::to_string(value)?;
+    std::fs::write(base.join(name), content)?;
+    Ok(())
 }
 
 fn load_yaml_with_diag<T: for<'de> Deserialize<'de> + Default>(

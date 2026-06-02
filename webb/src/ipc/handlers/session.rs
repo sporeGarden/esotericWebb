@@ -91,13 +91,13 @@ pub(super) fn handle_session_act(
 
         let action_kind = ActionKind::parse(kind).map_err(|e| JsonRpcError {
             code: -32602,
-            message: e,
+            message: e.to_string(),
             data: None,
         })?;
 
         let (outcome_text, narration_ctx) = s.act(action_kind, id).map_err(|e| JsonRpcError {
             code: -32000,
-            message: e,
+            message: e.to_string(),
             data: None,
         })?;
 

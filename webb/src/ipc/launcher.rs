@@ -131,7 +131,7 @@ impl PrimalLauncher {
         primal: &str,
         port: u16,
         domain: &str,
-    ) -> Result<&SpawnedPrimal, String> {
+    ) -> crate::error::Result<&SpawnedPrimal> {
         let binary = discover_binary(primal)?;
         let addr = format!("127.0.0.1:{port}");
 
@@ -143,8 +143,7 @@ impl PrimalLauncher {
             .arg(port.to_string())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
-            .spawn()
-            .map_err(|e| format!("spawn {primal}: {e}"))?;
+            .spawn()?;
 
         let pid = child.id();
         self.children.push((primal.to_owned(), child));
@@ -174,11 +173,10 @@ impl PrimalLauncher {
     ///
     /// Returns an error if the graph has cycles, a binary is missing, or
     /// a process fails to start.
-    pub fn spawn_from_graph(&mut self, graph_path: &str) -> Result<&[SpawnedPrimal], String> {
-        let contents =
-            std::fs::read_to_string(graph_path).map_err(|e| format!("read {graph_path}: {e}"))?;
-        let graph: DeployGraph =
-            toml::from_str(&contents).map_err(|e| format!("parse {graph_path}: {e}"))?;
+    pub fn spawn_from_graph(&mut self, graph_path: &str) -> crate::error::Result<&[SpawnedPrimal]> {
+        let contents = std::fs::read_to_string(graph_path)?;
+        let graph: DeployGraph = toml::from_str(&contents)
+            .map_err(|e| crate::error::WebbError::Other(format!("parse {graph_path}: {e}")))?;
 
         let waves = topological_waves(&graph)?;
         let mut next_port = default_port_base();
@@ -240,7 +238,7 @@ impl Drop for PrimalLauncher {
 ///
 /// Returns a descriptive error listing all searched paths if the binary
 /// is not found in any candidate location.
-pub fn discover_binary(primal: &str) -> Result<PathBuf, String> {
+pub fn discover_binary(primal: &str) -> crate::error::Result<PathBuf> {
     let base_dirs: Vec<Option<PathBuf>> = vec![
         std::env::var(crate::env_keys::ECOPRIMALS_PLASMID_BIN)
             .ok()
@@ -266,8 +264,6 @@ pub fn discover_binary(primal: &str) -> Result<PathBuf, String> {
         primal.to_string(),
     ];
 
-    let mut searched = Vec::new();
-
     for base in base_dirs.iter().filter_map(Option::as_ref) {
         if !base.exists() {
             continue;
@@ -277,22 +273,16 @@ pub fn discover_binary(primal: &str) -> Result<PathBuf, String> {
             if candidate.is_file() {
                 return Ok(candidate);
             }
-            searched.push(candidate);
         }
     }
 
-    Err(format!(
-        "binary not found for '{primal}'. Searched:\n{}",
-        searched
-            .iter()
-            .map(|p| format!("  - {}", p.display()))
-            .collect::<Vec<_>>()
-            .join("\n")
-    ))
+    Err(crate::error::WebbError::BinaryNotFound {
+        name: primal.to_owned(),
+    })
 }
 
 /// Kahn's algorithm — returns nodes grouped by wave (parallelizable tiers).
-fn topological_waves(graph: &DeployGraph) -> Result<Vec<Vec<GraphNode>>, String> {
+fn topological_waves(graph: &DeployGraph) -> crate::error::Result<Vec<Vec<GraphNode>>> {
     let nodes = &graph.graph.node;
     if nodes.is_empty() {
         return Ok(Vec::new());
@@ -310,10 +300,10 @@ fn topological_waves(graph: &DeployGraph) -> Result<Vec<Vec<GraphNode>>, String>
     for (i, node) in nodes.iter().enumerate() {
         for dep in &node.depends_on {
             let &dep_idx = name_to_idx.get(dep.as_str()).ok_or_else(|| {
-                format!(
+                crate::error::WebbError::Other(format!(
                     "node '{}' depends on '{}' which is not in the graph",
                     node.name, dep
-                )
+                ))
             })?;
             in_degree[i] += 1;
             dependents[dep_idx].push(i);
@@ -348,14 +338,16 @@ fn topological_waves(graph: &DeployGraph) -> Result<Vec<Vec<GraphNode>>, String>
     }
 
     if processed != nodes.len() {
-        return Err("deploy graph contains a dependency cycle".to_owned());
+        return Err(crate::error::WebbError::Other(
+            "deploy graph contains a dependency cycle".into(),
+        ));
     }
 
     Ok(waves)
 }
 
 /// Poll a TCP address until it accepts connections, or time out.
-fn await_tcp_ready(addr: &str) -> Result<(), String> {
+fn await_tcp_ready(addr: &str) -> crate::error::Result<()> {
     let timeout = readiness_timeout();
     let start = Instant::now();
     loop {
@@ -363,10 +355,10 @@ fn await_tcp_ready(addr: &str) -> Result<(), String> {
             return Ok(());
         }
         if start.elapsed() > timeout {
-            return Err(format!(
+            return Err(crate::error::WebbError::Other(format!(
                 "primal at {addr} did not become ready within {}s",
                 timeout.as_secs()
-            ));
+            )));
         }
         std::thread::sleep(READINESS_POLL_INTERVAL);
     }

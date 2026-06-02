@@ -42,7 +42,7 @@ impl GameSession {
     ///
     /// Returns an error if content fails to load or validate.
     /// Create a new session (standalone, no primal bridge).
-    pub fn new(content_path: &str) -> Result<Self, String> {
+    pub fn new(content_path: &str) -> crate::error::Result<Self> {
         Self::with_bridge(content_path, None)
     }
 
@@ -54,17 +54,19 @@ impl GameSession {
     /// # Errors
     ///
     /// Returns an error if content fails to load or validate.
-    pub fn with_bridge(content_path: &str, bridge: Option<PrimalBridge>) -> Result<Self, String> {
-        let bundle = ContentBundle::load(content_path).map_err(|e| format!("load: {e}"))?;
+    pub fn with_bridge(
+        content_path: &str,
+        bridge: Option<PrimalBridge>,
+    ) -> crate::error::Result<Self> {
+        let bundle = ContentBundle::load(content_path)?;
         let issues = bundle.validate();
         if !issues.is_empty() {
-            return Err(format!(
-                "{} validation issue(s): {}",
-                issues.len(),
-                issues.join("; ")
-            ));
+            return Err(crate::error::WebbError::Validation {
+                count: issues.len(),
+                summary: issues.join("; "),
+            });
         }
-        let director = GameDirector::new(&bundle).map_err(|e| format!("director: {e}"))?;
+        let director = GameDirector::new(&bundle)?;
         Ok(Self {
             bundle,
             director,
@@ -233,7 +235,7 @@ impl GameSession {
         &mut self,
         kind: ActionKind,
         id: &str,
-    ) -> Result<(String, NarrationContext), String> {
+    ) -> crate::error::Result<(String, NarrationContext)> {
         let input = match kind {
             ActionKind::Exit => PlayerInput::ChooseExit(id.to_owned()),
             ActionKind::Talk => PlayerInput::Talk(id.to_owned()),

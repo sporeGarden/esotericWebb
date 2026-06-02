@@ -5,7 +5,10 @@ use std::io::Write;
 
 use esoteric_webb::content::ContentBundle;
 use esoteric_webb::director::{DirectorOutcome, GameDirector, PlayerInput};
+use esoteric_webb::error::WebbError;
 use esoteric_webb::state::WorldState;
+
+type Result<T> = esoteric_webb::error::Result<T>;
 
 /// Start the full BYOB niche with game director and IPC server.
 ///
@@ -18,7 +21,7 @@ pub fn cmd_serve(
     launch: bool,
     graph_path: &str,
     listen_addr: Option<&str>,
-) -> Result<(), String> {
+) -> Result<()> {
     // Launcher owns child processes and kills them on Drop — must outlive the server.
     #[expect(
         clippy::collection_is_never_read,
@@ -33,9 +36,7 @@ pub fn cmd_serve(
         let graph_exists = std::path::Path::new(graph_path).is_file();
         if graph_exists {
             println!("Deploy graph: {graph_path}");
-            launcher
-                .spawn_from_graph(graph_path)
-                .map_err(|e| format!("launch from graph: {e}"))?;
+            launcher.spawn_from_graph(graph_path)?;
         } else {
             println!("No deploy graph at {graph_path} — skipping graph-driven launch");
         }
@@ -148,8 +149,8 @@ fn announce_to_biomeos(
 }
 
 /// Validate a content directory for correctness.
-pub fn cmd_validate(content_path: &str) -> Result<(), String> {
-    let bundle = ContentBundle::load(content_path).map_err(|e| format!("load: {e}"))?;
+pub fn cmd_validate(content_path: &str) -> Result<()> {
+    let bundle = ContentBundle::load(content_path)?;
     let issues = bundle.validate();
     if issues.is_empty() {
         println!(
@@ -164,23 +165,30 @@ pub fn cmd_validate(content_path: &str) -> Result<(), String> {
         for issue in &issues {
             eprintln!("  - {issue}");
         }
-        Err(format!("{} validation issue(s)", issues.len()))
+        Err(WebbError::Validation {
+            count: issues.len(),
+            summary: issues
+                .iter()
+                .map(String::as_str)
+                .collect::<Vec<_>>()
+                .join("; "),
+        })
     }
 }
 
 /// Text-mode interactive game preview (no primals required).
-pub fn cmd_preview(content_path: &str) -> Result<(), String> {
-    let bundle = ContentBundle::load(content_path).map_err(|e| format!("load: {e}"))?;
+pub fn cmd_preview(content_path: &str) -> Result<()> {
+    let bundle = ContentBundle::load(content_path)?;
     print_load_warnings(&bundle);
     let issues = bundle.validate();
     if !issues.is_empty() {
         for issue in &issues {
             eprintln!("  - {issue}");
         }
-        return Err(format!(
-            "{} validation issue(s) — run `validate` first",
-            issues.len()
-        ));
+        return Err(WebbError::Validation {
+            count: issues.len(),
+            summary: issues.join("; "),
+        });
     }
 
     println!("=== Esoteric Webb — {} ===", bundle.meta.name);
@@ -188,7 +196,7 @@ pub fn cmd_preview(content_path: &str) -> Result<(), String> {
     println!("{}", bundle.meta.description);
     println!();
 
-    let mut director = GameDirector::new(&bundle).map_err(|e| format!("director init: {e}"))?;
+    let mut director = GameDirector::new(&bundle)?;
     let mut state = WorldState::new();
 
     preview_loop(&mut director, &mut state, &bundle);
@@ -292,7 +300,7 @@ fn read_choice(max: usize) -> Option<usize> {
 ///
 /// Returns `Result` for command dispatch uniformity — currently infallible.
 #[expect(clippy::unnecessary_wraps, reason = "uniform cmd_* Result signature")]
-pub fn cmd_status() -> Result<(), String> {
+pub fn cmd_status() -> Result<()> {
     println!("Esoteric Webb — primal composition status");
     println!("Discovering primals...\n");
 
@@ -339,14 +347,13 @@ pub fn cmd_graph(
     played_path: Option<&str>,
     live: bool,
     format: &str,
-) -> Result<(), String> {
-    let bundle = ContentBundle::load(content_path).map_err(|e| format!("load: {e}"))?;
+) -> Result<()> {
+    let bundle = ContentBundle::load(content_path)?;
     print_load_warnings(&bundle);
 
     let overlay = if let Some(path) = played_path {
-        let json_str = std::fs::read_to_string(path).map_err(|e| format!("read {path}: {e}"))?;
-        let json: serde_json::Value =
-            serde_json::from_str(&json_str).map_err(|e| format!("parse JSON: {e}"))?;
+        let json_str = std::fs::read_to_string(path)?;
+        let json: serde_json::Value = serde_json::from_str(&json_str)?;
         Some(esoteric_webb::narrative::DagOverlay::from_history_json(
             &json,
             &bundle.narrative,
@@ -382,18 +389,18 @@ pub fn cmd_graph(
 /// Requires the provenance trio (rhizoCrypt, loamSpine, sweetGrass) to be
 /// fully wired with end-to-end session DAG persistence. See
 /// `EVOLUTION_GAPS.md` GAP-004 for tracking.
-pub fn cmd_replay(session_path: &str, content_path: &str) -> Result<(), String> {
-    let _bundle = ContentBundle::load(content_path).map_err(|e| format!("load: {e}"))?;
-    Err(format!(
+pub fn cmd_replay(session_path: &str, content_path: &str) -> Result<()> {
+    let _bundle = ContentBundle::load(content_path)?;
+    Err(WebbError::Other(format!(
         "provenance replay not yet implemented for session '{session_path}'. \
          The provenance trio (rhizoCrypt DAG, loamSpine certificates, sweetGrass attribution) \
          must be end-to-end wired before sessions can be replayed. \
          Track progress in EVOLUTION_GAPS.md GAP-004."
-    ))
+    )))
 }
 
 /// Automated playthrough — AI-as-player demonstration.
-pub fn cmd_autoplay(content_path: &str, max_turns: u32, json_output: bool) -> Result<(), String> {
+pub fn cmd_autoplay(content_path: &str, max_turns: u32, json_output: bool) -> Result<()> {
     use esoteric_webb::autoplay::{self, AutoplayConfig};
     use esoteric_webb::session::GameSession;
 
@@ -443,12 +450,12 @@ pub fn cmd_autoplay(content_path: &str, max_turns: u32, json_output: bool) -> Re
 }
 
 /// Scaffold a new content directory with template YAML.
-pub fn cmd_new_world(output_path: &str) -> Result<(), String> {
-    esoteric_webb::content::scaffold(output_path).map_err(|e| format!("scaffold: {e}"))
+pub fn cmd_new_world(output_path: &str) -> Result<()> {
+    esoteric_webb::content::scaffold(output_path)
 }
 
 /// Run all experiment validation suites (meta-runner).
-pub fn cmd_validate_all() -> Result<(), String> {
+pub fn cmd_validate_all() -> Result<()> {
     const EXPERIMENTS: &[&str] = &[
         "esotericwebb-exp001",
         "esotericwebb-exp002",
@@ -496,7 +503,10 @@ pub fn cmd_validate_all() -> Result<(), String> {
     println!("  {passed}/{total} passed, {failed} failed");
 
     if failed > 0 {
-        Err(format!("{failed} experiment(s) failed"))
+        Err(WebbError::Validation {
+            count: failed as usize,
+            summary: format!("{failed} experiment(s) failed"),
+        })
     } else {
         Ok(())
     }

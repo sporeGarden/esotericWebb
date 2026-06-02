@@ -41,11 +41,11 @@ impl DagOverlay {
     pub fn from_history_json(
         json: &serde_json::Value,
         graph: &NarrativeGraph,
-    ) -> Result<Self, String> {
+    ) -> crate::error::Result<Self> {
         let history = json
             .get("history")
             .and_then(serde_json::Value::as_array)
-            .ok_or("missing 'history' array")?;
+            .ok_or_else(|| crate::error::WebbError::Other("missing 'history' array".into()))?;
 
         let start_id = graph
             .start_node()
