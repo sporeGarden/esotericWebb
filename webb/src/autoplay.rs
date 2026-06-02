@@ -143,10 +143,7 @@ impl HeuristicTracker {
 /// # Errors
 ///
 /// Returns an error if the session encounters an unrecoverable state.
-pub fn run(
-    session: &mut GameSession,
-    config: &AutoplayConfig,
-) -> crate::error::Result<AutoplayResult> {
+pub fn run(session: &mut GameSession, config: &AutoplayConfig) -> crate::error::Result<AutoplayResult> {
     let mut tracker = HeuristicTracker::default();
     tracker.visited.insert(session.snapshot().current_node);
 
@@ -163,7 +160,7 @@ pub fn run(
             break;
         };
 
-        let (_outcome_text, _ctx) = session.act(kind, &id).map_err(|e| format!("act: {e}"))?;
+        let (_outcome_text, _ctx) = session.act(kind, &id)?;
         let snap_after = session.snapshot();
         let knowledge_count =
             snap_after.knowledge.len() + snap_after.flags.len() + snap_after.inventory.len();
