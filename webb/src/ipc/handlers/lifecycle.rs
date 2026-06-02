@@ -28,16 +28,16 @@ pub(super) fn handle_readiness(session: &SharedSession) -> Value {
 /// `identity.get` — sourDough-required self-identification.
 pub(super) fn handle_identity() -> Value {
     serde_json::json!({
-        "primal": "esotericwebb",
+        "primal": crate::niche::NICHE_NAME,
         "version": env!("CARGO_PKG_VERSION"),
-        "domain": "narrative",
+        "domain": crate::niche::NICHE_DOMAIN,
     })
 }
 
 /// `health.version` — detailed version, build target, and composition tier info.
 pub(super) fn handle_health_version() -> Value {
     serde_json::json!({
-        "primal": "esotericwebb",
+        "primal": crate::niche::NICHE_NAME,
         "version": env!("CARGO_PKG_VERSION"),
         "build_target": option_env!("TARGET").unwrap_or("unknown"),
         "edition": "2024",
@@ -50,7 +50,7 @@ pub(super) fn handle_health_drain() -> Value {
     tracing::info!("health.drain received — shutdown acknowledged");
     serde_json::json!({
         "acknowledged": true,
-        "primal": "esotericwebb",
+        "primal": crate::niche::NICHE_NAME,
     })
 }
 
@@ -76,9 +76,9 @@ pub(super) fn handle_primal_info() -> Value {
     let registry_toml = include_str!("../../../capability_registry.toml");
     let method_count = registry_toml.matches("method = ").count();
     serde_json::json!({
-        "primal": "esotericwebb",
+        "primal": crate::niche::NICHE_NAME,
         "version": env!("CARGO_PKG_VERSION"),
-        "domain": "narrative",
+        "domain": crate::niche::NICHE_DOMAIN,
         "capabilities": method_count,
         "signal_tiers": ["nest", "meta"],
         "guidestone_level": 0,
@@ -114,7 +114,7 @@ pub(super) fn handle_capabilities_list() -> Value {
     serde_json::json!({
         "capabilities": capabilities,
         "count": count,
-        "primal": "esotericwebb",
+        "primal": crate::niche::NICHE_NAME,
     })
 }
 

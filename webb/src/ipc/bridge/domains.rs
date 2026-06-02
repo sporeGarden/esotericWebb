@@ -440,7 +440,7 @@ impl PrimalBridge {
             return;
         }
         let params = serde_json::json!({
-            "primal": "esotericwebb",
+            "primal": crate::niche::NICHE_NAME,
             "socket": socket,
             "capabilities": ["narrative", "session", "mcp"],
             "methods": methods,
