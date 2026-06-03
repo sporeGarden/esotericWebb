@@ -63,3 +63,70 @@ impl From<String> for WebbError {
         Self::Other(s)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn display_io_variant() {
+        let err = WebbError::Io(std::io::Error::new(std::io::ErrorKind::NotFound, "gone"));
+        assert!(err.to_string().contains("io:"));
+    }
+
+    #[test]
+    fn display_content_not_found() {
+        let err = WebbError::ContentNotFound(PathBuf::from("/missing"));
+        assert!(err.to_string().contains("/missing"));
+    }
+
+    #[test]
+    fn display_validation() {
+        let err = WebbError::Validation {
+            count: 3,
+            summary: "a; b; c".to_owned(),
+        };
+        let msg = err.to_string();
+        assert!(msg.contains("3 validation"));
+        assert!(msg.contains("a; b; c"));
+    }
+
+    #[test]
+    fn display_no_start_node() {
+        let err = WebbError::NoStartNode;
+        assert!(err.to_string().contains("no start node"));
+    }
+
+    #[test]
+    fn display_binary_not_found() {
+        let err = WebbError::BinaryNotFound {
+            name: "rhizocrypt".to_owned(),
+        };
+        assert!(err.to_string().contains("rhizocrypt"));
+    }
+
+    #[test]
+    fn display_signal() {
+        let err = WebbError::Signal("SIGTERM".to_owned());
+        assert!(err.to_string().contains("SIGTERM"));
+    }
+
+    #[test]
+    fn display_other() {
+        let err = WebbError::Other("something failed".to_owned());
+        assert_eq!(err.to_string(), "something failed");
+    }
+
+    #[test]
+    fn from_string_produces_other() {
+        let err: WebbError = "custom error".to_owned().into();
+        assert!(matches!(err, WebbError::Other(s) if s == "custom error"));
+    }
+
+    #[test]
+    fn from_io_error() {
+        let io_err = std::io::Error::new(std::io::ErrorKind::PermissionDenied, "denied");
+        let err: WebbError = io_err.into();
+        assert!(matches!(err, WebbError::Io(_)));
+    }
+}

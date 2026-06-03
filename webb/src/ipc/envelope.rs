@@ -422,4 +422,75 @@ mod tests {
             assert!(!v.to_string().is_empty());
         }
     }
+
+    #[test]
+    fn jsonrpc_error_application_constructor() {
+        let err = JsonRpcError::application("session failed");
+        assert_eq!(err.code, ERROR_APPLICATION);
+        assert_eq!(err.message, "session failed");
+        assert!(err.data.is_none());
+    }
+
+    #[test]
+    fn jsonrpc_error_invalid_params_constructor() {
+        let err = JsonRpcError::invalid_params("missing field");
+        assert_eq!(err.code, ERROR_INVALID_PARAMS);
+        assert_eq!(err.message, "missing field");
+        assert!(err.data.is_none());
+    }
+
+    #[test]
+    fn jsonrpc_error_method_not_found_constructor() {
+        let err = JsonRpcError::method_not_found("unknown.method");
+        assert_eq!(err.code, ERROR_METHOD_NOT_FOUND);
+        assert_eq!(err.message, "unknown.method");
+        assert!(err.data.is_none());
+    }
+
+    #[test]
+    fn jsonrpc_request_with_id() {
+        let req = JsonRpcRequest::with_id("test.method", None, 42);
+        assert_eq!(req.jsonrpc, "2.0");
+        assert_eq!(req.method, "test.method");
+        assert_eq!(req.id, serde_json::json!(42));
+        assert!(req.params.is_none());
+    }
+
+    #[test]
+    fn jsonrpc_request_with_id_and_params() {
+        let params = serde_json::json!({"key": "value"});
+        let req = JsonRpcRequest::with_id("test.call", Some(params.clone()), 7);
+        assert_eq!(req.method, "test.call");
+        assert_eq!(req.params, Some(params));
+        assert_eq!(req.id, serde_json::json!(7));
+    }
+
+    #[test]
+    fn jsonrpc_response_success_constructor() {
+        let resp = JsonRpcResponse::success(serde_json::json!({"ok": true}), serde_json::json!(1));
+        assert_eq!(resp.jsonrpc, "2.0");
+        assert!(resp.result.is_some());
+        assert!(resp.error.is_none());
+        assert_eq!(resp.id, serde_json::json!(1));
+    }
+
+    #[test]
+    fn jsonrpc_response_error_constructor() {
+        let err = JsonRpcError::application("fail");
+        let resp = JsonRpcResponse::error(err, serde_json::json!(99));
+        assert_eq!(resp.jsonrpc, "2.0");
+        assert!(resp.result.is_none());
+        assert!(resp.error.is_some());
+        assert_eq!(resp.error.unwrap().code, ERROR_APPLICATION);
+        assert_eq!(resp.id, serde_json::json!(99));
+    }
+
+    #[test]
+    fn error_constants_have_correct_values() {
+        assert_eq!(ERROR_PARSE, -32700);
+        assert_eq!(ERROR_METHOD_NOT_FOUND, -32601);
+        assert_eq!(ERROR_INVALID_PARAMS, -32602);
+        assert_eq!(ERROR_INTERNAL, -32603);
+        assert_eq!(ERROR_APPLICATION, -32000);
+    }
 }

@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Version** | V12 |
-| **Tests** | 355 (336 unit + 18 E2E + 1 validation) |
+| **Tests** | 378 (359 unit + 18 E2E + 1 validation) |
 | **Coverage** | ~91% lines (`cargo llvm-cov`) |
 | **Rust files** | 43 (~13.2k LOC) |
 | **Experiments** | 5 (exp001–exp005) |

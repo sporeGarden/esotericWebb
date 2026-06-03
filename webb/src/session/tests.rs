@@ -465,3 +465,62 @@ fn record_provenance_noop_without_bridge() {
     let mut s = session_from_bundle(test_bundle());
     s.record_provenance_vertex("test", "room");
 }
+
+#[test]
+fn sorted_knowledge_returns_alphabetical() {
+    let mut s = session_from_bundle(test_bundle());
+    s.state.knowledge.insert("zebra".to_owned());
+    s.state.knowledge.insert("alpha".to_owned());
+    s.state.knowledge.insert("middle".to_owned());
+    let k = s.sorted_knowledge();
+    assert_eq!(k, vec!["alpha", "middle", "zebra"]);
+}
+
+#[test]
+fn sorted_flags_returns_alphabetical() {
+    let mut s = session_from_bundle(test_bundle());
+    s.state.flags.insert("z_flag".to_owned());
+    s.state.flags.insert("a_flag".to_owned());
+    let f = s.sorted_flags();
+    assert_eq!(f, vec!["a_flag", "z_flag"]);
+}
+
+#[test]
+fn narration_hints_from_abilities() {
+    let s = session_from_bundle(test_bundle());
+    let hints = s.narration_hints();
+    assert!(hints.iter().any(|h| h.contains("Eyes")));
+}
+
+#[test]
+fn narration_context_initial_state() {
+    let s = session_from_bundle(test_bundle());
+    let ctx = s.narration_context();
+    assert_eq!(ctx.player_action, "(session start)");
+    assert!(ctx.outcome_text.is_empty());
+    assert_eq!(ctx.turn, 0);
+    assert!(!ctx.scene_description.is_empty());
+}
+
+#[test]
+fn narration_context_reflects_last_action() {
+    let mut s = session_from_bundle(test_bundle());
+    s.act(ActionKind::Exit, "room").unwrap();
+    let ctx = s.narration_context();
+    assert!(ctx.player_action.contains("exit:room"));
+    assert_eq!(ctx.turn, 1);
+    assert!(!ctx.outcome_text.is_empty());
+}
+
+#[test]
+fn snapshot_reflects_state() {
+    let mut s = session_from_bundle(test_bundle());
+    s.state.knowledge.insert("lore".to_owned());
+    s.state.inventory.insert("sword".to_owned());
+    s.state.flags.insert("quest_started".to_owned());
+    let snap = s.snapshot();
+    assert!(snap.knowledge.contains(&"lore".to_owned()));
+    assert!(snap.inventory.contains(&"sword".to_owned()));
+    assert!(snap.flags.contains(&"quest_started".to_owned()));
+    assert!(snap.session_active);
+}
