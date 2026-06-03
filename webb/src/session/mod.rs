@@ -147,12 +147,8 @@ impl GameSession {
     /// Get the full game state snapshot.
     #[must_use]
     pub fn snapshot(&self) -> GameStateSnapshot {
-        let mut knowledge: Vec<String> = self.state.knowledge.iter().cloned().collect();
-        knowledge.sort();
         let mut inventory: Vec<String> = self.state.inventory.iter().cloned().collect();
         inventory.sort();
-        let mut flags: Vec<String> = self.state.flags.iter().cloned().collect();
-        flags.sort();
 
         GameStateSnapshot {
             session_active: true,
@@ -161,9 +157,9 @@ impl GameSession {
             scene_description: self.director.current_scene_description(&self.bundle),
             scene_npcs: self.current_scene_npcs(),
             is_ending: self.director.is_at_ending(&self.bundle),
-            knowledge,
+            knowledge: self.sorted_knowledge(),
             inventory,
-            flags,
+            flags: self.sorted_flags(),
             trust: self.state.trust.clone(),
             available_actions: self.available_actions(),
         }
@@ -269,27 +265,15 @@ impl GameSession {
         self.record_provenance_vertex(&action_desc, &node_after);
         self.complete_provenance_if_ended();
 
-        let mut knowledge: Vec<String> = self.state.knowledge.iter().cloned().collect();
-        knowledge.sort();
-        let mut active_flags: Vec<String> = self.state.flags.iter().cloned().collect();
-        active_flags.sort();
-
-        let narration_hints: Vec<String> = self
-            .bundle
-            .abilities
-            .values()
-            .filter_map(|a| a.narration_hint.clone())
-            .collect();
-
         let ctx = NarrationContext {
             scene_description: scene_before,
             scene_npcs: npcs_before,
             player_action: action_desc,
             outcome_text: outcome_text.clone(),
-            knowledge,
-            active_flags,
+            knowledge: self.sorted_knowledge(),
+            active_flags: self.sorted_flags(),
             turn: self.turn,
-            narration_hints,
+            narration_hints: self.narration_hints(),
             enrichment,
         };
 
@@ -314,18 +298,6 @@ impl GameSession {
     /// contextual prose without knowing the engine internals.
     #[must_use]
     pub fn narration_context(&self) -> NarrationContext {
-        let mut knowledge: Vec<String> = self.state.knowledge.iter().cloned().collect();
-        knowledge.sort();
-        let mut active_flags: Vec<String> = self.state.flags.iter().cloned().collect();
-        active_flags.sort();
-
-        let narration_hints: Vec<String> = self
-            .bundle
-            .abilities
-            .values()
-            .filter_map(|a| a.narration_hint.clone())
-            .collect();
-
         let last_action = self
             .history
             .last()
@@ -340,10 +312,10 @@ impl GameSession {
             scene_npcs: self.current_scene_npcs(),
             player_action: last_action,
             outcome_text: last_outcome,
-            knowledge,
-            active_flags,
+            knowledge: self.sorted_knowledge(),
+            active_flags: self.sorted_flags(),
             turn: self.turn,
-            narration_hints,
+            narration_hints: self.narration_hints(),
             enrichment: PrimalEnrichment::default(),
         }
     }
@@ -418,6 +390,26 @@ impl GameSession {
             .and_then(|node| self.bundle.scenes.get(&node.content_ref))
             .map(|scene| scene.npcs.clone())
             .unwrap_or_default()
+    }
+
+    fn sorted_knowledge(&self) -> Vec<String> {
+        let mut v: Vec<String> = self.state.knowledge.iter().cloned().collect();
+        v.sort();
+        v
+    }
+
+    fn sorted_flags(&self) -> Vec<String> {
+        let mut v: Vec<String> = self.state.flags.iter().cloned().collect();
+        v.sort();
+        v
+    }
+
+    fn narration_hints(&self) -> Vec<String> {
+        self.bundle
+            .abilities
+            .values()
+            .filter_map(|a| a.narration_hint.clone())
+            .collect()
     }
 }
 

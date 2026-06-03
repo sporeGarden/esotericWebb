@@ -59,11 +59,9 @@ pub(super) fn handle_tools_call(
         METHOD_SESSION_HISTORY => handle_session_history(session),
         METHOD_SESSION_NARRATE => handle_session_narrate(session),
         METHOD_SESSION_GRAPH => handle_session_graph(session),
-        _ => Err(JsonRpcError {
-            code: -32602,
-            message: format!("unknown tool: {name}"),
-            data: None,
-        }),
+        _ => Err(JsonRpcError::invalid_params(format!(
+            "unknown tool: {name}"
+        ))),
     }
 }
 

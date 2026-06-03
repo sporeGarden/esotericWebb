@@ -71,11 +71,10 @@ pub fn dispatch_with_session(request: &JsonRpcRequest, session: &SharedSession) 
         METHOD_SESSION_NARRATE => session::handle_session_narrate(session),
         METHOD_SESSION_GRAPH => session::handle_session_graph(session),
 
-        _ => Err(JsonRpcError {
-            code: super::envelope::ERROR_METHOD_NOT_FOUND,
-            message: format!("method not found: {}", request.method),
-            data: None,
-        }),
+        _ => Err(JsonRpcError::method_not_found(format!(
+            "method not found: {}",
+            request.method
+        ))),
     };
 
     match result {

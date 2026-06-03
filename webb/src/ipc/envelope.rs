@@ -18,6 +18,8 @@ pub const ERROR_PARSE: i64 = -32700;
 pub const ERROR_INVALID_PARAMS: i64 = -32602;
 /// Standard JSON-RPC error code for internal error.
 pub const ERROR_INTERNAL: i64 = -32603;
+/// Application-level error (session/runtime failures).
+pub const ERROR_APPLICATION: i64 = -32000;
 
 /// A JSON-RPC 2.0 request.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -58,6 +60,38 @@ pub struct JsonRpcError {
     /// Optional structured data.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub data: Option<serde_json::Value>,
+}
+
+impl JsonRpcError {
+    /// Application-level error (session / runtime failures).
+    #[must_use]
+    pub fn application(message: impl Into<String>) -> Self {
+        Self {
+            code: ERROR_APPLICATION,
+            message: message.into(),
+            data: None,
+        }
+    }
+
+    /// Invalid parameters error.
+    #[must_use]
+    pub fn invalid_params(message: impl Into<String>) -> Self {
+        Self {
+            code: ERROR_INVALID_PARAMS,
+            message: message.into(),
+            data: None,
+        }
+    }
+
+    /// Method not found error.
+    #[must_use]
+    pub fn method_not_found(message: impl Into<String>) -> Self {
+        Self {
+            code: ERROR_METHOD_NOT_FOUND,
+            message: message.into(),
+            data: None,
+        }
+    }
 }
 
 /// Semantic IPC error — classifies failures by *what happened* rather
@@ -187,7 +221,7 @@ impl From<JsonRpcError> for IpcError {
 }
 
 impl JsonRpcRequest {
-    /// Create a new request with the given method and params.
+    /// Create a new request with the given method and params (id defaults to 1).
     #[must_use]
     pub fn new(method: &str, params: Option<serde_json::Value>) -> Self {
         Self {
@@ -195,6 +229,17 @@ impl JsonRpcRequest {
             method: method.to_owned(),
             params,
             id: serde_json::Value::Number(serde_json::Number::from(1)),
+        }
+    }
+
+    /// Create a request with an explicit numeric id.
+    #[must_use]
+    pub fn with_id(method: &str, params: Option<serde_json::Value>, id: u64) -> Self {
+        Self {
+            jsonrpc: "2.0".to_owned(),
+            method: method.to_owned(),
+            params,
+            id: serde_json::Value::Number(serde_json::Number::from(id)),
         }
     }
 }
@@ -366,7 +411,7 @@ mod tests {
                 method: "foo.bar".to_owned(),
             },
             IpcError::ApplicationError {
-                code: -32603,
+                code: ERROR_INTERNAL,
                 message: "internal".to_owned(),
             },
             IpcError::Serialization {

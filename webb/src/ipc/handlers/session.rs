@@ -27,11 +27,8 @@ pub(super) fn handle_session_start(
 
     let bridge = guard.as_mut().and_then(GameSession::take_bridge);
 
-    let mut game = GameSession::with_bridge(content_path, bridge).map_err(|e| JsonRpcError {
-        code: -32000,
-        message: format!("session start failed: {e}"),
-        data: None,
-    })?;
+    let mut game = GameSession::with_bridge(content_path, bridge)
+        .map_err(|e| JsonRpcError::application(format!("session start failed: {e}")))?;
 
     game.initialize_provenance();
 
@@ -64,42 +61,27 @@ pub(super) fn handle_session_act(
     let kind = params
         .and_then(|p| p.get("kind"))
         .and_then(Value::as_str)
-        .ok_or_else(|| JsonRpcError {
-            code: -32602,
-            message: "missing 'kind' parameter".to_owned(),
-            data: None,
-        })?;
+        .ok_or_else(|| JsonRpcError::invalid_params("missing 'kind' parameter"))?;
 
     let id = params
         .and_then(|p| p.get("id"))
         .and_then(Value::as_str)
-        .ok_or_else(|| JsonRpcError {
-            code: -32602,
-            message: "missing 'id' parameter".to_owned(),
-            data: None,
-        })?;
+        .ok_or_else(|| JsonRpcError::invalid_params("missing 'id' parameter"))?;
 
     let (outcome_text, narration_ctx, state_after) = {
         let mut guard = session
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
-        let s = guard.as_mut().ok_or_else(|| JsonRpcError {
-            code: -32000,
-            message: "no active session".to_owned(),
-            data: None,
-        })?;
+        let s = guard
+            .as_mut()
+            .ok_or_else(|| JsonRpcError::application("no active session"))?;
 
-        let action_kind = ActionKind::parse(kind).map_err(|e| JsonRpcError {
-            code: -32602,
-            message: e.to_string(),
-            data: None,
-        })?;
+        let action_kind =
+            ActionKind::parse(kind).map_err(|e| JsonRpcError::invalid_params(e.to_string()))?;
 
-        let (outcome_text, narration_ctx) = s.act(action_kind, id).map_err(|e| JsonRpcError {
-            code: -32000,
-            message: e.to_string(),
-            data: None,
-        })?;
+        let (outcome_text, narration_ctx) = s
+            .act(action_kind, id)
+            .map_err(|e| JsonRpcError::application(e.to_string()))?;
 
         let state_after = s.snapshot();
         drop(guard);
@@ -142,11 +124,9 @@ where
         .unwrap_or_else(std::sync::PoisonError::into_inner);
     guard.as_ref().map_or_else(
         || {
-            Err(JsonRpcError {
-                code: -32000,
-                message: "no active session — call session.start first".to_owned(),
-                data: None,
-            })
+            Err(JsonRpcError::application(
+                "no active session — call session.start first",
+            ))
         },
         f,
     )

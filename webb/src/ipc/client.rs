@@ -166,12 +166,7 @@ impl PrimalClient {
         params: serde_json::Value,
     ) -> Result<JsonRpcResponse, IpcError> {
         let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
-        let request = JsonRpcRequest {
-            jsonrpc: "2.0".to_owned(),
-            method: method.to_owned(),
-            params: Some(params),
-            id: serde_json::Value::Number(serde_json::Number::from(id)),
-        };
+        let request = JsonRpcRequest::with_id(method, Some(params), id);
 
         let mut line = serde_json::to_string(&request).map_err(|e| IpcError::Serialization {
             detail: e.to_string(),
@@ -210,13 +205,14 @@ impl PrimalClient {
     ///
     /// Returns [`IpcError`] only on transport-level failures.
     pub fn health_liveness(&mut self) -> Result<bool, IpcError> {
-        let methods = [
-            super::METHOD_HEALTH_LIVENESS.to_owned(),
-            super::METHOD_HEALTH_CHECK.to_owned(),
-            "health".to_owned(),
-            format!("{}.health", self.primal),
+        let primal_health = format!("{}.health", self.primal);
+        let methods: &[&str] = &[
+            super::METHOD_HEALTH_LIVENESS,
+            super::METHOD_HEALTH_CHECK,
+            "health",
+            &primal_health,
         ];
-        for method in &methods {
+        for method in methods {
             match self.call(method, serde_json::Value::Null) {
                 Ok(resp) => {
                     if resp

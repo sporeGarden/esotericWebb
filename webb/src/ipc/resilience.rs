@@ -266,7 +266,7 @@ mod tests {
         )));
         assert!(is_recoverable(&IpcError::Timeout { ms: 5000 }));
         assert!(is_recoverable(&IpcError::ApplicationError {
-            code: -32603,
+            code: crate::ipc::envelope::ERROR_INTERNAL,
             message: "internal".to_owned(),
         }));
         assert!(!is_recoverable(&IpcError::MethodNotFound {
