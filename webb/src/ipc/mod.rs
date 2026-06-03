@@ -103,6 +103,11 @@ pub const METHOD_HEALTH_VERSION: &str = "health.version";
 /// Graceful shutdown acknowledgment.
 pub const METHOD_HEALTH_DRAIN: &str = "health.drain";
 
+// ── Mesh routing (Wave 73 — cross-gate access) ──────────────
+
+/// Register capabilities with the mesh router for cross-gate discovery.
+pub const METHOD_ROUTE_REGISTER: &str = "route.register";
+
 // ── Webb's own methods ─────────────────────────────────────
 
 /// Webb health method.

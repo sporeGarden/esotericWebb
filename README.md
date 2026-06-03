@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Version** | V11 |
+| **Version** | V12 |
 | **Tests** | 355 (336 unit + 18 E2E + 1 validation) |
 | **Coverage** | ~91% lines (`cargo llvm-cov`) |
 | **Rust files** | 43 (~13.2k LOC) |
@@ -15,12 +15,13 @@
 | **Capabilities exposed** | 24 (sourDough + lifecycle + narrative + session + MCP) |
 | **Primals consumed** | 7 domains (ai, viz, dag, lineage, compute, storage, provenance) |
 | **Composition adoption** | Wave 17 — `nest.store`, `nest.commit`, `primal.announce` |
-| **Wave compliance** | Wave 67 — vocabulary aligned, dead code removed, `#![forbid(unsafe_code)]` |
+| **Mesh registration** | Wave 73 — `route.register` wired (degraded until router live) |
+| **Wave compliance** | Wave 73 — zero debt, typed errors, mesh-ready |
 | **Degradation contracts** | Written per-domain in `docs/DEGRADATION_BEHAVIOR.md` |
 | **Trio tracking** | `primals_reached` in session state per `PROVENANCE_TRIO_INTEGRATION_GUIDE` |
 | **Local science** | flow, engagement, DDA (absorbed from ludoSpring patterns) |
 | **Ecosystem registry** | 490 methods (primalSpring v0.9.31) |
-| **Last validation** | 2026-06-01 (V11) |
+| **Last validation** | 2026-06-03 (V12) |
 
 **A [sporeGarden](https://github.com/sporeGarden) project — the primals as a composed CRPG.**
 

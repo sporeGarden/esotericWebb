@@ -327,6 +327,42 @@ Webb exercises primal composition -> discovers gap in a primal capability
 - **Handoff**: primalSpring / wateringHole for game-science primal design.
 - **Status**: open
 
+### GAP-034: Mesh route registration awaiting router availability
+
+- **Primal**: mesh routing (`route.register`)
+- **Spring (producer)**: biomeOS / primalSpring
+- **Severity**: low (wiring complete; awaiting live mesh router)
+- **Evidence**: Wave 73 audit requires cross-gate capability visibility via
+  `route.register`. Webb V12 wires the call into `announce_self()` with
+  graceful degradation. However, the mesh router is not yet deployed on
+  ironGate or any gate. The registration call silently degrades to
+  single-gate mode.
+- **Expected**: Mesh router accepts `route.register` and makes Webb's
+  interactive capabilities (narrative, session, MCP) discoverable from
+  eastGate, southGate, and other mesh participants.
+- **Workaround**: Single-gate operation via `primal.announce` to local
+  biomeOS. Cross-gate access requires manual socket configuration.
+- **Handoff**: biomeOS / primalSpring for mesh router deployment.
+- **Status**: wiring complete (V12), live validation pending
+
+### GAP-035: Content pipeline integration with sporePrint (post-S3)
+
+- **Primal**: sporePrint (sovereign content delivery)
+- **Spring (producer)**: sporePrint / primalSpring
+- **Severity**: low (current GitHub Pages workflow functional)
+- **Evidence**: Wave 73 audit identifies that post-S3 cutover, esotericWebb
+  content should flow through the sporePrint sovereign pipeline instead of
+  GitHub Pages. Webb already has `.github/workflows/notify-sporeprint.yml`
+  as a bridge mechanism.
+- **Expected**: Content bundles (YAML worlds, scenes, NPCs, abilities)
+  published via sporePrint composition deploy instead of GitHub Pages.
+  `sporeprint_composition.toml` routes content artifacts through sovereign
+  infrastructure.
+- **Workaround**: GitHub Actions notification workflow triggers sporePrint.
+  Content served via GitHub Pages until S3 cutover completes.
+- **Handoff**: sporePrint / primalSpring for pipeline readiness.
+- **Status**: open (blocked on S3 cutover)
+
 ### GAP-024: Composition dispatch not yet exercised E2E against live biomeOS
 
 - **Primal**: biomeOS (composition orchestration layer)

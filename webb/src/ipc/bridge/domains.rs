@@ -444,7 +444,7 @@ impl PrimalBridge {
             "socket": socket,
             "capabilities": ["narrative", "session", "mcp"],
             "methods": methods,
-            "signal_tiers": ["nest", "meta"],
+            "composition_tiers": ["nest", "meta"],
             "version": env!("CARGO_PKG_VERSION"),
             "cost_hints": {
                 "session.act": "low",
@@ -465,6 +465,32 @@ impl PrimalBridge {
             }
             Ok(_) | Err(_) => {
                 tracing::debug!("primal.announce not accepted — operating without registration");
+            }
+        }
+
+        self.register_mesh_route(socket, methods);
+    }
+
+    /// Register with mesh router for cross-gate capability discovery (Wave 73).
+    ///
+    /// Enables other gates in the mesh to discover and invoke esotericWebb's
+    /// interactive product capabilities. Gracefully degrades if the mesh router
+    /// is unavailable (standalone/single-gate operation continues).
+    fn register_mesh_route(&mut self, socket: &str, methods: &[&str]) {
+        let params = serde_json::json!({
+            "primal": crate::niche::NICHE_NAME,
+            "gate": "ironGate",
+            "socket": socket,
+            "capabilities": crate::niche::CAPABILITIES,
+            "methods": methods,
+            "version": env!("CARGO_PKG_VERSION"),
+        });
+        match self.neural_api_call("routing", crate::ipc::METHOD_ROUTE_REGISTER, params) {
+            Ok(resp) if resp.error.is_none() => {
+                tracing::info!("route.register accepted — mesh-visible");
+            }
+            Ok(_) | Err(_) => {
+                tracing::debug!("route.register unavailable — single-gate mode");
             }
         }
     }
