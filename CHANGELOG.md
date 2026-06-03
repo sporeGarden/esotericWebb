@@ -2,6 +2,54 @@
 
 All notable changes to Esoteric Webb are documented here.
 
+## V12 — Wave 72-74: Zero debt, typed constructors, mesh readiness (Jun 3, 2026)
+
+### Method constant consolidation
+
+- **All `METHOD_*` constants** centralized in `ipc/mod.rs` as single source of truth.
+- **String literal dispatch eliminated** — `WEBB_METHODS` array replaced with
+  `niche::CAPABILITIES`, MCP and client dispatch uses constants exclusively.
+- **`METHOD_ROUTE_REGISTER`** added for cross-gate mesh registration (Wave 73).
+- **`METHOD_SESSION_*` constants** moved from handlers to `ipc/mod.rs`.
+
+### Typed error constructors
+
+- **`JsonRpcError::application/invalid_params/method_not_found`** constructors
+  eliminate verbose struct-literal boilerplate across all handlers.
+- **`ERROR_APPLICATION`** constant added — all raw `-32000`/`-32602` literals
+  replaced with named constants from `envelope.rs`.
+- **`JsonRpcRequest::with_id`** constructor — IPC client no longer manually
+  builds request envelopes.
+
+### Idiomatic Rust evolution
+
+- **DRY session helpers** — `sorted_knowledge()`, `sorted_flags()`,
+  `narration_hints()` extracted from 3 duplicate sites.
+- **Unnecessary String allocations eliminated** — `health_liveness()` fallback
+  chain uses `&[&str]` instead of `[String; 4]`, `contains(&x.to_owned())`
+  replaced with `iter().any(|n| n == x)`.
+
+### Mesh registration (Wave 73)
+
+- **`route.register`** wired into `announce_self()` — gracefully degrades
+  when mesh router unavailable (single-gate mode continues).
+- **Vocabulary fix**: `signal_tiers` → `composition_tiers` in announce payload.
+- **GAP-034** (mesh route) and **GAP-035** (sporePrint pipeline) documented.
+
+### Test coverage expansion
+
+- **378 tests** (was 355): +9 constructor tests, +9 `WebbError` variant tests,
+  +1 error constant verification, +6 session helper/snapshot tests.
+
+### Metrics
+
+| Metric | V11 | V12 |
+|--------|-----|-----|
+| Tests | 355 | 378 |
+| Hardcoded error codes | 15 | 0 |
+| Hardcoded method strings | 8 | 0 |
+| Wave compliance | 67 | 74 |
+
 ## V11 — Wave 67 Polish: dead code removal, vocabulary alignment, safety (Jun 1, 2026)
 
 ### Dead code removal

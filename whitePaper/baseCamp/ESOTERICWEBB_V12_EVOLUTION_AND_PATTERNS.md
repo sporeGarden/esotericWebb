@@ -1,10 +1,10 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
-# Esoteric Webb V11 — Evolution Patterns and Ecosystem Learnings
+# Esoteric Webb V12 — Evolution Patterns and Ecosystem Learnings
 
-**Date:** Jun 1, 2026 (updated from May 17, 2026)
+**Date:** Jun 3, 2026 (updated from Jun 1, 2026)
 **Author:** ecoPrimals / sporeGarden
-**Foundation:** V1–V4 bootstrap; V5 deep debt; V5.1 audit; V6 ludoSpring decomposition; V7 deploy alignment; V8 Wave 17 composition adoption + deep debt + smart refactoring; V9 Wave 20-21 canonical schema absorption + stability tiers + degradation contracts + trio tracking; V10 Wave 46 env_keys + deploy metadata + announce hints; V11 Wave 67 dead code removal + vocabulary alignment + safety escalation
-**Coverage:** ~91% lines (355 tests)
+**Foundation:** V1–V4 bootstrap; V5 deep debt; V5.1 audit; V6 ludoSpring decomposition; V7 deploy alignment; V8 Wave 17 composition adoption + deep debt + smart refactoring; V9 Wave 20-21 canonical schema absorption + stability tiers + degradation contracts + trio tracking; V10 Wave 46 env_keys + deploy metadata + announce hints; V11 Wave 67 dead code removal + vocabulary alignment + safety escalation; V12 Wave 72-74 zero debt + typed constructors + mesh readiness
+**Coverage:** ~91% lines (378 tests)
 
 ---
 
@@ -566,19 +566,69 @@ primals or their dependencies), `forbid` communicates architectural intent.
 
 ---
 
-## Architecture Summary (V11)
+## Pattern 19: Typed Error Constructors Reduce Boilerplate (V12)
+
+**Problem.** JSON-RPC error responses require constructing `JsonRpcError { code, message, data: None }` at every error site — verbose, error-prone (wrong code), and obscures intent.
+
+**Solution.** Named constructors on the error type: `JsonRpcError::application(msg)`,
+`::invalid_params(msg)`, `::method_not_found(msg)`. These:
+- Enforce correct error codes (constants, not raw numbers)
+- Accept `impl Into<String>` for zero-cost &str or formatted String
+- Eliminate `data: None` boilerplate
+- Make handler code express intent: "this is an invalid param" vs "code -32602"
+
+**Ecosystem pattern:** Any primal that exposes JSON-RPC should adopt this pattern.
+The constructors sit on the shared error type and enforce the JSON-RPC spec.
+
+---
+
+## Pattern 20: Mesh Registration with Graceful Degradation (V12)
+
+**Problem.** Single-gate primals are invisible to the mesh. Cross-gate access
+requires manual socket configuration.
+
+**Solution.** Wire `route.register` into the startup announce path. If the mesh
+router is unavailable, silently degrade to single-gate mode. The call costs
+nothing when degraded (early return on no neural-api connection) and activates
+automatically when the mesh router becomes available.
+
+**Key insight:** Register *alongside* `primal.announce`, not instead of it.
+Local registration (announce) and mesh registration (route.register) serve
+different discovery tiers. Both degrade independently.
+
+---
+
+## Pattern 21: DRY Helpers as Session Internals (V12)
+
+**Problem.** `snapshot()`, `act()`, and `narration_context()` all built
+sorted knowledge/flags vectors and narration hints identically — three
+sites with the same 5-line pattern.
+
+**Solution.** Extract `sorted_knowledge()`, `sorted_flags()`, `narration_hints()`
+as private session methods. Benefits:
+- Single source of truth for sort order
+- Easier to evolve (e.g., add caching later)
+- Act and narration_context become shorter and more focused
+
+**When to extract:** When the same multi-line expression appears in 3+ sites
+within one impl block, extract. Single-expression patterns (one-liners) are
+fine to repeat.
+
+---
+
+## Architecture Summary (V12)
 
 ```
-esotericWebb V11
-├── 355 tests (clippy -D warnings, #![forbid(unsafe_code)])
+esotericWebb V12
+├── 378 tests (clippy -D warnings, #![forbid(unsafe_code)])
 ├── 43 Rust files (~13.2k LOC, zero C deps)
 ├── 24 JSON-RPC capabilities (sourDough + lifecycle + narrative + session + MCP)
 ├── 7 primal domains consumed (composition-first with graceful degradation)
-├── 490 ecosystem methods tracked (primalSpring v0.9.31, Wave 67)
-├── Wave compliance: 67 (vocabulary, safety, dead code)
-├── 12 open evolution gaps (consumer pressure on ecosystem)
-├── ipc/bridge/   (all domains, retry, circuit breaker, composition dispatch)
-├── ipc/handlers/ (sourDough + lifecycle + capability registry)
+├── 490 ecosystem methods tracked (primalSpring v0.9.31, Wave 74)
+├── Wave compliance: 74 (zero debt, typed errors, mesh-ready)
+├── 14 open evolution gaps (consumer pressure on ecosystem)
+├── ipc/bridge/   (all domains, retry, circuit breaker, composition dispatch, mesh)
+├── ipc/handlers/ (sourDough + lifecycle + capability registry, typed constructors)
 ├── science/      (absorbed pure-math: flow, engagement, DDA)
 ├── env_keys.rs   (zero bare env strings)
 ├── niche.rs      (24 capabilities, cross-validated against registry TOML)
