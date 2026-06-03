@@ -459,7 +459,7 @@ impl PrimalBridge {
                 "webb.scene.current": "< 5ms",
             },
         });
-        match self.neural_api_call("lifecycle", "primal.announce", params) {
+        match self.neural_api_call("lifecycle", crate::ipc::METHOD_PRIMAL_ANNOUNCE, params) {
             Ok(resp) if resp.error.is_none() => {
                 tracing::info!("primal.announce accepted by biomeOS");
             }

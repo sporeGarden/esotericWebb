@@ -211,8 +211,8 @@ impl PrimalClient {
     /// Returns [`IpcError`] only on transport-level failures.
     pub fn health_liveness(&mut self) -> Result<bool, IpcError> {
         let methods = [
-            "health.liveness".to_owned(),
-            "health.check".to_owned(),
+            super::METHOD_HEALTH_LIVENESS.to_owned(),
+            super::METHOD_HEALTH_CHECK.to_owned(),
             "health".to_owned(),
             format!("{}.health", self.primal),
         ];
@@ -246,7 +246,7 @@ impl PrimalClient {
     /// Returns [`IpcError`] if all method names fail.
     pub fn capabilities(&mut self) -> Result<serde_json::Value, IpcError> {
         let methods = [
-            "capabilities.list",
+            super::METHOD_CAPABILITIES_LIST,
             "capability.list",
             "primal.capabilities",
         ];

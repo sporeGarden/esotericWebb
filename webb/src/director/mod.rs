@@ -207,7 +207,7 @@ impl GameDirector {
             .narrative
             .get(&self.current_node)
             .and_then(|node| bundle.scenes.get(&node.content_ref))
-            .is_some_and(|scene| scene.npcs.contains(&npc_id.to_owned()));
+            .is_some_and(|scene| scene.npcs.iter().any(|n| n == npc_id));
 
         if !in_scene {
             return if bundle.npcs.contains_key(npc_id) {

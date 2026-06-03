@@ -215,7 +215,7 @@ impl GameSession {
         });
         match bridge.nest_store(&vertex) {
             Ok(true) => {
-                if !self.state.primals_reached.contains(&"dag".to_owned()) {
+                if !self.state.primals_reached.iter().any(|p| p == "dag") {
                     self.state.primals_reached.push("dag".to_owned());
                 }
             }

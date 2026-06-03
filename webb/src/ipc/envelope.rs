@@ -200,6 +200,28 @@ impl JsonRpcRequest {
 }
 
 impl JsonRpcResponse {
+    /// Construct a success response.
+    #[must_use]
+    pub fn success(result: serde_json::Value, id: serde_json::Value) -> Self {
+        Self {
+            jsonrpc: "2.0".to_owned(),
+            result: Some(result),
+            error: None,
+            id,
+        }
+    }
+
+    /// Construct an error response.
+    #[must_use]
+    pub fn error(err: JsonRpcError, id: serde_json::Value) -> Self {
+        Self {
+            jsonrpc: "2.0".to_owned(),
+            result: None,
+            error: Some(err),
+            id,
+        }
+    }
+
     /// Whether this response indicates success (no error field).
     #[must_use]
     pub const fn is_success(&self) -> bool {

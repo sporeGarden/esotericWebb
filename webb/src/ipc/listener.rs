@@ -133,16 +133,14 @@ fn handle_tcp_connection(stream: &std::net::TcpStream, session: &SharedSession) 
 
         let response = match serde_json::from_str::<JsonRpcRequest>(&line) {
             Ok(req) => dispatch_with_session(&req, session),
-            Err(e) => super::envelope::JsonRpcResponse {
-                jsonrpc: "2.0".to_owned(),
-                result: None,
-                error: Some(super::envelope::JsonRpcError {
-                    code: -32700,
+            Err(e) => super::envelope::JsonRpcResponse::error(
+                super::envelope::JsonRpcError {
+                    code: super::envelope::ERROR_PARSE,
                     message: format!("parse error: {e}"),
                     data: None,
-                }),
-                id: serde_json::Value::Null,
-            },
+                },
+                serde_json::Value::Null,
+            ),
         };
 
         let Ok(resp_json) = serde_json::to_string(&response) else {
@@ -166,16 +164,14 @@ fn handle_connection(stream: &std::os::unix::net::UnixStream, session: &SharedSe
 
         let response = match serde_json::from_str::<JsonRpcRequest>(&line) {
             Ok(req) => dispatch_with_session(&req, session),
-            Err(e) => super::envelope::JsonRpcResponse {
-                jsonrpc: "2.0".to_owned(),
-                result: None,
-                error: Some(super::envelope::JsonRpcError {
-                    code: -32700,
+            Err(e) => super::envelope::JsonRpcResponse::error(
+                super::envelope::JsonRpcError {
+                    code: super::envelope::ERROR_PARSE,
                     message: format!("parse error: {e}"),
                     data: None,
-                }),
-                id: serde_json::Value::Null,
-            },
+                },
+                serde_json::Value::Null,
+            ),
         };
 
         let Ok(resp_json) = serde_json::to_string(&response) else {

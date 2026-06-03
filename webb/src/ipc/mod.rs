@@ -131,3 +131,20 @@ pub const METHOD_HEALTH_CHECK: &str = "health.check";
 pub const METHOD_CAPABILITIES_LIST: &str = "capabilities.list";
 /// sourDough identity.get.
 pub const METHOD_IDENTITY_GET: &str = "identity.get";
+
+// ── Session methods ─────────────────────────────────────
+
+/// Start a new game session.
+pub const METHOD_SESSION_START: &str = "session.start";
+/// Get full game state.
+pub const METHOD_SESSION_STATE: &str = "session.state";
+/// List available actions.
+pub const METHOD_SESSION_ACTIONS: &str = "session.actions";
+/// Perform an action.
+pub const METHOD_SESSION_ACT: &str = "session.act";
+/// Get session history.
+pub const METHOD_SESSION_HISTORY: &str = "session.history";
+/// Get narration context for AI-as-generator.
+pub const METHOD_SESSION_NARRATE: &str = "session.narrate";
+/// Get DOT graph with live session overlay.
+pub const METHOD_SESSION_GRAPH: &str = "session.graph";

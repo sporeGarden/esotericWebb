@@ -14,8 +14,9 @@ use super::{
     METHOD_CAPABILITIES_LIST, METHOD_CONTENT_LIST, METHOD_HEALTH, METHOD_HEALTH_CHECK,
     METHOD_HEALTH_DRAIN, METHOD_HEALTH_LIVENESS, METHOD_HEALTH_READINESS, METHOD_HEALTH_VERSION,
     METHOD_IDENTITY_GET, METHOD_LIVENESS, METHOD_NARRATIVE_STATUS, METHOD_PRIMAL_ANNOUNCE,
-    METHOD_PRIMAL_INFO, METHOD_READINESS, METHOD_SCENE_CURRENT, METHOD_TOOLS_CALL,
-    METHOD_TOOLS_LIST,
+    METHOD_PRIMAL_INFO, METHOD_READINESS, METHOD_SCENE_CURRENT, METHOD_SESSION_ACT,
+    METHOD_SESSION_ACTIONS, METHOD_SESSION_GRAPH, METHOD_SESSION_HISTORY, METHOD_SESSION_NARRATE,
+    METHOD_SESSION_START, METHOD_SESSION_STATE, METHOD_TOOLS_CALL, METHOD_TOOLS_LIST,
 };
 use crate::session::GameSession;
 
@@ -32,21 +33,6 @@ pub type SharedSession = Arc<Mutex<Option<GameSession>>>;
 pub fn new_shared_session() -> SharedSession {
     Arc::new(Mutex::new(None))
 }
-
-/// Session method names.
-pub const METHOD_SESSION_START: &str = "session.start";
-/// Get full game state.
-pub const METHOD_SESSION_STATE: &str = "session.state";
-/// List available actions.
-pub const METHOD_SESSION_ACTIONS: &str = "session.actions";
-/// Perform an action.
-pub const METHOD_SESSION_ACT: &str = "session.act";
-/// Get session history.
-pub const METHOD_SESSION_HISTORY: &str = "session.history";
-/// Get narration context for AI-as-generator.
-pub const METHOD_SESSION_NARRATE: &str = "session.narrate";
-/// Get DOT graph with live session overlay.
-pub const METHOD_SESSION_GRAPH: &str = "session.graph";
 
 /// Dispatch a JSON-RPC request to the appropriate handler.
 #[must_use]
@@ -93,18 +79,8 @@ pub fn dispatch_with_session(request: &JsonRpcRequest, session: &SharedSession) 
     };
 
     match result {
-        Ok(value) => JsonRpcResponse {
-            jsonrpc: "2.0".to_owned(),
-            result: Some(value),
-            error: None,
-            id: request.id.clone(),
-        },
-        Err(err) => JsonRpcResponse {
-            jsonrpc: "2.0".to_owned(),
-            result: None,
-            error: Some(err),
-            id: request.id.clone(),
-        },
+        Ok(value) => JsonRpcResponse::success(value, request.id.clone()),
+        Err(err) => JsonRpcResponse::error(err, request.id.clone()),
     }
 }
 

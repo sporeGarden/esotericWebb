@@ -122,30 +122,10 @@ fn announce_to_biomeos(
     bridge: &mut esoteric_webb::ipc::bridge::PrimalBridge,
     sock: &std::path::Path,
 ) {
-    const WEBB_METHODS: &[&str] = &[
-        "health.liveness",
-        "health.readiness",
-        "health.version",
-        "health.drain",
-        "identity.get",
-        "capabilities.list",
-        "primal.announce",
-        "primal.info",
-        "webb.health",
-        "webb.scene.current",
-        "webb.narrative.status",
-        "webb.content.list",
-        "session.start",
-        "session.state",
-        "session.actions",
-        "session.act",
-        "session.history",
-        "session.narrate",
-        "session.graph",
-        "tools.list",
-        "tools.call",
-    ];
-    bridge.announce_self(&sock.display().to_string(), WEBB_METHODS);
+    bridge.announce_self(
+        &sock.display().to_string(),
+        esoteric_webb::niche::CAPABILITIES,
+    );
 }
 
 /// Validate a content directory for correctness.

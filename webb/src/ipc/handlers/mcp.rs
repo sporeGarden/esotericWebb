@@ -8,6 +8,12 @@
 use serde_json::Value;
 
 use crate::ipc::envelope::JsonRpcError;
+use crate::ipc::{
+    METHOD_CAPABILITIES_LIST, METHOD_CONTENT_LIST, METHOD_HEALTH, METHOD_HEALTH_CHECK,
+    METHOD_HEALTH_LIVENESS, METHOD_HEALTH_READINESS, METHOD_IDENTITY_GET, METHOD_NARRATIVE_STATUS,
+    METHOD_SCENE_CURRENT, METHOD_SESSION_ACT, METHOD_SESSION_ACTIONS, METHOD_SESSION_GRAPH,
+    METHOD_SESSION_HISTORY, METHOD_SESSION_NARRATE, METHOD_SESSION_START, METHOD_SESSION_STATE,
+};
 
 use super::SharedSession;
 use super::lifecycle::{
@@ -39,20 +45,20 @@ pub(super) fn handle_tools_call(
     let arguments = params.and_then(|p| p.get("arguments"));
 
     match name {
-        "health.liveness" | "webb.health" | "health.check" => Ok(handle_health()),
-        "health.readiness" => Ok(handle_readiness(session)),
-        "identity.get" => Ok(handle_identity()),
-        "capabilities.list" => Ok(handle_capabilities_list()),
-        "webb.scene.current" => Ok(handle_scene_current(session)),
-        "webb.narrative.status" => Ok(handle_narrative_status(session)),
-        "webb.content.list" => Ok(handle_content_list(session)),
-        "session.start" => handle_session_start(arguments, session),
-        "session.state" => handle_session_state(session),
-        "session.actions" => handle_session_actions(session),
-        "session.act" => handle_session_act(arguments, session),
-        "session.history" => handle_session_history(session),
-        "session.narrate" => handle_session_narrate(session),
-        "session.graph" => handle_session_graph(session),
+        METHOD_HEALTH_LIVENESS | METHOD_HEALTH | METHOD_HEALTH_CHECK => Ok(handle_health()),
+        METHOD_HEALTH_READINESS => Ok(handle_readiness(session)),
+        METHOD_IDENTITY_GET => Ok(handle_identity()),
+        METHOD_CAPABILITIES_LIST => Ok(handle_capabilities_list()),
+        METHOD_SCENE_CURRENT => Ok(handle_scene_current(session)),
+        METHOD_NARRATIVE_STATUS => Ok(handle_narrative_status(session)),
+        METHOD_CONTENT_LIST => Ok(handle_content_list(session)),
+        METHOD_SESSION_START => handle_session_start(arguments, session),
+        METHOD_SESSION_STATE => handle_session_state(session),
+        METHOD_SESSION_ACTIONS => handle_session_actions(session),
+        METHOD_SESSION_ACT => handle_session_act(arguments, session),
+        METHOD_SESSION_HISTORY => handle_session_history(session),
+        METHOD_SESSION_NARRATE => handle_session_narrate(session),
+        METHOD_SESSION_GRAPH => handle_session_graph(session),
         _ => Err(JsonRpcError {
             code: -32602,
             message: format!("unknown tool: {name}"),
