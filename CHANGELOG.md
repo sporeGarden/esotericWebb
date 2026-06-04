@@ -33,16 +33,22 @@ All notable changes to Esoteric Webb are documented here.
 - **Session module**: +6 metrics tests (initial state, navigation, backtrack,
   interactions, actions-per-node, serialization).
 - **Niche module**: +1 test (`gate_id` default).
-- **Total**: 378 → 410 tests (all passing, clippy clean, fmt clean).
+- **Autoplay module**: 5 → 15 tests. New: heuristic priority system, stale counter,
+  config/result defaults, ability-over-talk preference, blocked abilities, exit rotation.
+- **Narrative module**: 6 → 14 tests. New: node_count, get (existing/nonexistent),
+  valid_exits for unknown, bfs_depths for empty, edge_count, start/endings edge cases.
+- **Total**: 378 → 427 tests (all passing, clippy clean, fmt clean).
 
 ### Metrics
 
 | Metric | V12 | V13 |
 |--------|-----|-----|
-| Tests | 378 | 410 |
+| Tests | 378 | 427 |
 | Capabilities | 24 | 25 |
 | Director tests | 7 | 19 |
 | Visualization tests | 7 | 20 |
+| Autoplay tests | 5 | 15 |
+| Narrative tests | 6 | 14 |
 | Wave compliance | 73 | 75 |
 | Mesh propagation | degraded | push-ready |
 

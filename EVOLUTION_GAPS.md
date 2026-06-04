@@ -331,19 +331,19 @@ Webb exercises primal composition -> discovers gap in a primal capability
 
 - **Primal**: mesh routing (`route.register`)
 - **Spring (producer)**: biomeOS / primalSpring
-- **Severity**: low (wiring complete; awaiting live mesh router)
-- **Evidence**: Wave 73 audit requires cross-gate capability visibility via
-  `route.register`. Webb V12 wires the call into `announce_self()` with
-  graceful degradation. However, the mesh router is not yet deployed on
-  ironGate or any gate. The registration call silently degrades to
-  single-gate mode.
-- **Expected**: Mesh router accepts `route.register` and makes Webb's
-  interactive capabilities (narrative, session, MCP) discoverable from
-  eastGate, southGate, and other mesh participants.
+- **Severity**: low (push-model ready; awaiting live mesh router)
+- **Evidence**: Wave 73 required cross-gate capability visibility via
+  `route.register`. Webb V13 sends the full registration payload including
+  stability tiers (stable/evolving method classification) and `"propagation":
+  "push"` signal for Songbird w75 compatibility. Gate identity is
+  environment-overridable via `BIOMEOS_GATE_ID`. The call gracefully degrades
+  to single-gate mode when the mesh router is unavailable.
+- **Expected**: Mesh router accepts `route.register` and push-propagates
+  Webb's 25 capabilities (23 stable + 2 evolving) to all connected gates.
 - **Workaround**: Single-gate operation via `primal.announce` to local
   biomeOS. Cross-gate access requires manual socket configuration.
 - **Handoff**: biomeOS / primalSpring for mesh router deployment.
-- **Status**: wiring complete (V12), live validation pending
+- **Status**: push-model ready (V13), live validation pending
 
 ### GAP-035: Content pipeline integration with sporePrint (post-S3)
 
