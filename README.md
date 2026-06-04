@@ -2,26 +2,26 @@
 
 | | |
 |---|---|
-| **Version** | V12 |
-| **Tests** | 378 (359 unit + 18 E2E + 1 validation) |
-| **Coverage** | ~91% lines (`cargo llvm-cov`) |
-| **Rust files** | 43 (~13.2k LOC) |
+| **Version** | V13 |
+| **Tests** | 410 (391 unit + 18 E2E + 1 validation) |
+| **Coverage** | ~92% lines (`cargo llvm-cov`) |
+| **Rust files** | 43 (~13.6k LOC) |
 | **Experiments** | 5 (exp001–exp005) |
 | **MSRV** | 1.87 (edition 2024) |
 | **License** | AGPL-3.0 + ORC + CC-BY-SA 4.0 |
 | **Unsafe** | `#![forbid(unsafe_code)]` (crate-level) |
 | **C deps** | Zero (ecoBin compliant) |
 | **Bridge methods** | 22 (all domains, all degrading, composition-first) |
-| **Capabilities exposed** | 24 (sourDough + lifecycle + narrative + session + MCP) |
+| **Capabilities exposed** | 25 (sourDough + lifecycle + narrative + session + MCP) |
 | **Primals consumed** | 7 domains (ai, viz, dag, lineage, compute, storage, provenance) |
 | **Composition adoption** | Wave 17 — `nest.store`, `nest.commit`, `primal.announce` |
-| **Mesh registration** | Wave 73 — `route.register` wired (degraded until router live) |
-| **Wave compliance** | Wave 73 — zero debt, typed errors, mesh-ready |
+| **Mesh registration** | Wave 75 — `route.register` with stability tiers + push propagation |
+| **Wave compliance** | Wave 75 — zero debt, typed errors, mesh-visible, session metrics |
 | **Degradation contracts** | Written per-domain in `docs/DEGRADATION_BEHAVIOR.md` |
 | **Trio tracking** | `primals_reached` in session state per `PROVENANCE_TRIO_INTEGRATION_GUIDE` |
-| **Local science** | flow, engagement, DDA (absorbed from ludoSpring patterns) |
+| **Local science** | flow, engagement, DDA, session metrics (absorbed from ludoSpring patterns) |
 | **Ecosystem registry** | 490 methods (primalSpring v0.9.31) |
-| **Last validation** | 2026-06-03 (V12) |
+| **Last validation** | 2026-06-03 (V13) |
 
 **A [sporeGarden](https://github.com/sporeGarden) project — the primals as a composed CRPG.**
 
@@ -124,9 +124,9 @@ webb/              Main Rust crate (narrative engine + IPC + director + bridge)
   src/director/    Game director (outcome evaluation, DDA integration)
   src/content/     YAML content loader, ability/NPC/scene models (tests in tests.rs)
   src/session/     Game session, enrichment pipeline, types (tests in tests.rs)
-  src/niche.rs     Self-knowledge (identity, 24 capabilities, socket resolution)
+  src/niche.rs     Self-knowledge (identity, 25 capabilities, socket resolution)
   src/state/       World state (knowledge, trust, inventory, flags, conditions)
-  capability_registry.toml   All 24 exposed JSON-RPC methods
+  capability_registry.toml   All 25 exposed JSON-RPC methods
 content/           YAML game content (authored by creative teams)
 experiments/       5 standalone validation crates (exp001–exp005)
 graphs/            biomeOS deploy graphs (8 TOML compositions, secure_by_default)

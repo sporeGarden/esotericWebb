@@ -276,6 +276,8 @@ const fn trust_demeanor(trust: i32) -> &'static str {
 
 #[cfg(test)]
 mod tests {
+    #![expect(clippy::unwrap_used, reason = "test code")]
+
     use super::*;
     use crate::content::{AbilityDef, ContentBundle, NpcDef, SceneContent, WorldMeta};
     use crate::narrative::effect::StateEffect;
@@ -536,5 +538,218 @@ mod tests {
             &content,
         );
         assert!(d.is_at_ending(&content));
+    }
+
+    #[test]
+    fn invalid_exit_returns_no_effect() {
+        let content = test_content();
+        let mut d = GameDirector::new(&content).unwrap_or_else(|_| unreachable!());
+        let mut state = WorldState::new();
+        let outcome = d.process(
+            &PlayerInput::ChooseExit("nonexistent_room".to_owned()),
+            &mut state,
+            &content,
+        );
+        assert!(matches!(outcome, DirectorOutcome::NoEffect(ref s) if s.contains("Cannot go to")));
+        assert_eq!(d.current_node_id(), "start");
+    }
+
+    #[test]
+    fn talk_to_npc_in_scene() {
+        let content = test_content();
+        let mut d = GameDirector::new(&content).unwrap_or_else(|_| unreachable!());
+        let mut state = WorldState::new();
+        d.process(
+            &PlayerInput::ChooseExit("parlor".to_owned()),
+            &mut state,
+            &content,
+        );
+        let outcome = d.process(&PlayerInput::Talk("maren".to_owned()), &mut state, &content);
+        assert!(matches!(outcome, DirectorOutcome::Narration(ref s) if s.contains("Maren")));
+        assert_eq!(state.trust.get("maren").copied(), Some(1));
+    }
+
+    #[test]
+    fn talk_to_npc_not_in_scene() {
+        let content = test_content();
+        let mut d = GameDirector::new(&content).unwrap_or_else(|_| unreachable!());
+        let mut state = WorldState::new();
+        let outcome = d.process(&PlayerInput::Talk("maren".to_owned()), &mut state, &content);
+        assert!(
+            matches!(outcome, DirectorOutcome::NoEffect(ref s) if s.contains("not in this scene"))
+        );
+    }
+
+    #[test]
+    fn talk_to_unknown_npc() {
+        let content = test_content();
+        let mut d = GameDirector::new(&content).unwrap_or_else(|_| unreachable!());
+        let mut state = WorldState::new();
+        let outcome = d.process(&PlayerInput::Talk("ghost".to_owned()), &mut state, &content);
+        assert!(matches!(outcome, DirectorOutcome::NoEffect(ref s) if s.contains("no one called")));
+    }
+
+    #[test]
+    fn trust_increments_on_repeated_talk() {
+        let content = test_content();
+        let mut d = GameDirector::new(&content).unwrap_or_else(|_| unreachable!());
+        let mut state = WorldState::new();
+        d.process(
+            &PlayerInput::ChooseExit("parlor".to_owned()),
+            &mut state,
+            &content,
+        );
+        d.process(&PlayerInput::Talk("maren".to_owned()), &mut state, &content);
+        d.process(&PlayerInput::Talk("maren".to_owned()), &mut state, &content);
+        d.process(&PlayerInput::Talk("maren".to_owned()), &mut state, &content);
+        assert_eq!(state.trust.get("maren").copied(), Some(3));
+    }
+
+    #[test]
+    fn trust_demeanor_covers_all_ranges() {
+        assert_eq!(trust_demeanor(-5), "hostility");
+        assert_eq!(trust_demeanor(0), "hostility");
+        assert_eq!(trust_demeanor(1), "wariness");
+        assert_eq!(trust_demeanor(2), "cautious interest");
+        assert_eq!(trust_demeanor(3), "growing warmth");
+        assert_eq!(trust_demeanor(4), "openness");
+        assert_eq!(trust_demeanor(5), "openness");
+        assert_eq!(trust_demeanor(6), "deep trust");
+        assert_eq!(trust_demeanor(100), "deep trust");
+    }
+
+    fn content_with_gated_ability() -> ContentBundle {
+        let mut content = test_content();
+        content.abilities.insert(
+            "shadow_walk".to_owned(),
+            AbilityDef {
+                id: "shadow_walk".to_owned(),
+                name: "Shadow Walk".to_owned(),
+                description: "Slip between planes.".to_owned(),
+                preconditions: vec![StatePredicate::HasKnowledge("shadow_lore".to_owned())],
+                effects: vec![StateEffect::SetFlag("shadow_walked".to_owned())],
+                narration_hint: Some("Shadows engulf you.".to_owned()),
+            },
+        );
+        content
+    }
+
+    #[test]
+    fn ability_blocked_by_precondition() {
+        let content = content_with_gated_ability();
+        let mut d = GameDirector::new(&content).unwrap_or_else(|_| unreachable!());
+        let mut state = WorldState::new();
+        let outcome = d.process(
+            &PlayerInput::UseAbility("shadow_walk".to_owned()),
+            &mut state,
+            &content,
+        );
+        assert!(matches!(outcome, DirectorOutcome::NoEffect(ref s) if s.contains("Cannot use")));
+        assert!(!state.flags.contains("shadow_walked"));
+    }
+
+    #[test]
+    fn ability_succeeds_when_precondition_met() {
+        let content = content_with_gated_ability();
+        let mut d = GameDirector::new(&content).unwrap_or_else(|_| unreachable!());
+        let mut state = WorldState::new();
+        state.knowledge.insert("shadow_lore".to_owned());
+        let outcome = d.process(
+            &PlayerInput::UseAbility("shadow_walk".to_owned()),
+            &mut state,
+            &content,
+        );
+        assert!(matches!(outcome, DirectorOutcome::Narration(ref s) if s.contains("Shadow Walk")));
+        assert!(state.flags.contains("shadow_walked"));
+    }
+
+    #[test]
+    fn ability_narration_includes_hint() {
+        let content = content_with_gated_ability();
+        let mut d = GameDirector::new(&content).unwrap_or_else(|_| unreachable!());
+        let mut state = WorldState::new();
+        state.knowledge.insert("shadow_lore".to_owned());
+        let outcome = d.process(
+            &PlayerInput::UseAbility("shadow_walk".to_owned()),
+            &mut state,
+            &content,
+        );
+        assert!(
+            matches!(outcome, DirectorOutcome::Narration(ref s) if s.contains("Shadows engulf"))
+        );
+    }
+
+    fn content_with_trust_rewards() -> ContentBundle {
+        let mut content = test_content();
+        let mut rewards = std::collections::BTreeMap::new();
+        rewards.insert(
+            2,
+            crate::content::NpcTrustReward {
+                description: "Maren opens a hidden drawer.".to_owned(),
+                grants_knowledge: vec!["drawer_secret".to_owned()],
+                grants_items: vec!["silver_key".to_owned()],
+                sets_flags: vec!["maren_trusts_you".to_owned()],
+            },
+        );
+        content.npcs.get_mut("maren").unwrap().trust_rewards = rewards;
+        content
+    }
+
+    #[test]
+    fn trust_reward_triggers_at_threshold() {
+        let content = content_with_trust_rewards();
+        let mut d = GameDirector::new(&content).unwrap_or_else(|_| unreachable!());
+        let mut state = WorldState::new();
+        d.process(
+            &PlayerInput::ChooseExit("parlor".to_owned()),
+            &mut state,
+            &content,
+        );
+        d.process(&PlayerInput::Talk("maren".to_owned()), &mut state, &content);
+        assert!(!state.knowledge.contains("drawer_secret"));
+
+        let outcome = d.process(&PlayerInput::Talk("maren".to_owned()), &mut state, &content);
+        assert!(state.knowledge.contains("drawer_secret"));
+        assert!(state.inventory.contains("silver_key"));
+        assert!(state.flags.contains("maren_trusts_you"));
+        assert!(matches!(outcome, DirectorOutcome::Narration(ref s)
+                if s.contains("hidden drawer") && s.contains("[Learned: drawer_secret]")));
+    }
+
+    #[test]
+    fn scene_change_increments_turn() {
+        let content = test_content();
+        let mut d = GameDirector::new(&content).unwrap_or_else(|_| unreachable!());
+        let mut state = WorldState::new();
+        assert_eq!(state.turn, 0);
+        d.process(
+            &PlayerInput::ChooseExit("parlor".to_owned()),
+            &mut state,
+            &content,
+        );
+        assert_eq!(state.turn, 2); // +1 from exit, +1 from tick_conditions
+        d.process(
+            &PlayerInput::ChooseExit("start".to_owned()),
+            &mut state,
+            &content,
+        );
+        assert_eq!(state.turn, 4);
+    }
+
+    #[test]
+    fn scene_description_missing_content() {
+        let mut content = test_content();
+        content.scenes.remove("parlor");
+        let mut d = GameDirector::new(&content).unwrap_or_else(|_| unreachable!());
+        let mut state = WorldState::new();
+        d.process(
+            &PlayerInput::ChooseExit("parlor".to_owned()),
+            &mut state,
+            &content,
+        );
+        let outcome = d.process(&PlayerInput::Examine, &mut state, &content);
+        assert!(
+            matches!(outcome, DirectorOutcome::Narration(ref s) if s.contains("[no scene content"))
+        );
     }
 }

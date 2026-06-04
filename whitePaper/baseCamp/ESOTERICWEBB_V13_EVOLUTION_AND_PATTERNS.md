@@ -1,10 +1,10 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
-# Esoteric Webb V12 — Evolution Patterns and Ecosystem Learnings
+# Esoteric Webb V13 — Evolution Patterns and Ecosystem Learnings
 
-**Date:** Jun 3, 2026 (updated from Jun 1, 2026)
+**Date:** Jun 3, 2026 (updated)
 **Author:** ecoPrimals / sporeGarden
-**Foundation:** V1–V4 bootstrap; V5 deep debt; V5.1 audit; V6 ludoSpring decomposition; V7 deploy alignment; V8 Wave 17 composition adoption + deep debt + smart refactoring; V9 Wave 20-21 canonical schema absorption + stability tiers + degradation contracts + trio tracking; V10 Wave 46 env_keys + deploy metadata + announce hints; V11 Wave 67 dead code removal + vocabulary alignment + safety escalation; V12 Wave 72-74 zero debt + typed constructors + mesh readiness
-**Coverage:** ~91% lines (378 tests)
+**Foundation:** V1–V4 bootstrap; V5 deep debt; V5.1 audit; V6 ludoSpring decomposition; V7 deploy alignment; V8 Wave 17 composition adoption + deep debt + smart refactoring; V9 Wave 20-21 canonical schema absorption + stability tiers + degradation contracts + trio tracking; V10 Wave 46 env_keys + deploy metadata + announce hints; V11 Wave 67 dead code removal + vocabulary alignment + safety escalation; V12 Wave 72-74 zero debt + typed constructors + mesh readiness; V13 Wave 75 session metrics + push propagation + coverage expansion
+**Coverage:** ~92% lines (410 tests)
 
 ---
 
@@ -616,21 +616,58 @@ fine to repeat.
 
 ---
 
-## Architecture Summary (V12)
+## Pattern 22: On-Demand Session Metrics (V13)
+
+**Problem.** Game science (DDA, flow evaluation, AI pacing) needs session
+engagement data, but tracking it imperatively during `act()` adds complexity
+and state that's expensive to maintain for rarely-queried analytics.
+
+**Solution.** Compute metrics on demand from existing history:
+- `metrics()` walks `self.history` once to derive all analytics
+- Zero persistent state — no additional fields on `GameSession`
+- `SessionMetrics` struct is `Serialize` — flows directly to IPC and game science
+
+**Key insight:** If your analytics can be derived from an append-only log
+(history), prefer on-demand computation over incremental tracking. The log
+is already maintained for other purposes — metrics are a free read view.
+
+---
+
+## Pattern 23: Stability-Annotated Mesh Registration (V13)
+
+**Problem.** Songbird w75 push model propagates registered capabilities
+to all gates. Without metadata, the router treats all methods equally —
+but consumers need to know which methods are safe to hardcode vs. which
+may change.
+
+**Solution.** Include `stability_tiers` in the `route.register` payload:
+```json
+{
+  "stability_tiers": { "stable": [...], "evolving": [...] },
+  "propagation": "push"
+}
+```
+Router uses this for prioritized propagation and consumer-side gate TOMLs
+can filter by tier. The `"propagation": "push"` field signals awareness of
+the new model — older registrations (without it) get poll-compatible behavior.
+
+---
+
+## Architecture Summary (V13)
 
 ```
-esotericWebb V12
-├── 378 tests (clippy -D warnings, #![forbid(unsafe_code)])
-├── 43 Rust files (~13.2k LOC, zero C deps)
-├── 24 JSON-RPC capabilities (sourDough + lifecycle + narrative + session + MCP)
+esotericWebb V13
+├── 410 tests (clippy -D warnings, #![forbid(unsafe_code)])
+├── 43 Rust files (~13.6k LOC, zero C deps)
+├── 25 JSON-RPC capabilities (sourDough + lifecycle + narrative + session + MCP)
 ├── 7 primal domains consumed (composition-first with graceful degradation)
-├── 490 ecosystem methods tracked (primalSpring v0.9.31, Wave 74)
-├── Wave compliance: 74 (zero debt, typed errors, mesh-ready)
+├── 490 ecosystem methods tracked (primalSpring v0.9.31, Wave 75)
+├── Wave compliance: 75 (zero debt, typed errors, mesh push-ready, session metrics)
 ├── 14 open evolution gaps (consumer pressure on ecosystem)
 ├── ipc/bridge/   (all domains, retry, circuit breaker, composition dispatch, mesh)
 ├── ipc/handlers/ (sourDough + lifecycle + capability registry, typed constructors)
-├── science/      (absorbed pure-math: flow, engagement, DDA)
+├── science/      (absorbed pure-math: flow, engagement, DDA, session metrics)
 ├── env_keys.rs   (zero bare env strings)
-├── niche.rs      (24 capabilities, cross-validated against registry TOML)
+├── niche.rs      (25 capabilities, cross-validated against registry TOML)
 └── deploy graphs (8 TOML, secure_by_default, metadata, composition-first)
 ```

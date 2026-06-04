@@ -153,3 +153,5 @@ pub const METHOD_SESSION_HISTORY: &str = "session.history";
 pub const METHOD_SESSION_NARRATE: &str = "session.narrate";
 /// Get DOT graph with live session overlay.
 pub const METHOD_SESSION_GRAPH: &str = "session.graph";
+/// Get session engagement metrics (V13 — game science / DDA).
+pub const METHOD_SESSION_METRICS: &str = "session.metrics";

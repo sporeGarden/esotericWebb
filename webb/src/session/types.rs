@@ -160,3 +160,31 @@ pub struct VoiceEnrichment {
     /// The voice's interjection text.
     pub text: String,
 }
+
+/// Session-level engagement metrics for game science and DDA (V13).
+///
+/// Computed from session history — lightweight, no persistent state needed.
+/// Useful for AI narration pacing awareness and flow evaluation calibration.
+#[derive(Debug, Clone, Serialize)]
+pub struct SessionMetrics {
+    /// Total turns played in this session.
+    pub turns_played: u32,
+    /// Unique narrative nodes visited.
+    pub nodes_visited: u32,
+    /// Total nodes in the narrative graph.
+    pub nodes_total: u32,
+    /// Exploration ratio (visited / total), clamped 0.0–1.0.
+    pub exploration_ratio: f64,
+    /// Times the player returned to a previously-visited node.
+    pub backtrack_count: u32,
+    /// Total NPC interactions (talk actions).
+    pub npc_interactions: u32,
+    /// Total ability uses.
+    pub ability_uses: u32,
+    /// Total examine actions.
+    pub examine_count: u32,
+    /// Average actions per unique node (pacing indicator).
+    pub actions_per_node: f64,
+    /// Whether the session reached an ending.
+    pub reached_ending: bool,
+}

@@ -131,6 +131,10 @@ description = "Narration context for AI-as-generator"
 method = "session.graph"
 description = "Narrative DAG as DOT with live session overlay"
 
+[[capabilities]]
+method = "session.metrics"
+description = "Session engagement metrics for game science / DDA (V13)"
+
 # ── MCP tools (evolving) ──
 
 [tools]

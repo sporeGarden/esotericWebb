@@ -50,10 +50,22 @@ pub const CAPABILITIES: &[&str] = &[
     "session.history",
     "session.narrate",
     "session.graph",
+    "session.metrics",
     // MCP
     "tools.list",
     "tools.call",
 ];
+
+/// Resolve the owning gate identity from environment.
+///
+/// Priority: `BIOMEOS_GATE_ID` → `HOSTNAME` → `"unknown-gate"`.
+#[must_use]
+pub fn gate_id() -> String {
+    use crate::env_keys;
+    std::env::var(env_keys::BIOMEOS_GATE_ID)
+        .or_else(|_| std::env::var("HOSTNAME"))
+        .unwrap_or_else(|_| "unknown-gate".to_owned())
+}
 
 /// Resolve the biomeOS family ID from environment.
 ///
@@ -155,7 +167,7 @@ mod tests {
 
     #[test]
     fn capabilities_count() {
-        assert_eq!(CAPABILITIES.len(), 24);
+        assert_eq!(CAPABILITIES.len(), 25);
     }
 
     #[test]
@@ -186,6 +198,12 @@ mod tests {
     fn family_id_has_default() {
         let fid = family_id();
         assert!(!fid.is_empty());
+    }
+
+    #[test]
+    fn gate_id_returns_nonempty() {
+        let gid = gate_id();
+        assert!(!gid.is_empty());
     }
 
     #[test]

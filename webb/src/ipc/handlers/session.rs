@@ -114,6 +114,13 @@ pub(super) fn handle_session_graph(session: &SharedSession) -> Result<Value, Jso
     with_session(session, |s| Ok(Value::String(s.to_dot())))
 }
 
+/// `session.metrics` — engagement metrics for game science / DDA (V13).
+pub(super) fn handle_session_metrics(session: &SharedSession) -> Result<Value, JsonRpcError> {
+    with_session(session, |s| {
+        Ok(serde_json::to_value(s.metrics()).unwrap_or(Value::Null))
+    })
+}
+
 /// Helper: lock session, require it exists, run closure.
 fn with_session<F>(session: &SharedSession, f: F) -> Result<Value, JsonRpcError>
 where

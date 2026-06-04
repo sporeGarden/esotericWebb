@@ -110,6 +110,12 @@ pub struct NarrativeGraph {
 }
 
 impl NarrativeGraph {
+    /// Total number of narrative nodes in the graph.
+    #[must_use]
+    pub fn node_count(&self) -> usize {
+        self.nodes.len()
+    }
+
     /// Find the start node (the node with `is_start = true`).
     #[must_use]
     pub fn start_node(&self) -> Option<&NarrativeNode> {

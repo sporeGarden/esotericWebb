@@ -524,3 +524,65 @@ fn snapshot_reflects_state() {
     assert!(snap.flags.contains(&"quest_started".to_owned()));
     assert!(snap.session_active);
 }
+
+#[test]
+fn metrics_initial_state() {
+    let s = session_from_bundle(test_bundle());
+    let m = s.metrics();
+    assert_eq!(m.turns_played, 0);
+    assert_eq!(m.nodes_visited, 1); // start node
+    assert!(m.nodes_total >= 2);
+    assert!(!m.reached_ending);
+    assert_eq!(m.backtrack_count, 0);
+    assert_eq!(m.npc_interactions, 0);
+    assert_eq!(m.ability_uses, 0);
+    assert_eq!(m.examine_count, 0);
+    assert!(m.exploration_ratio > 0.0);
+    assert!(m.exploration_ratio <= 1.0);
+}
+
+#[test]
+fn metrics_after_navigation() {
+    let mut s = session_from_bundle(test_bundle());
+    s.act(ActionKind::Exit, "room").unwrap();
+    let m = s.metrics();
+    assert_eq!(m.turns_played, 1);
+    assert_eq!(m.nodes_visited, 2);
+    assert_eq!(m.backtrack_count, 0);
+}
+
+#[test]
+fn metrics_counts_backtrack() {
+    let mut s = session_from_bundle(test_bundle());
+    s.act(ActionKind::Exit, "room").unwrap();
+    s.act(ActionKind::Exit, "start").unwrap();
+    let m = s.metrics();
+    assert_eq!(m.backtrack_count, 1);
+}
+
+#[test]
+fn metrics_counts_interactions() {
+    let mut s = session_from_bundle(test_bundle());
+    s.act(ActionKind::Examine, "examine").unwrap();
+    let m = s.metrics();
+    assert_eq!(m.examine_count, 1);
+}
+
+#[test]
+fn metrics_actions_per_node() {
+    let mut s = session_from_bundle(test_bundle());
+    s.act(ActionKind::Examine, "examine").unwrap();
+    s.act(ActionKind::Examine, "examine").unwrap();
+    let m = s.metrics();
+    assert!(m.actions_per_node >= 2.0);
+}
+
+#[test]
+fn metrics_serializable() {
+    let s = session_from_bundle(test_bundle());
+    let m = s.metrics();
+    let json = serde_json::to_value(&m).unwrap();
+    assert!(json.get("turns_played").is_some());
+    assert!(json.get("exploration_ratio").is_some());
+    assert!(json.get("reached_ending").is_some());
+}

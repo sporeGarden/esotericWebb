@@ -17,7 +17,7 @@ pub mod types;
 
 pub use types::{
     ActionKind, ActionRecord, AvailableAction, GameStateSnapshot, NarrationContext,
-    PrimalEnrichment, VoiceEnrichment,
+    PrimalEnrichment, SessionMetrics, VoiceEnrichment,
 };
 
 use crate::content::ContentBundle;
@@ -317,6 +317,73 @@ impl GameSession {
             turn: self.turn,
             narration_hints: self.narration_hints(),
             enrichment: PrimalEnrichment::default(),
+        }
+    }
+
+    /// Compute session engagement metrics (V13 — game science / DDA).
+    ///
+    /// Derived entirely from session history and bundle metadata.
+    /// Zero allocation cost when not called — metrics are computed on demand.
+    #[must_use]
+    pub fn metrics(&self) -> SessionMetrics {
+        use std::collections::HashSet;
+
+        let mut visited_nodes: HashSet<&str> = HashSet::new();
+        let mut backtrack_count: u32 = 0;
+        let mut npc_interactions: u32 = 0;
+        let mut ability_uses: u32 = 0;
+        let mut examine_count: u32 = 0;
+
+        if let Some(start) = self.bundle.narrative.start_node() {
+            visited_nodes.insert(&start.id);
+        }
+
+        for record in &self.history {
+            let was_visited = visited_nodes.contains(record.node_after.as_str());
+            visited_nodes.insert(&record.node_after);
+
+            if record.action.starts_with("exit:") && was_visited {
+                backtrack_count += 1;
+            }
+            if record.action.starts_with("talk:") {
+                npc_interactions += 1;
+            }
+            if record.action.starts_with("ability:") {
+                ability_uses += 1;
+            }
+            if record.action.starts_with("examine:") {
+                examine_count += 1;
+            }
+        }
+
+        #[expect(clippy::cast_possible_truncation, reason = "graph sizes <<2^32")]
+        let nodes_visited = visited_nodes.len() as u32;
+        #[expect(clippy::cast_possible_truncation, reason = "graph sizes <<2^32")]
+        let nodes_total = self.bundle.narrative.node_count() as u32;
+        let exploration_ratio = if nodes_total > 0 {
+            f64::from(nodes_visited) / f64::from(nodes_total)
+        } else {
+            0.0
+        };
+        let actions_per_node = if nodes_visited > 0 {
+            #[expect(clippy::cast_precision_loss, reason = "action counts fit f64")]
+            let actions = self.history.len() as f64;
+            actions / f64::from(nodes_visited)
+        } else {
+            0.0
+        };
+
+        SessionMetrics {
+            turns_played: self.turn,
+            nodes_visited,
+            nodes_total,
+            exploration_ratio,
+            backtrack_count,
+            npc_interactions,
+            ability_uses,
+            examine_count,
+            actions_per_node,
+            reached_ending: self.is_ended(),
         }
     }
 

@@ -2,6 +2,52 @@
 
 All notable changes to Esoteric Webb are documented here.
 
+## V13 — Wave 75: Session metrics, mesh push propagation, coverage expansion (Jun 3, 2026)
+
+### Session metrics (V13 feature)
+
+- **`session.metrics`** — new IPC method returning engagement analytics for game
+  science / DDA: turns played, exploration ratio, backtrack count, NPC interactions,
+  ability uses, actions-per-node pacing indicator.
+- **`SessionMetrics` struct** — zero-cost on-demand computation from session history.
+- **Capability count**: 24 → 25 (`session.metrics` added to stable tier).
+
+### Mesh registration evolution (Songbird w75)
+
+- **Stability tier metadata** included in `route.register` payload — router can
+  prioritize propagation of stable methods vs evolving ones.
+- **Push propagation signal** — `"propagation": "push"` declares awareness of
+  w75 push model.
+- **`gate_id()` function** in `niche.rs` — environment-overridable gate identity
+  (default: `ironGate`), replaces hardcoded gate string.
+- **`BIOMEOS_GATE_ID` env key** centralized in `env_keys.rs`.
+
+### Test coverage expansion (+32 tests)
+
+- **Director module**: 7 → 19 tests. New: `process_talk`, trust mechanics,
+  `trust_demeanor` ranges, ability precondition gating, trust reward thresholds,
+  invalid exit handling, scene change turn counting, missing content fallback.
+- **Visualization module**: 7 → 20 tests. New: empty graph DOT/JSON, node shape
+  assertions, JSON field structure, overlay status states, edge taken/gated flags,
+  DOT overlay style assertions, history parsing edge cases.
+- **Session module**: +6 metrics tests (initial state, navigation, backtrack,
+  interactions, actions-per-node, serialization).
+- **Niche module**: +1 test (`gate_id` default).
+- **Total**: 378 → 410 tests (all passing, clippy clean, fmt clean).
+
+### Metrics
+
+| Metric | V12 | V13 |
+|--------|-----|-----|
+| Tests | 378 | 410 |
+| Capabilities | 24 | 25 |
+| Director tests | 7 | 19 |
+| Visualization tests | 7 | 20 |
+| Wave compliance | 73 | 75 |
+| Mesh propagation | degraded | push-ready |
+
+---
+
 ## V12 — Wave 72-74: Zero debt, typed constructors, mesh readiness (Jun 3, 2026)
 
 ### Method constant consolidation

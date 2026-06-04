@@ -461,4 +461,203 @@ mod tests {
         assert!(dot.contains("dashed"));
         assert!(dot.contains("digraph"));
     }
+
+    #[test]
+    fn empty_graph_dot_is_valid() {
+        let g = NarrativeGraph {
+            nodes: HashMap::new(),
+        };
+        let dot = g.to_dot();
+        assert!(dot.starts_with("digraph"));
+        assert!(dot.ends_with("}\n"));
+        assert!(!dot.contains("->"));
+    }
+
+    #[test]
+    fn empty_graph_json_has_zero_depth() {
+        let g = NarrativeGraph {
+            nodes: HashMap::new(),
+        };
+        let json = g.to_graph_json(None);
+        assert_eq!(json["max_depth"], 0);
+        assert!(json["nodes"].as_array().unwrap().is_empty());
+        assert!(json["edges"].as_array().unwrap().is_empty());
+    }
+
+    #[test]
+    fn dot_start_node_has_doubleoctagon() {
+        let g = sample_graph();
+        let dot = g.to_dot();
+        assert!(dot.contains("doubleoctagon"));
+    }
+
+    #[test]
+    fn dot_ending_node_has_doublecircle() {
+        let g = sample_graph();
+        let dot = g.to_dot();
+        assert!(dot.contains("doublecircle"));
+    }
+
+    #[test]
+    fn json_nodes_have_expected_fields() {
+        let g = sample_graph();
+        let json = g.to_graph_json(None);
+        let nodes = json["nodes"].as_array().unwrap();
+        for node in nodes {
+            assert!(node.get("id").is_some());
+            assert!(node.get("label").is_some());
+            assert!(node.get("scene_type").is_some());
+            assert!(node.get("depth").is_some());
+            assert!(node.get("status").is_some());
+            assert_eq!(node["status"].as_str(), Some("neutral"));
+        }
+    }
+
+    #[test]
+    fn json_edges_have_expected_fields() {
+        let g = sample_graph();
+        let json = g.to_graph_json(None);
+        let edges = json["edges"].as_array().unwrap();
+        for edge in edges {
+            assert!(edge.get("source").is_some());
+            assert!(edge.get("target").is_some());
+            assert!(edge.get("edge_type").is_some());
+            assert!(!edge["taken"].as_bool().unwrap());
+            assert!(!edge["gated"].as_bool().unwrap());
+        }
+    }
+
+    #[test]
+    fn overlay_visited_node_status() {
+        let g = sample_graph();
+        let overlay = DagOverlay {
+            visited: ["start".to_owned(), "parlor".to_owned()]
+                .into_iter()
+                .collect(),
+            edges_taken: HashSet::new(),
+            current_node: None,
+            available_targets: HashSet::new(),
+            gated_targets: HashSet::new(),
+        };
+        let json = g.to_graph_json(Some(&overlay));
+        let nodes = json["nodes"].as_array().unwrap();
+        let start = nodes
+            .iter()
+            .find(|n| n["id"].as_str() == Some("start"))
+            .unwrap();
+        assert_eq!(start["status"].as_str(), Some("visited"));
+    }
+
+    #[test]
+    fn overlay_unexplored_node_status() {
+        let g = sample_graph();
+        let overlay = DagOverlay {
+            visited: ["start".to_owned()].into(),
+            edges_taken: HashSet::new(),
+            current_node: Some("start".to_owned()),
+            available_targets: HashSet::new(),
+            gated_targets: HashSet::new(),
+        };
+        let json = g.to_graph_json(Some(&overlay));
+        let nodes = json["nodes"].as_array().unwrap();
+        let garden = nodes
+            .iter()
+            .find(|n| n["id"].as_str() == Some("garden"))
+            .unwrap();
+        assert_eq!(garden["status"].as_str(), Some("unexplored"));
+    }
+
+    #[test]
+    fn overlay_edge_taken_flag() {
+        let g = sample_graph();
+        let overlay = DagOverlay {
+            visited: ["start".to_owned(), "parlor".to_owned()]
+                .into_iter()
+                .collect(),
+            edges_taken: [("start".to_owned(), "parlor".to_owned())].into(),
+            current_node: Some("parlor".to_owned()),
+            available_targets: HashSet::new(),
+            gated_targets: HashSet::new(),
+        };
+        let json = g.to_graph_json(Some(&overlay));
+        let edges = json["edges"].as_array().unwrap();
+        let taken_edge = edges
+            .iter()
+            .find(|e| {
+                e["source"].as_str() == Some("start") && e["target"].as_str() == Some("parlor")
+            })
+            .unwrap();
+        assert!(taken_edge["taken"].as_bool().unwrap());
+    }
+
+    #[test]
+    fn overlay_gated_edge_flag() {
+        let g = sample_graph();
+        let overlay = DagOverlay {
+            visited: ["start".to_owned()].into(),
+            edges_taken: HashSet::new(),
+            current_node: Some("start".to_owned()),
+            available_targets: HashSet::new(),
+            gated_targets: [("start".to_owned(), "garden".to_owned())].into(),
+        };
+        let json = g.to_graph_json(Some(&overlay));
+        let edges = json["edges"].as_array().unwrap();
+        let gated_edge = edges
+            .iter()
+            .find(|e| {
+                e["source"].as_str() == Some("start") && e["target"].as_str() == Some("garden")
+            })
+            .unwrap();
+        assert!(gated_edge["gated"].as_bool().unwrap());
+    }
+
+    #[test]
+    fn dot_overlay_taken_edge_is_bold() {
+        let g = sample_graph();
+        let overlay = DagOverlay {
+            visited: ["start".to_owned(), "parlor".to_owned()]
+                .into_iter()
+                .collect(),
+            edges_taken: [("start".to_owned(), "parlor".to_owned())].into(),
+            current_node: Some("parlor".to_owned()),
+            available_targets: HashSet::new(),
+            gated_targets: HashSet::new(),
+        };
+        let dot = g.to_dot_overlay(&overlay);
+        assert!(dot.contains("style=bold"));
+        assert!(dot.contains("#50fa7b"));
+    }
+
+    #[test]
+    fn history_with_non_exit_actions_ignored_for_edges() {
+        let g = sample_graph();
+        let history = serde_json::json!({
+            "history": [
+                {"action": "examine", "node_after": "start"},
+                {"action": "exit:parlor", "node_after": "parlor"},
+            ],
+            "final_node": "parlor"
+        });
+        let overlay = DagOverlay::from_history_json(&history, &g).unwrap();
+        assert_eq!(overlay.edges_taken.len(), 1);
+        assert!(
+            overlay
+                .edges_taken
+                .contains(&("start".to_owned(), "parlor".to_owned()))
+        );
+    }
+
+    #[test]
+    fn history_with_empty_entries_handled() {
+        let g = sample_graph();
+        let history = serde_json::json!({
+            "history": [
+                {"action": "", "node_after": ""},
+            ],
+            "final_node": "start"
+        });
+        let overlay = DagOverlay::from_history_json(&history, &g).unwrap();
+        assert!(overlay.edges_taken.is_empty());
+        assert_eq!(overlay.current_node.as_deref(), Some("start"));
+    }
 }

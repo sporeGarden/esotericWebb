@@ -35,6 +35,8 @@ pub const UID: &str = "UID";
 pub const BIOMEOS_SOCKET_DIR: &str = "BIOMEOS_SOCKET_DIR";
 /// Explicit Neural API socket path override.
 pub const NEURAL_API_SOCKET: &str = "NEURAL_API_SOCKET";
+/// Gate identity for mesh registration (default: `"ironGate"`).
+pub const BIOMEOS_GATE_ID: &str = "BIOMEOS_GATE_ID";
 
 // ── Per-primal address / port overrides ─────────────────────────────────────
 // Used by discovery: `<PRIMAL>_ADDRESS` for host:port,
