@@ -41,7 +41,7 @@ pub(super) fn handle_health_version() -> Value {
         "version": env!("CARGO_PKG_VERSION"),
         "build_target": option_env!("TARGET").unwrap_or("unknown"),
         "edition": "2024",
-        "signal_tiers": ["nest", "meta"],
+        "composition_tiers": ["nest", "meta"],
     })
 }
 
@@ -80,7 +80,7 @@ pub(super) fn handle_primal_info() -> Value {
         "version": env!("CARGO_PKG_VERSION"),
         "domain": crate::niche::NICHE_DOMAIN,
         "capabilities": method_count,
-        "signal_tiers": ["nest", "meta"],
+        "composition_tiers": ["nest", "meta"],
         "guidestone_level": 0,
     })
 }
@@ -163,7 +163,7 @@ mod tests {
         assert_eq!(v["primal"], "esotericwebb");
         assert!(v.get("version").is_some());
         assert!(v.get("build_target").is_some());
-        let tiers = v["signal_tiers"].as_array().unwrap();
+        let tiers = v["composition_tiers"].as_array().unwrap();
         assert!(tiers.contains(&Value::from("nest")));
         assert!(tiers.contains(&Value::from("meta")));
     }
@@ -200,7 +200,7 @@ mod tests {
         assert_eq!(v["primal"], "esotericwebb");
         assert_eq!(v["domain"], "narrative");
         assert!(v["capabilities"].as_u64().unwrap() > 0);
-        let tiers = v["signal_tiers"].as_array().unwrap();
+        let tiers = v["composition_tiers"].as_array().unwrap();
         assert!(tiers.contains(&Value::from("nest")));
     }
 }

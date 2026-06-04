@@ -148,7 +148,7 @@ pub fn run(
     config: &AutoplayConfig,
 ) -> crate::error::Result<AutoplayResult> {
     let mut tracker = HeuristicTracker::default();
-    tracker.visited.insert(session.snapshot().current_node);
+    tracker.visited.insert(session.current_node_id().to_owned());
 
     for _ in 0..config.max_turns {
         if session.is_ended() {
@@ -156,7 +156,7 @@ pub fn run(
         }
 
         let actions = session.available_actions();
-        let node = session.snapshot().current_node.clone();
+        let node = session.current_node_id().to_owned();
         let choice = tracker.pick(&actions, &node, config);
 
         let Some((kind, id)) = choice else {
@@ -168,7 +168,7 @@ pub fn run(
         let knowledge_count =
             snap_after.knowledge.len() + snap_after.flags.len() + snap_after.inventory.len();
         tracker.record_novelty(kind, &id, knowledge_count);
-        tracker.visited.insert(snap_after.current_node.clone());
+        tracker.visited.insert(snap_after.current_node);
     }
 
     Ok(AutoplayResult {

@@ -283,6 +283,12 @@ impl GameSession {
         &self.history
     }
 
+    /// Current narrative node ID (lightweight — no snapshot allocation).
+    #[must_use]
+    pub fn current_node_id(&self) -> &str {
+        self.director.current_node_id()
+    }
+
     /// Whether the game has reached an ending.
     #[must_use]
     pub fn is_ended(&self) -> bool {
