@@ -432,16 +432,14 @@ mod tests {
     #[test]
     fn director_starts_at_start_node() {
         let content = test_content();
-        let director = GameDirector::new(&content);
-        assert!(director.is_ok());
-        let d = director.unwrap_or_else(|_| unreachable!());
+        let d = GameDirector::new(&content).unwrap();
         assert_eq!(d.current_node_id(), "start");
     }
 
     #[test]
     fn examine_returns_scene_description() {
         let content = test_content();
-        let mut d = GameDirector::new(&content).unwrap_or_else(|_| unreachable!());
+        let mut d = GameDirector::new(&content).unwrap();
         let mut state = WorldState::new();
         let outcome = d.process(&PlayerInput::Examine, &mut state, &content);
         assert!(
@@ -452,7 +450,7 @@ mod tests {
     #[test]
     fn choose_exit_transitions() {
         let content = test_content();
-        let mut d = GameDirector::new(&content).unwrap_or_else(|_| unreachable!());
+        let mut d = GameDirector::new(&content).unwrap();
         let mut state = WorldState::new();
         let outcome = d.process(
             &PlayerInput::ChooseExit("parlor".to_owned()),
@@ -467,7 +465,7 @@ mod tests {
     #[test]
     fn gated_exit_becomes_available_after_knowledge() {
         let content = test_content();
-        let mut d = GameDirector::new(&content).unwrap_or_else(|_| unreachable!());
+        let mut d = GameDirector::new(&content).unwrap();
         let mut state = WorldState::new();
 
         let exits = d.available_exits(&content, &state);
@@ -491,7 +489,7 @@ mod tests {
     #[test]
     fn use_ability_applies_effects() {
         let content = test_content();
-        let mut d = GameDirector::new(&content).unwrap_or_else(|_| unreachable!());
+        let mut d = GameDirector::new(&content).unwrap();
         let mut state = WorldState::new();
         let outcome = d.process(
             &PlayerInput::UseAbility("read_aura".to_owned()),
@@ -505,7 +503,7 @@ mod tests {
     #[test]
     fn unknown_ability_fails() {
         let content = test_content();
-        let mut d = GameDirector::new(&content).unwrap_or_else(|_| unreachable!());
+        let mut d = GameDirector::new(&content).unwrap();
         let mut state = WorldState::new();
         let outcome = d.process(
             &PlayerInput::UseAbility("nonexistent".to_owned()),
@@ -520,7 +518,7 @@ mod tests {
     #[test]
     fn ending_detected() {
         let content = test_content();
-        let mut d = GameDirector::new(&content).unwrap_or_else(|_| unreachable!());
+        let mut d = GameDirector::new(&content).unwrap();
         let mut state = WorldState::new();
         d.process(
             &PlayerInput::ChooseExit("parlor".to_owned()),
@@ -543,7 +541,7 @@ mod tests {
     #[test]
     fn invalid_exit_returns_no_effect() {
         let content = test_content();
-        let mut d = GameDirector::new(&content).unwrap_or_else(|_| unreachable!());
+        let mut d = GameDirector::new(&content).unwrap();
         let mut state = WorldState::new();
         let outcome = d.process(
             &PlayerInput::ChooseExit("nonexistent_room".to_owned()),
@@ -557,7 +555,7 @@ mod tests {
     #[test]
     fn talk_to_npc_in_scene() {
         let content = test_content();
-        let mut d = GameDirector::new(&content).unwrap_or_else(|_| unreachable!());
+        let mut d = GameDirector::new(&content).unwrap();
         let mut state = WorldState::new();
         d.process(
             &PlayerInput::ChooseExit("parlor".to_owned()),
@@ -572,7 +570,7 @@ mod tests {
     #[test]
     fn talk_to_npc_not_in_scene() {
         let content = test_content();
-        let mut d = GameDirector::new(&content).unwrap_or_else(|_| unreachable!());
+        let mut d = GameDirector::new(&content).unwrap();
         let mut state = WorldState::new();
         let outcome = d.process(&PlayerInput::Talk("maren".to_owned()), &mut state, &content);
         assert!(
@@ -583,7 +581,7 @@ mod tests {
     #[test]
     fn talk_to_unknown_npc() {
         let content = test_content();
-        let mut d = GameDirector::new(&content).unwrap_or_else(|_| unreachable!());
+        let mut d = GameDirector::new(&content).unwrap();
         let mut state = WorldState::new();
         let outcome = d.process(&PlayerInput::Talk("ghost".to_owned()), &mut state, &content);
         assert!(matches!(outcome, DirectorOutcome::NoEffect(ref s) if s.contains("no one called")));
@@ -592,7 +590,7 @@ mod tests {
     #[test]
     fn trust_increments_on_repeated_talk() {
         let content = test_content();
-        let mut d = GameDirector::new(&content).unwrap_or_else(|_| unreachable!());
+        let mut d = GameDirector::new(&content).unwrap();
         let mut state = WorldState::new();
         d.process(
             &PlayerInput::ChooseExit("parlor".to_owned()),
@@ -637,7 +635,7 @@ mod tests {
     #[test]
     fn ability_blocked_by_precondition() {
         let content = content_with_gated_ability();
-        let mut d = GameDirector::new(&content).unwrap_or_else(|_| unreachable!());
+        let mut d = GameDirector::new(&content).unwrap();
         let mut state = WorldState::new();
         let outcome = d.process(
             &PlayerInput::UseAbility("shadow_walk".to_owned()),
@@ -651,7 +649,7 @@ mod tests {
     #[test]
     fn ability_succeeds_when_precondition_met() {
         let content = content_with_gated_ability();
-        let mut d = GameDirector::new(&content).unwrap_or_else(|_| unreachable!());
+        let mut d = GameDirector::new(&content).unwrap();
         let mut state = WorldState::new();
         state.knowledge.insert("shadow_lore".to_owned());
         let outcome = d.process(
@@ -666,7 +664,7 @@ mod tests {
     #[test]
     fn ability_narration_includes_hint() {
         let content = content_with_gated_ability();
-        let mut d = GameDirector::new(&content).unwrap_or_else(|_| unreachable!());
+        let mut d = GameDirector::new(&content).unwrap();
         let mut state = WorldState::new();
         state.knowledge.insert("shadow_lore".to_owned());
         let outcome = d.process(
@@ -698,7 +696,7 @@ mod tests {
     #[test]
     fn trust_reward_triggers_at_threshold() {
         let content = content_with_trust_rewards();
-        let mut d = GameDirector::new(&content).unwrap_or_else(|_| unreachable!());
+        let mut d = GameDirector::new(&content).unwrap();
         let mut state = WorldState::new();
         d.process(
             &PlayerInput::ChooseExit("parlor".to_owned()),
@@ -719,7 +717,7 @@ mod tests {
     #[test]
     fn scene_change_increments_turn() {
         let content = test_content();
-        let mut d = GameDirector::new(&content).unwrap_or_else(|_| unreachable!());
+        let mut d = GameDirector::new(&content).unwrap();
         let mut state = WorldState::new();
         assert_eq!(state.turn, 0);
         d.process(
@@ -740,7 +738,7 @@ mod tests {
     fn scene_description_missing_content() {
         let mut content = test_content();
         content.scenes.remove("parlor");
-        let mut d = GameDirector::new(&content).unwrap_or_else(|_| unreachable!());
+        let mut d = GameDirector::new(&content).unwrap();
         let mut state = WorldState::new();
         d.process(
             &PlayerInput::ChooseExit("parlor".to_owned()),

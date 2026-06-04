@@ -388,4 +388,160 @@ mod tests {
         tracker.record_novelty(ActionKind::Ability, "new_ability", 0);
         assert_eq!(tracker.stale_count, 0);
     }
+
+    #[test]
+    fn heuristic_prefers_abilities_over_talk() {
+        let mut tracker = HeuristicTracker::default();
+        tracker.visited.insert("room".to_owned());
+        tracker.visited.insert("other".to_owned());
+        let config = AutoplayConfig::default();
+        let actions = vec![
+            AvailableAction {
+                kind: ActionKind::Exit,
+                id: "room".to_owned(),
+                label: "Room".to_owned(),
+                detail: None,
+            },
+            AvailableAction {
+                kind: ActionKind::Talk,
+                id: "npc".to_owned(),
+                label: "Talk".to_owned(),
+                detail: None,
+            },
+            AvailableAction {
+                kind: ActionKind::Ability,
+                id: "heal".to_owned(),
+                label: "Heal".to_owned(),
+                detail: Some("Restore health.".to_owned()),
+            },
+        ];
+        let choice = tracker.pick(&actions, "here", &config);
+        assert_eq!(choice, Some((ActionKind::Ability, "heal".to_owned())));
+    }
+
+    #[test]
+    fn heuristic_skips_blocked_abilities() {
+        let mut tracker = HeuristicTracker::default();
+        tracker.visited.insert("room".to_owned());
+        let config = AutoplayConfig::default();
+        let actions = vec![
+            AvailableAction {
+                kind: ActionKind::Ability,
+                id: "fly".to_owned(),
+                label: "Fly".to_owned(),
+                detail: Some("[blocked] need wings".to_owned()),
+            },
+            AvailableAction {
+                kind: ActionKind::Talk,
+                id: "npc".to_owned(),
+                label: "Talk".to_owned(),
+                detail: None,
+            },
+        ];
+        let choice = tracker.pick(&actions, "here", &config);
+        assert_eq!(choice, Some((ActionKind::Talk, "npc".to_owned())));
+    }
+
+    #[test]
+    fn heuristic_respects_talk_cap() {
+        let mut tracker = HeuristicTracker::default();
+        let config = AutoplayConfig {
+            max_talks_per_npc: 2,
+            ..AutoplayConfig::default()
+        };
+        tracker.talk_count.insert("npc".to_owned(), 2);
+        tracker.visited.insert("room".to_owned());
+        let actions = vec![AvailableAction {
+            kind: ActionKind::Talk,
+            id: "npc".to_owned(),
+            label: "Talk".to_owned(),
+            detail: None,
+        }];
+        let choice = tracker.pick(&actions, "here", &config);
+        assert_eq!(choice, Some((ActionKind::Examine, "examine".to_owned())));
+    }
+
+    #[test]
+    fn heuristic_examine_once_per_node() {
+        let mut tracker = HeuristicTracker::default();
+        tracker.visited.insert("room".to_owned());
+        tracker.examined_at.insert("here".to_owned());
+        let config = AutoplayConfig::default();
+        let actions = vec![AvailableAction {
+            kind: ActionKind::Exit,
+            id: "room".to_owned(),
+            label: "Room".to_owned(),
+            detail: None,
+        }];
+        let choice = tracker.pick(&actions, "here", &config);
+        assert_eq!(choice, Some((ActionKind::Exit, "room".to_owned())));
+    }
+
+    #[test]
+    fn heuristic_rotates_exits() {
+        let mut tracker = HeuristicTracker::default();
+        tracker.visited.insert("a".to_owned());
+        tracker.visited.insert("b".to_owned());
+        tracker.examined_at.insert("here".to_owned());
+        let config = AutoplayConfig::default();
+        let actions = vec![
+            AvailableAction {
+                kind: ActionKind::Exit,
+                id: "a".to_owned(),
+                label: "A".to_owned(),
+                detail: None,
+            },
+            AvailableAction {
+                kind: ActionKind::Exit,
+                id: "b".to_owned(),
+                label: "B".to_owned(),
+                detail: None,
+            },
+        ];
+        let first = tracker.pick(&actions, "here", &config);
+        let second = tracker.pick(&actions, "here", &config);
+        assert_ne!(first, second);
+    }
+
+    #[test]
+    fn heuristic_returns_none_when_no_actions() {
+        let mut tracker = HeuristicTracker::default();
+        tracker.examined_at.insert("here".to_owned());
+        let config = AutoplayConfig::default();
+        let actions: Vec<AvailableAction> = vec![];
+        let choice = tracker.pick(&actions, "here", &config);
+        assert!(choice.is_none());
+    }
+
+    #[test]
+    fn non_novel_increments_stale_counter() {
+        let mut tracker = HeuristicTracker::default();
+        tracker.used_abilities.insert("heal".to_owned());
+        tracker.record_novelty(ActionKind::Ability, "heal", 0);
+        assert_eq!(tracker.stale_count, 1);
+        tracker.record_novelty(ActionKind::Ability, "heal", 0);
+        assert_eq!(tracker.stale_count, 2);
+    }
+
+    #[test]
+    fn autoplay_config_default_values() {
+        let config = AutoplayConfig::default();
+        assert_eq!(config.max_turns, 100);
+        assert_eq!(config.stale_limit, 12);
+        assert_eq!(config.max_talks_per_npc, 8);
+    }
+
+    #[test]
+    fn autoplay_result_fields() {
+        let result = AutoplayResult {
+            ended: true,
+            turns: 5,
+            nodes_visited: 3,
+            stale_halt: false,
+        };
+        assert!(result.ended);
+        assert_eq!(result.turns, 5);
+        assert_eq!(result.nodes_visited, 3);
+        assert!(!result.stale_halt);
+    }
 }

@@ -114,16 +114,13 @@ impl GameSession {
     /// [`WorldState::session_id`] for subsequent event appends.
     /// Degrades silently if the DAG primal is absent.
     pub fn initialize_provenance(&mut self) {
-        let world_name = self.bundle.meta.name.clone();
-        let world_version = self.bundle.meta.version.clone();
-
         let session_id = {
             let Some(bridge) = self.bridge.as_mut() else {
                 return;
             };
             let params = serde_json::json!({
-                "world": world_name,
-                "content_version": world_version,
+                "world": &self.bundle.meta.name,
+                "content_version": &self.bundle.meta.version,
             });
             match bridge.dag_session_create(&params) {
                 Ok(Some(id)) => Some(id),

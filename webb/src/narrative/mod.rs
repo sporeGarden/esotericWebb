@@ -190,6 +190,7 @@ impl NarrativeGraph {
 }
 
 #[cfg(test)]
+#[expect(clippy::unwrap_used, reason = "test code")]
 mod tests {
     use super::*;
 
@@ -300,5 +301,66 @@ mod tests {
         assert_eq!(depths.get("start").copied(), Some(0));
         assert_eq!(depths.get("parlor").copied(), Some(1));
         assert_eq!(depths.get("garden").copied(), Some(1));
+    }
+
+    #[test]
+    fn node_count_correct() {
+        let g = sample_graph();
+        assert_eq!(g.node_count(), 3);
+    }
+
+    #[test]
+    fn get_existing_node() {
+        let g = sample_graph();
+        let node = g.get("parlor");
+        assert!(node.is_some());
+        assert_eq!(node.unwrap().scene_type, SceneType::Dialogue);
+    }
+
+    #[test]
+    fn get_nonexistent_node() {
+        let g = sample_graph();
+        assert!(g.get("nonexistent").is_none());
+    }
+
+    #[test]
+    fn valid_exits_for_unknown_node() {
+        let g = sample_graph();
+        let exits = g.valid_exits("nonexistent", |_| true);
+        assert!(exits.is_empty());
+    }
+
+    #[test]
+    fn bfs_depths_empty_graph() {
+        let g = NarrativeGraph {
+            nodes: HashMap::new(),
+        };
+        let depths = g.bfs_depths();
+        assert!(depths.is_empty());
+    }
+
+    #[test]
+    fn edge_count_empty_graph() {
+        let g = NarrativeGraph {
+            nodes: HashMap::new(),
+        };
+        assert_eq!(g.edge_count(), 0);
+    }
+
+    #[test]
+    fn start_node_absent_in_empty_graph() {
+        let g = NarrativeGraph {
+            nodes: HashMap::new(),
+        };
+        assert!(g.start_node().is_none());
+    }
+
+    #[test]
+    fn endings_empty_when_none() {
+        let mut g = sample_graph();
+        for node in g.nodes.values_mut() {
+            node.is_ending = false;
+        }
+        assert!(g.endings().is_empty());
     }
 }
