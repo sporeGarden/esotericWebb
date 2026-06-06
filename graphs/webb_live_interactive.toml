@@ -1,0 +1,257 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# biomeOS deployment graph: Esoteric Webb — Live Interactive
+#
+# Produces a playable CRPG with native GPU-accelerated GUI.
+# Key difference from esotericwebb_full.toml: petalTongue launches in
+# `live` mode (IPC server + egui window), enabling real-time scene
+# rendering and user interaction via interaction.subscribe/poll.
+#
+# Phases:
+#   1 — Tower primals (crypto -> discovery)
+#   2 — Game science primal (ludoSpring barracuda IPC)
+#   3 — Visualization primal in LIVE mode (egui + IPC)
+#   4 — Compute primal (barraCuda, optional)
+#   5 — AI primal (Squirrel, optional)
+#   6 — esotericWebb narrative director
+#   7 — Validate full interactive stack
+#
+# Status: 1.0 — First interactive garden composition
+
+[graph]
+id = "webb_live_interactive"
+description = "Esoteric Webb: playable CRPG with native petalTongue GUI, game science from ludoSpring, and AI narration"
+coordination = "Sequential"
+version = "1.0"
+
+# ── Phase 1: Tower Atomic (security + discovery) ────────────────────────
+
+[[nodes]]
+id = "germinate_beardog"
+output = "beardog_genesis"
+capabilities = ["security", "crypto"]
+
+[nodes.primal]
+by_capability = "security"
+
+[nodes.operation]
+name = "start"
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+[nodes.operation.environment]
+BIOMEOS_SOCKET_DIR = "${XDG_RUNTIME_DIR}/biomeos"
+
+[nodes.constraints]
+timeout_ms = 15000
+
+[nodes.capabilities_provided]
+"crypto.sign_ed25519" = "crypto.sign_ed25519"
+"crypto.verify_ed25519" = "crypto.verify_ed25519"
+"crypto.blake3_hash" = "crypto.blake3_hash"
+
+[[nodes]]
+id = "germinate_songbird"
+depends_on = ["germinate_beardog"]
+output = "songbird_genesis"
+capabilities = ["discovery"]
+
+[nodes.primal]
+by_capability = "discovery"
+
+[nodes.operation]
+name = "start"
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+[nodes.operation.environment]
+BIOMEOS_SOCKET_DIR = "${XDG_RUNTIME_DIR}/biomeos"
+
+[nodes.constraints]
+timeout_ms = 15000
+
+[nodes.capabilities_provided]
+"discovery.register" = "discovery.register"
+"discovery.query" = "discovery.query"
+
+# ── Phase 2: Game science primal ────────────────────────────────────────
+
+[[nodes]]
+id = "germinate_ludospring"
+depends_on = ["germinate_songbird"]
+output = "ludospring_genesis"
+capabilities = ["game", "ludology"]
+
+[nodes.primal]
+by_capability = "game"
+
+[nodes.operation]
+name = "start"
+[nodes.operation.params]
+mode = "server"
+domain = "game"
+family_id = "${FAMILY_ID}"
+[nodes.operation.environment]
+BIOMEOS_SOCKET_DIR = "${XDG_RUNTIME_DIR}/biomeos"
+
+[nodes.constraints]
+timeout_ms = 15000
+
+[nodes.capabilities_provided]
+"game.evaluate_flow" = "game.evaluate_flow"
+"game.engagement" = "game.engagement"
+"game.difficulty_adjustment" = "game.difficulty_adjustment"
+"game.push_scene" = "game.push_scene"
+"game.begin_session" = "game.begin_session"
+"game.record_action" = "game.record_action"
+"game.complete_session" = "game.complete_session"
+"game.npc_dialogue" = "game.npc_dialogue"
+"game.narrate_action" = "game.narrate_action"
+"game.voice_check" = "game.voice_check"
+"game.query_vertices" = "game.query_vertices"
+"game.mint_certificate" = "game.mint_certificate"
+
+# ── Phase 3: Visualization primal — LIVE mode ───────────────────────────
+# This is the key difference: `live` mode runs BOTH the IPC server AND the
+# native egui window, sharing VisualizationState via Arc<RwLock<>>.
+
+[[nodes]]
+id = "germinate_petaltongue_live"
+depends_on = ["germinate_songbird"]
+output = "petaltongue_genesis"
+capabilities = ["visualization", "ui", "interaction"]
+
+[nodes.primal]
+by_capability = "visualization"
+
+[nodes.operation]
+name = "start"
+[nodes.operation.params]
+mode = "live"
+domain = "game"
+family_id = "${FAMILY_ID}"
+[nodes.operation.environment]
+BIOMEOS_SOCKET_DIR = "${XDG_RUNTIME_DIR}/biomeos"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[nodes.capabilities_provided]
+"visualization.render" = "visualization.render"
+"visualization.render.stream" = "visualization.render.stream"
+"visualization.render.scene" = "visualization.render.scene"
+"visualization.render.dashboard" = "visualization.render.dashboard"
+"visualization.export" = "visualization.export"
+"visualization.session.list" = "visualization.session.list"
+"visualization.session.status" = "visualization.session.status"
+"ui.render" = "ui.render"
+"interaction.subscribe" = "interaction.subscribe"
+"interaction.poll" = "interaction.poll"
+
+# ── Phase 4: Compute primal (optional) ──────────────────────────────────
+
+[[nodes]]
+id = "germinate_barracuda"
+depends_on = ["germinate_songbird"]
+output = "barracuda_genesis"
+capabilities = ["tensor"]
+fallback = "skip"
+
+[nodes.primal]
+by_capability = "tensor"
+
+[nodes.operation]
+name = "start"
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+[nodes.operation.environment]
+BIOMEOS_SOCKET_DIR = "${XDG_RUNTIME_DIR}/biomeos"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[nodes.capabilities_provided]
+"tensor.matmul" = "tensor.matmul"
+"tensor.matmul_inline" = "tensor.matmul_inline"
+"tensor.dot" = "tensor.dot"
+
+# ── Phase 5: AI primal (optional) ───────────────────────────────────────
+
+[[nodes]]
+id = "germinate_squirrel"
+depends_on = ["germinate_songbird"]
+output = "squirrel_genesis"
+capabilities = ["ai"]
+fallback = "skip"
+
+[nodes.primal]
+by_capability = "ai"
+
+[nodes.operation]
+name = "start"
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+[nodes.operation.environment]
+BIOMEOS_SOCKET_DIR = "${XDG_RUNTIME_DIR}/biomeos"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[nodes.capabilities_provided]
+"ai.chat" = "ai.chat"
+"ai.inference" = "ai.inference"
+"ai.summarize" = "context.summarize"
+
+# ── Phase 6: esotericWebb narrative director ────────────────────────────
+
+[[nodes]]
+id = "germinate_esotericwebb"
+depends_on = ["germinate_ludospring", "germinate_petaltongue_live"]
+output = "esotericwebb_genesis"
+capabilities = ["narrative", "webb"]
+
+[nodes.primal]
+by_capability = "narrative"
+
+[nodes.operation]
+name = "start"
+[nodes.operation.params]
+mode = "server"
+domain = "narrative"
+family_id = "${FAMILY_ID}"
+[nodes.operation.environment]
+BIOMEOS_SOCKET_DIR = "${XDG_RUNTIME_DIR}/biomeos"
+
+[nodes.constraints]
+timeout_ms = 20000
+
+[nodes.capabilities_provided]
+"health.liveness" = "health.liveness"
+"health.readiness" = "health.readiness"
+"health.check" = "health.check"
+"identity.get" = "identity.get"
+"capabilities.list" = "capabilities.list"
+"webb.health" = "webb.health"
+"webb.liveness" = "webb.liveness"
+"webb.readiness" = "webb.readiness"
+"webb.scene.current" = "webb.scene.current"
+"webb.narrative.status" = "webb.narrative.status"
+"webb.content.list" = "webb.content.list"
+"tools.list" = "tools.list"
+"tools.call" = "tools.call"
+
+# ── Phase 7: Validate full interactive stack ────────────────────────────
+
+[[nodes]]
+id = "validate_interactive_stack"
+depends_on = ["germinate_esotericwebb"]
+output = "interactive_stack_healthy"
+
+[nodes.operation]
+name = "health_check"
+[nodes.operation.params]
+targets = ["esotericwebb", "ludospring", "petaltongue", "beardog", "songbird"]
+
+[nodes.constraints]
+timeout_ms = 10000
