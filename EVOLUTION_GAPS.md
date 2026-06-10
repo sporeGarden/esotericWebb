@@ -128,21 +128,22 @@ Webb exercises primal composition -> discovers gap in a primal capability
 
 ### GAP-006: Discovery primal capability-filtered queries
 
-- **Primal**: discovery (`discovery.query`)
+- **Primal**: discovery (`discovery.query`, `capability.resolve`, `ipc.resolve`)
 - **Spring (producer)**: Songbird
-- **Severity**: medium
+- **Severity**: medium (closer — TransportEndpoint type landed V14)
 - **Evidence**: Webb's `PrimalRegistry::discover()` probes filesystem socket
-  directories but does not call the discovery primal's `discovery.query`
-  for tier-5 lookup. In a composed niche, the discovery primal is the
-  canonical mechanism.
-- **Expected**: After filesystem probe, Webb queries the discovery primal
-  for any primals not found locally, using `discovery.query` with
-  capability filters.
+  directories but does not yet call songBird's `ipc.resolve` for tier-5
+  topology-aware resolution. In the 4-gate mesh collective (Wave 107),
+  songBird returns structured `TransportEndpoint` responses from
+  `capability.resolve` and `ipc.resolve` (MeshRelay endpoints for cross-gate).
+- **Expected**: After filesystem probe, Webb queries songBird `ipc.resolve`
+  for primals not found locally, receiving `TransportEndpoint` (UDS/TCP/MeshRelay)
+  responses. The `TransportEndpoint` type (V14) already matches this wire format.
 - **Workaround**: Filesystem probe covers tiers 1-4. Tier-5 is logged as
-  degraded but functional.
-- **Handoff**: File when the discovery primal confirms response format for
-  capability-filtered queries.
-- **Status**: open
+  degraded but functional. `TransportEndpoint` type is ready for consumption.
+- **Handoff**: Next step: wire `ipc.resolve` call into discovery after local
+  probe fails, deserialize response as `TransportEndpoint`.
+- **Status**: type-ready (V14), live query pending
 
 ### GAP-007: Voice interjection preview without live AI primal
 

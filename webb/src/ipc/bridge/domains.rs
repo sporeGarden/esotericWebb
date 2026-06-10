@@ -495,7 +495,7 @@ impl PrimalBridge {
                     "webb.scene.current", "webb.narrative.status", "webb.content.list",
                     "session.start", "session.state", "session.actions",
                     "session.act", "session.history", "session.narrate",
-                    "session.graph", "session.metrics"
+                    "session.graph", "session.metrics", "method.describe"
                 ],
                 "evolving": ["tools.list", "tools.call"],
             },

@@ -2,6 +2,52 @@
 
 All notable changes to Esoteric Webb are documented here.
 
+## V14 — Wave 107: Method introspection, TransportEndpoint, ecosystem absorption (Jun 10, 2026)
+
+### `method.describe` — runtime method introspection (barraCuda pattern)
+
+- **New IPC method**: `method.describe` returns structured metadata for any
+  exposed method — description, parameters, stability tier, domain, and access
+  level. Follows the barraCuda Wave 107 pattern for self-correcting distributed
+  compositions.
+- **26th capability** added to niche (24 stable + 2 evolving).
+- **New handler module**: `ipc/handlers/introspection.rs` with complete method
+  catalog compiled from `capability_registry.toml`.
+
+### TransportEndpoint — ecosystem wire format (Wave 107)
+
+- **`TransportEndpoint` enum** in `ipc/discovery.rs` — structured transport
+  resolution matching the confirmed ecosystem wire format:
+  - `Uds { path }` — Unix domain socket
+  - `Tcp { host, port }` — TCP connection
+  - `MeshRelay { peer_id, relay }` — songBird federation relay
+- **Serde support** — serialize/deserialize with `#[serde(tag = "transport")]`
+  matching the format returned by songBird `capability.resolve` and `ipc.resolve`.
+- **`PrimalEndpoint::resolve_transport()`** — best-effort resolution (UDS > TCP).
+- **`PrimalEndpoint::available_transports()`** — all available transports.
+
+### Test expansion (+26 tests)
+
+- **Introspection**: 10 tests (describe known/unknown/self, params, stability,
+  missing params, capability↔descriptor parity).
+- **TransportEndpoint**: 14 tests (serialization, deserialization, from_tcp_addr,
+  resolve priority, available_transports).
+- **Dispatch**: 3 tests (method.describe known/unknown/missing).
+- **Total**: 427 → 453 tests.
+
+### Metrics
+
+| Metric | V13 | V14 |
+|--------|-----|-----|
+| Tests | 427 | 453 |
+| Capabilities | 25 | 26 |
+| Discovery tests | 17 | 31 |
+| Handler tests | 25 | 28 |
+| Wave compliance | 75 | 107 |
+| Transport types | unstructured | TransportEndpoint enum |
+
+---
+
 ## V13 — Wave 75: Session metrics, mesh push propagation, coverage expansion (Jun 3, 2026)
 
 ### Session metrics (V13 feature)

@@ -2,26 +2,26 @@
 
 | | |
 |---|---|
-| **Version** | V13 |
-| **Tests** | 427 (408 unit + 18 E2E + 1 validation) |
+| **Version** | V14 |
+| **Tests** | 453 (434 unit + 18 E2E + 1 validation) |
 | **Coverage** | ~92% lines (`cargo llvm-cov`) |
-| **Rust files** | 43 (~13.6k LOC) |
+| **Rust files** | 44 (~14.2k LOC) |
 | **Experiments** | 5 (exp001–exp005) |
 | **MSRV** | 1.87 (edition 2024) |
 | **License** | AGPL-3.0 + ORC + CC-BY-SA 4.0 |
 | **Unsafe** | `#![forbid(unsafe_code)]` (crate-level) |
 | **C deps** | Zero (ecoBin compliant) |
 | **Bridge methods** | 22 (all domains, all degrading, composition-first) |
-| **Capabilities exposed** | 25 (sourDough + lifecycle + narrative + session + MCP) |
+| **Capabilities exposed** | 26 (sourDough + lifecycle + narrative + session + introspection + MCP) |
 | **Primals consumed** | 7 domains (ai, viz, dag, lineage, compute, storage, provenance) |
 | **Composition adoption** | Wave 17 — `nest.store`, `nest.commit`, `primal.announce` |
-| **Mesh registration** | Wave 75 — `route.register` with stability tiers + push propagation |
-| **Wave compliance** | Wave 75 — zero debt, typed errors, mesh-visible, session metrics |
+| **Mesh registration** | Wave 107 — `route.register` with stability tiers + push propagation |
+| **Wave compliance** | Wave 107 — zero debt, typed errors, mesh-visible, introspection, TransportEndpoint |
 | **Degradation contracts** | Written per-domain in `docs/DEGRADATION_BEHAVIOR.md` |
 | **Trio tracking** | `primals_reached` in session state per `PROVENANCE_TRIO_INTEGRATION_GUIDE` |
 | **Local science** | flow, engagement, DDA, session metrics (absorbed from ludoSpring patterns) |
-| **Ecosystem registry** | 490 methods (primalSpring v0.9.31) |
-| **Last validation** | 2026-06-03 (V13) |
+| **Ecosystem registry** | 490+ methods (primalSpring) |
+| **Last validation** | 2026-06-10 (V14) |
 
 **A [sporeGarden](https://github.com/sporeGarden) project — the primals as a composed CRPG.**
 

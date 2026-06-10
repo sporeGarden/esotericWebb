@@ -1,10 +1,10 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
-# Esoteric Webb V13 — Evolution Patterns and Ecosystem Learnings
+# Esoteric Webb V14 — Evolution Patterns and Ecosystem Learnings
 
-**Date:** Jun 3, 2026 (updated)
+**Date:** Jun 10, 2026 (updated)
 **Author:** ecoPrimals / sporeGarden
-**Foundation:** V1–V4 bootstrap; V5 deep debt; V5.1 audit; V6 ludoSpring decomposition; V7 deploy alignment; V8 Wave 17 composition adoption + deep debt + smart refactoring; V9 Wave 20-21 canonical schema absorption + stability tiers + degradation contracts + trio tracking; V10 Wave 46 env_keys + deploy metadata + announce hints; V11 Wave 67 dead code removal + vocabulary alignment + safety escalation; V12 Wave 72-74 zero debt + typed constructors + mesh readiness; V13 Wave 75 session metrics + push propagation + coverage expansion
-**Coverage:** ~92% lines (410 tests)
+**Foundation:** V1–V4 bootstrap; V5 deep debt; V5.1 audit; V6 ludoSpring decomposition; V7 deploy alignment; V8 Wave 17 composition adoption + deep debt + smart refactoring; V9 Wave 20-21 canonical schema absorption + stability tiers + degradation contracts + trio tracking; V10 Wave 46 env_keys + deploy metadata + announce hints; V11 Wave 67 dead code removal + vocabulary alignment + safety escalation; V12 Wave 72-74 zero debt + typed constructors + mesh readiness; V13 Wave 75 session metrics + push propagation + coverage expansion; V14 Wave 107 method introspection + TransportEndpoint + ecosystem absorption
+**Coverage:** ~92% lines (453 tests)
 
 ---
 
@@ -653,21 +653,58 @@ the new model — older registrations (without it) get poll-compatible behavior.
 
 ---
 
-## Architecture Summary (V13)
+## Pattern 24: Runtime Method Introspection (V14)
+
+**Problem.** In a distributed composition, consumers discover primals by
+capability but have no structured way to understand method signatures,
+parameter requirements, or stability tiers without prior documentation.
+Self-correcting compositions need runtime introspection.
+
+**Solution.** Implement `method.describe` following the barraCuda Wave 107
+pattern. A static method catalog (compiled from `capability_registry.toml`)
+maps every method to its description, params schema, domain, stability tier,
+and access level. Unknown methods return `{ found: false }` rather than
+error — graceful introspection.
+
+**Key invariant:** The descriptor count must equal the niche capabilities
+count. A test asserts `METHODS.len() == CAPABILITIES.len()`.
+
+---
+
+## Pattern 25: Structured Transport Resolution (V14)
+
+**Problem.** Discovery produces `Option<PathBuf>` for sockets and
+`Option<String>` for TCP addresses — unstructured, hard to pass across
+IPC boundaries, and incompatible with the ecosystem's confirmed wire format.
+
+**Solution.** `TransportEndpoint` enum with three variants (`Uds`, `Tcp`,
+`MeshRelay`) using `#[serde(tag = "transport")]` for tagged serialization.
+Matches the format returned by songBird `capability.resolve` (confirmed
+on southGate Wave 107: `{"transport":"uds","path":"..."}`).
+
+`PrimalEndpoint::resolve_transport()` returns the best endpoint (UDS
+preferred for latency, TCP as fallback). When `ipc.resolve` is wired
+(GAP-006 next step), the response deserializes directly into
+`TransportEndpoint` — including `MeshRelay` for cross-gate routing.
+
+---
+
+## Architecture Summary (V14)
 
 ```
-esotericWebb V13
-├── 410 tests (clippy -D warnings, #![forbid(unsafe_code)])
-├── 43 Rust files (~13.6k LOC, zero C deps)
-├── 25 JSON-RPC capabilities (sourDough + lifecycle + narrative + session + MCP)
+esotericWebb V14
+├── 453 tests (clippy -D warnings, #![forbid(unsafe_code)])
+├── 44 Rust files (~14.2k LOC, zero C deps)
+├── 26 JSON-RPC capabilities (sourDough + lifecycle + narrative + session + introspection + MCP)
 ├── 7 primal domains consumed (composition-first with graceful degradation)
-├── 490 ecosystem methods tracked (primalSpring v0.9.31, Wave 75)
-├── Wave compliance: 75 (zero debt, typed errors, mesh push-ready, session metrics)
+├── 490+ ecosystem methods tracked (primalSpring, Wave 107)
+├── Wave compliance: 107 (zero debt, typed errors, mesh push-ready, introspection, TransportEndpoint)
 ├── 14 open evolution gaps (consumer pressure on ecosystem)
-├── ipc/bridge/   (all domains, retry, circuit breaker, composition dispatch, mesh)
-├── ipc/handlers/ (sourDough + lifecycle + capability registry, typed constructors)
-├── science/      (absorbed pure-math: flow, engagement, DDA, session metrics)
-├── env_keys.rs   (zero bare env strings)
-├── niche.rs      (25 capabilities, cross-validated against registry TOML)
-└── deploy graphs (8 TOML, secure_by_default, metadata, composition-first)
+├── ipc/bridge/       (all domains, retry, circuit breaker, composition dispatch, mesh)
+├── ipc/discovery.rs  (TransportEndpoint enum, 4-tier probe, capability-based resolution)
+├── ipc/handlers/     (sourDough + lifecycle + introspection + capability registry)
+├── science/          (absorbed pure-math: flow, engagement, DDA, session metrics)
+├── env_keys.rs       (zero bare env strings)
+├── niche.rs          (26 capabilities, cross-validated against registry TOML)
+└── deploy graphs     (8 TOML, secure_by_default, metadata, composition-first)
 ```

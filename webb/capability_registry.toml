@@ -135,6 +135,16 @@ description = "Narrative DAG as DOT with live session overlay"
 method = "session.metrics"
 description = "Session engagement metrics for game science / DDA (V13)"
 
+# ── Introspection (stable — Wave 107, barraCuda pattern) ──
+
+[introspection]
+stability = "stable"
+
+[[capabilities]]
+method = "method.describe"
+description = "Runtime method introspection — returns description, parameters, stability tier, and domain for any exposed method"
+params = "{ method: string }"
+
 # ── MCP tools (evolving) ──
 
 [tools]

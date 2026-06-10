@@ -13,14 +13,15 @@ use super::envelope::{JsonRpcError, JsonRpcRequest, JsonRpcResponse};
 use super::{
     METHOD_CAPABILITIES_LIST, METHOD_CONTENT_LIST, METHOD_HEALTH, METHOD_HEALTH_CHECK,
     METHOD_HEALTH_DRAIN, METHOD_HEALTH_LIVENESS, METHOD_HEALTH_READINESS, METHOD_HEALTH_VERSION,
-    METHOD_IDENTITY_GET, METHOD_LIVENESS, METHOD_NARRATIVE_STATUS, METHOD_PRIMAL_ANNOUNCE,
-    METHOD_PRIMAL_INFO, METHOD_READINESS, METHOD_SCENE_CURRENT, METHOD_SESSION_ACT,
-    METHOD_SESSION_ACTIONS, METHOD_SESSION_GRAPH, METHOD_SESSION_HISTORY, METHOD_SESSION_METRICS,
-    METHOD_SESSION_NARRATE, METHOD_SESSION_START, METHOD_SESSION_STATE, METHOD_TOOLS_CALL,
-    METHOD_TOOLS_LIST,
+    METHOD_IDENTITY_GET, METHOD_LIVENESS, METHOD_METHOD_DESCRIBE, METHOD_NARRATIVE_STATUS,
+    METHOD_PRIMAL_ANNOUNCE, METHOD_PRIMAL_INFO, METHOD_READINESS, METHOD_SCENE_CURRENT,
+    METHOD_SESSION_ACT, METHOD_SESSION_ACTIONS, METHOD_SESSION_GRAPH, METHOD_SESSION_HISTORY,
+    METHOD_SESSION_METRICS, METHOD_SESSION_NARRATE, METHOD_SESSION_START, METHOD_SESSION_STATE,
+    METHOD_TOOLS_CALL, METHOD_TOOLS_LIST,
 };
 use crate::session::GameSession;
 
+pub mod introspection;
 pub mod lifecycle;
 pub mod mcp;
 pub mod narrative;
@@ -60,6 +61,8 @@ pub fn dispatch_with_session(request: &JsonRpcRequest, session: &SharedSession) 
         METHOD_SCENE_CURRENT => Ok(narrative::handle_scene_current(session)),
         METHOD_NARRATIVE_STATUS => Ok(narrative::handle_narrative_status(session)),
         METHOD_CONTENT_LIST => Ok(narrative::handle_content_list(session)),
+
+        METHOD_METHOD_DESCRIBE => introspection::handle_method_describe(request.params.as_ref()),
 
         METHOD_TOOLS_LIST => Ok(mcp::handle_tools_list()),
         METHOD_TOOLS_CALL => mcp::handle_tools_call(request.params.as_ref(), session),
@@ -395,5 +398,53 @@ mod tests {
             .and_then(|r| r.get("domain"))
             .and_then(Value::as_str);
         assert_eq!(domain, Some("narrative"));
+    }
+
+    #[test]
+    fn method_describe_dispatches_known() {
+        let req = JsonRpcRequest::new(
+            "method.describe",
+            Some(serde_json::json!({"method": "session.start"})),
+        );
+        let resp = dispatch(&req);
+        assert!(resp.error.is_none());
+        let method = resp
+            .result
+            .as_ref()
+            .and_then(|r| r.get("method"))
+            .and_then(Value::as_str);
+        assert_eq!(method, Some("session.start"));
+        let stability = resp
+            .result
+            .as_ref()
+            .and_then(|r| r.get("stability"))
+            .and_then(Value::as_str);
+        assert_eq!(stability, Some("stable"));
+    }
+
+    #[test]
+    fn method_describe_dispatches_unknown() {
+        let req = JsonRpcRequest::new(
+            "method.describe",
+            Some(serde_json::json!({"method": "no.such.method"})),
+        );
+        let resp = dispatch(&req);
+        assert!(resp.error.is_none());
+        let found = resp
+            .result
+            .as_ref()
+            .and_then(|r| r.get("found"))
+            .and_then(Value::as_bool);
+        assert_eq!(found, Some(false));
+    }
+
+    #[test]
+    fn method_describe_missing_params_errors() {
+        let req = JsonRpcRequest::new("method.describe", None);
+        let resp = dispatch(&req);
+        assert!(resp.error.is_some());
+        if let Some(err) = &resp.error {
+            assert_eq!(err.code, -32602);
+        }
     }
 }

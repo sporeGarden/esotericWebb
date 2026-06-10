@@ -38,12 +38,13 @@ wateringHole/
 
 | Handoff | Direction | Summary |
 |---------|-----------|---------|
-| `ESOTERICWEBB_V13_WAVE75_METRICS_HANDOFF_JUN03_2026.md` | Outbound | **Current** — V13 session metrics, mesh push propagation, 427 tests |
+| `ESOTERICWEBB_V14_WAVE107_INTROSPECTION_HANDOFF_JUN10_2026.md` | Outbound | **Current** — V14 method.describe, TransportEndpoint, 453 tests |
 
 ## Archived handoffs (fossil record)
 
 | Handoff | Direction | Summary |
 |---------|-----------|---------|
+| `ESOTERICWEBB_V13_WAVE75_METRICS_HANDOFF_JUN03_2026.md` | Outbound | V13 session metrics, mesh push propagation, 427 tests |
 | `ESOTERICWEBB_V12_WAVE74_ZERO_DEBT_HANDOFF_JUN03_2026.md` | Outbound | V12 zero debt, typed constructors, mesh registration, 378 tests |
 | `ESOTERICWEBB_V11_WAVE67_POLISH_HANDOFF_JUN01_2026.md` | Outbound | V11 dead code removal, vocabulary alignment, `#![forbid(unsafe_code)]` |
 | `ESOTERICWEBB_V10_WAVE46_ABSORPTION_HANDOFF_MAY23_2026.md` | Outbound | V10 Wave 46 env_keys, deploy graph metadata, announce hints |

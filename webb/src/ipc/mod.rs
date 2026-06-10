@@ -108,6 +108,11 @@ pub const METHOD_HEALTH_DRAIN: &str = "health.drain";
 /// Register capabilities with the mesh router for cross-gate discovery.
 pub const METHOD_ROUTE_REGISTER: &str = "route.register";
 
+// ── Introspection (Wave 107 — barraCuda pattern) ──────────────
+
+/// Runtime method introspection — describe any exposed method.
+pub const METHOD_METHOD_DESCRIBE: &str = "method.describe";
+
 // ── Webb's own methods ─────────────────────────────────────
 
 /// Webb health method.

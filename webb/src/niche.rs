@@ -51,6 +51,8 @@ pub const CAPABILITIES: &[&str] = &[
     "session.narrate",
     "session.graph",
     "session.metrics",
+    // Introspection (Wave 107)
+    "method.describe",
     // MCP
     "tools.list",
     "tools.call",
@@ -167,7 +169,7 @@ mod tests {
 
     #[test]
     fn capabilities_count() {
-        assert_eq!(CAPABILITIES.len(), 25);
+        assert_eq!(CAPABILITIES.len(), 26);
     }
 
     #[test]
@@ -179,6 +181,7 @@ mod tests {
             "primal.",
             "webb.",
             "session.",
+            "method.",
             "tools.",
         ];
         for cap in CAPABILITIES {
