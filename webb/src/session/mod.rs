@@ -242,9 +242,10 @@ impl GameSession {
         let outcome = self.director.process(&input, &mut self.state, &self.bundle);
         self.turn += 1;
 
-        let outcome_text = match &outcome {
-            DirectorOutcome::SceneChange { narration, .. } => narration.clone(),
-            DirectorOutcome::Narration(s) | DirectorOutcome::NoEffect(s) => s.clone(),
+        let outcome_text = match outcome {
+            DirectorOutcome::SceneChange { narration, .. }
+            | DirectorOutcome::Narration(narration)
+            | DirectorOutcome::NoEffect(narration) => narration,
         };
 
         let action_desc = format!("{kind}:{id}");

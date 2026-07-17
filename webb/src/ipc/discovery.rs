@@ -28,71 +28,7 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use serde::{Deserialize, Serialize};
-
-/// Structured transport endpoint — ecosystem wire format (Wave 107).
-///
-/// Matches the format returned by songBird `capability.resolve` and `ipc.resolve`:
-/// - UDS: `{"transport":"uds","path":"/run/user/1000/biomeos/dag.sock"}`
-/// - TCP: `{"transport":"tcp","host":"127.0.0.1","port":9401}`
-/// - Mesh relay: `{"transport":"mesh_relay","peer_id":"eastGate","relay":"157.230.3.183:7700"}`
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "transport", rename_all = "snake_case")]
-pub enum TransportEndpoint {
-    /// Unix domain socket.
-    Uds {
-        /// Absolute filesystem path to the socket.
-        path: String,
-    },
-    /// TCP connection.
-    Tcp {
-        /// Hostname or IP address.
-        host: String,
-        /// Port number.
-        port: u16,
-    },
-    /// Mesh relay via songBird federation.
-    MeshRelay {
-        /// Identity of the remote gate hosting the primal.
-        peer_id: String,
-        /// Relay address (songBird federation endpoint).
-        relay: String,
-    },
-}
-
-impl TransportEndpoint {
-    /// Create a UDS endpoint from a socket path.
-    #[must_use]
-    pub fn uds(path: impl Into<String>) -> Self {
-        Self::Uds { path: path.into() }
-    }
-
-    /// Create a TCP endpoint from host and port.
-    #[must_use]
-    pub fn tcp(host: impl Into<String>, port: u16) -> Self {
-        Self::Tcp {
-            host: host.into(),
-            port,
-        }
-    }
-
-    /// Create a mesh relay endpoint.
-    #[must_use]
-    pub fn mesh_relay(peer_id: impl Into<String>, relay: impl Into<String>) -> Self {
-        Self::MeshRelay {
-            peer_id: peer_id.into(),
-            relay: relay.into(),
-        }
-    }
-
-    /// Parse a TCP address string (host:port) into a TCP endpoint.
-    #[must_use]
-    pub fn from_tcp_addr(addr: &str) -> Option<Self> {
-        let (host, port_str) = addr.rsplit_once(':')?;
-        let port: u16 = port_str.parse().ok()?;
-        Some(Self::tcp(host, port))
-    }
-}
+pub use super::transport::TransportEndpoint;
 
 /// A discovered primal endpoint (UDS and/or TCP).
 #[derive(Debug, Clone)]
@@ -112,6 +48,18 @@ pub struct PrimalEndpoint {
 }
 
 impl PrimalEndpoint {
+    /// Create a new endpoint with domain and name, no transports yet.
+    fn empty(domain: impl Into<String>, name: impl Into<String>) -> Self {
+        Self {
+            domain: domain.into(),
+            name: name.into(),
+            socket_path: None,
+            tcp_addr: None,
+            capabilities: Vec::new(),
+            healthy: false,
+        }
+    }
+
     /// Resolve the best `TransportEndpoint` for this primal.
     ///
     /// Priority: UDS (lowest latency) > TCP (wider platform support).
@@ -210,14 +158,7 @@ impl PrimalRegistry {
                 let ep =
                     self.by_domain
                         .entry(domain.to_owned())
-                        .or_insert_with(|| PrimalEndpoint {
-                            domain: domain.to_owned(),
-                            name: name.to_owned(),
-                            socket_path: None,
-                            tcp_addr: None,
-                            capabilities: Vec::new(),
-                            healthy: false,
-                        });
+                        .or_insert_with(|| PrimalEndpoint::empty(domain, name));
                 ep.tcp_addr = Some(tcp_addr);
             }
         }
@@ -294,14 +235,7 @@ impl PrimalRegistry {
         let ep = self
             .by_domain
             .entry(domain.to_owned())
-            .or_insert_with(|| PrimalEndpoint {
-                domain: domain.to_owned(),
-                name: name.to_owned(),
-                socket_path: None,
-                tcp_addr: None,
-                capabilities: Vec::new(),
-                healthy: false,
-            });
+            .or_insert_with(|| PrimalEndpoint::empty(domain, name));
 
         if ep.tcp_addr.is_none() {
             ep.tcp_addr = tcp_addr;
@@ -354,14 +288,7 @@ impl PrimalRegistry {
                 let ep =
                     self.by_domain
                         .entry(resolved_domain.clone())
-                        .or_insert_with(|| PrimalEndpoint {
-                            domain: resolved_domain,
-                            name: resolved_name,
-                            socket_path: None,
-                            tcp_addr: None,
-                            capabilities: Vec::new(),
-                            healthy: false,
-                        });
+                        .or_insert_with(|| PrimalEndpoint::empty(resolved_domain, resolved_name));
                 ep.socket_path = Some(path);
             }
         }
@@ -726,82 +653,14 @@ name = "orphan"
         let _ = std::fs::remove_dir_all(&dir);
     }
 
-    // ── TransportEndpoint tests ──
-
-    #[test]
-    fn transport_endpoint_uds_serialization() {
-        let ep = TransportEndpoint::uds("/run/user/1000/biomeos/dag.sock");
-        let json = serde_json::to_value(&ep).unwrap();
-        assert_eq!(json["transport"], "uds");
-        assert_eq!(json["path"], "/run/user/1000/biomeos/dag.sock");
-    }
-
-    #[test]
-    fn transport_endpoint_tcp_serialization() {
-        let ep = TransportEndpoint::tcp("127.0.0.1", 9401);
-        let json = serde_json::to_value(&ep).unwrap();
-        assert_eq!(json["transport"], "tcp");
-        assert_eq!(json["host"], "127.0.0.1");
-        assert_eq!(json["port"], 9401);
-    }
-
-    #[test]
-    fn transport_endpoint_mesh_relay_serialization() {
-        let ep = TransportEndpoint::mesh_relay("eastGate", "157.230.3.183:7700");
-        let json = serde_json::to_value(&ep).unwrap();
-        assert_eq!(json["transport"], "mesh_relay");
-        assert_eq!(json["peer_id"], "eastGate");
-        assert_eq!(json["relay"], "157.230.3.183:7700");
-    }
-
-    #[test]
-    fn transport_endpoint_deserialization_uds() {
-        let json = serde_json::json!({"transport": "uds", "path": "/tmp/test.sock"});
-        let ep: TransportEndpoint = serde_json::from_value(json).unwrap();
-        assert_eq!(ep, TransportEndpoint::uds("/tmp/test.sock"));
-    }
-
-    #[test]
-    fn transport_endpoint_deserialization_tcp() {
-        let json = serde_json::json!({"transport": "tcp", "host": "10.0.0.1", "port": 8080});
-        let ep: TransportEndpoint = serde_json::from_value(json).unwrap();
-        assert_eq!(ep, TransportEndpoint::tcp("10.0.0.1", 8080));
-    }
-
-    #[test]
-    fn transport_endpoint_deserialization_mesh_relay() {
-        let json =
-            serde_json::json!({"transport": "mesh_relay", "peer_id": "south", "relay": "vps:7700"});
-        let ep: TransportEndpoint = serde_json::from_value(json).unwrap();
-        assert_eq!(ep, TransportEndpoint::mesh_relay("south", "vps:7700"));
-    }
-
-    #[test]
-    fn from_tcp_addr_valid() {
-        let ep = TransportEndpoint::from_tcp_addr("127.0.0.1:9401").unwrap();
-        assert_eq!(ep, TransportEndpoint::tcp("127.0.0.1", 9401));
-    }
-
-    #[test]
-    fn from_tcp_addr_invalid_port() {
-        assert!(TransportEndpoint::from_tcp_addr("127.0.0.1:notaport").is_none());
-    }
-
-    #[test]
-    fn from_tcp_addr_no_colon() {
-        assert!(TransportEndpoint::from_tcp_addr("127.0.0.1").is_none());
-    }
+    // ── PrimalEndpoint resolve tests ──
 
     #[test]
     fn resolve_transport_prefers_uds() {
-        let ep = PrimalEndpoint {
-            domain: "dag".to_owned(),
-            name: "rhizocrypt".to_owned(),
-            socket_path: Some(PathBuf::from("/run/user/1000/biomeos/dag.sock")),
-            tcp_addr: Some("127.0.0.1:9401".to_owned()),
-            capabilities: vec![],
-            healthy: true,
-        };
+        let mut ep = PrimalEndpoint::empty("dag", "rhizocrypt");
+        ep.socket_path = Some(PathBuf::from("/run/user/1000/biomeos/dag.sock"));
+        ep.tcp_addr = Some("127.0.0.1:9401".to_owned());
+        ep.healthy = true;
         let resolved = ep.resolve_transport().unwrap();
         assert_eq!(
             resolved,
@@ -811,55 +670,31 @@ name = "orphan"
 
     #[test]
     fn resolve_transport_falls_back_to_tcp() {
-        let ep = PrimalEndpoint {
-            domain: "dag".to_owned(),
-            name: "rhizocrypt".to_owned(),
-            socket_path: None,
-            tcp_addr: Some("127.0.0.1:9401".to_owned()),
-            capabilities: vec![],
-            healthy: true,
-        };
+        let mut ep = PrimalEndpoint::empty("dag", "rhizocrypt");
+        ep.tcp_addr = Some("127.0.0.1:9401".to_owned());
+        ep.healthy = true;
         let resolved = ep.resolve_transport().unwrap();
         assert_eq!(resolved, TransportEndpoint::tcp("127.0.0.1", 9401));
     }
 
     #[test]
     fn resolve_transport_none_when_empty() {
-        let ep = PrimalEndpoint {
-            domain: "dag".to_owned(),
-            name: "rhizocrypt".to_owned(),
-            socket_path: None,
-            tcp_addr: None,
-            capabilities: vec![],
-            healthy: false,
-        };
+        let ep = PrimalEndpoint::empty("dag", "rhizocrypt");
         assert!(ep.resolve_transport().is_none());
     }
 
     #[test]
     fn available_transports_returns_both() {
-        let ep = PrimalEndpoint {
-            domain: "dag".to_owned(),
-            name: "rhizocrypt".to_owned(),
-            socket_path: Some(PathBuf::from("/tmp/dag.sock")),
-            tcp_addr: Some("127.0.0.1:9401".to_owned()),
-            capabilities: vec![],
-            healthy: true,
-        };
+        let mut ep = PrimalEndpoint::empty("dag", "rhizocrypt");
+        ep.socket_path = Some(PathBuf::from("/tmp/dag.sock"));
+        ep.tcp_addr = Some("127.0.0.1:9401".to_owned());
         let transports = ep.available_transports();
         assert_eq!(transports.len(), 2);
     }
 
     #[test]
     fn available_transports_empty_endpoint() {
-        let ep = PrimalEndpoint {
-            domain: "dag".to_owned(),
-            name: "rhizocrypt".to_owned(),
-            socket_path: None,
-            tcp_addr: None,
-            capabilities: vec![],
-            healthy: false,
-        };
+        let ep = PrimalEndpoint::empty("dag", "rhizocrypt");
         assert!(ep.available_transports().is_empty());
     }
 
@@ -906,17 +741,9 @@ tcp_address = "127.0.0.1:8888"
         .unwrap();
 
         let mut registry = PrimalRegistry::default();
-        registry.by_domain.insert(
-            "keepdomain".to_owned(),
-            PrimalEndpoint {
-                domain: "keepdomain".to_owned(),
-                name: "keeper".to_owned(),
-                socket_path: None,
-                tcp_addr: Some("10.0.0.1:1111".to_owned()),
-                capabilities: vec![],
-                healthy: false,
-            },
-        );
+        let mut existing = PrimalEndpoint::empty("keepdomain", "keeper");
+        existing.tcp_addr = Some("10.0.0.1:1111".to_owned());
+        registry.by_domain.insert("keepdomain".to_owned(), existing);
         registry.ingest_metadata(&meta_path);
 
         let ep = registry.by_domain.get("keepdomain").unwrap();

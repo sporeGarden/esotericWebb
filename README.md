@@ -2,10 +2,10 @@
 
 | | |
 |---|---|
-| **Version** | V16 |
-| **Tests** | 471 (452 unit + 18 E2E + 1 validation) |
+| **Version** | V17 |
+| **Tests** | 472 (453 unit + 18 E2E + 1 validation) |
 | **Coverage** | ~92% lines (`cargo llvm-cov`) |
-| **Rust files** | 48 (~14.8k LOC) |
+| **Rust files** | 49 (~15.7k LOC) |
 | **Experiments** | 6 (exp001–exp006) |
 | **MSRV** | 1.87 (edition 2024) |
 | **License** | AGPL-3.0 + ORC + CC-BY-SA 4.0 |
@@ -22,7 +22,7 @@
 | **Local science** | flow, engagement, DDA, voice interjections, session metrics (absorbed patterns) |
 | **Ecosystem registry** | 490+ methods (primalSpring) |
 | **Live primals (flockGate)** | 6/9 connected (squirrel, petaltongue, nestgate, loamspine, sweetgrass, beardog) |
-| **Last validation** | 2026-07-17 (V16) |
+| **Last validation** | 2026-07-17 (V17) |
 
 **A [sporeGarden](https://github.com/sporeGarden) project — the primals as a composed CRPG.**
 
@@ -60,7 +60,7 @@ engine**. It consumes primals via JSON-RPC IPC — zero Rust crate dependencies
 on any spring. Primals are resolved from `plasmidBin/` or discovered via
 Songbird at runtime.
 
-| Domain | Primal | Role | Status (V16) | Key IPC methods |
+| Domain | Primal | Role | Status (V17) | Key IPC methods |
 |--------|--------|------|-------------|-----------------|
 | ai | Squirrel | AI narration, NPC dialogue, inference | Live on flockGate | `ai.query`, `ai.suggest`, `ai.analyze` |
 | visualization | petalTongue | Scene rendering, input polling | Live on flockGate | `visualization.render.scene`, `interaction.poll` |

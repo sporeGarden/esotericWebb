@@ -2,6 +2,39 @@
 
 All notable changes to Esoteric Webb are documented here.
 
+## V17 — Deep Debt: Smart Refactoring, Clone Reduction, Module Extraction (Jul 17, 2026)
+
+### Smart file refactoring
+
+- **`discovery.rs` refactored** (927L -> 754L): `TransportEndpoint` type
+  extracted to dedicated `transport.rs` module (142L). Decouples the
+  ecosystem wire format type from filesystem probing logic.
+- **`PrimalEndpoint::empty()` constructor**: DRYs up 4 repeated struct
+  literal constructions in discovery code. Reduces 28 lines of boilerplate.
+- **Preview engine extracted** from `commands/mod.rs` (510L -> 417L):
+  `preview_loop`, `build_action_menu`, `read_choice` moved to
+  `commands/preview.rs` (105L). Command dispatch stays thin.
+
+### Clone reduction
+
+- **`DirectorOutcome` consumed by value** in `session::act()` — was
+  matched by reference and cloned; now destructured by value, eliminating
+  one `String::clone()` per action.
+
+### Test coverage
+
+- **`health_liveness_skips_invalid_params_error`** — new test validating
+  V16's `-32602` fallback behavior. Mock server sends invalid params on
+  first method, success on second; asserts health probe falls through.
+
+### Dependency audit
+
+- All 9 direct dependencies verified: pure Rust, no C deps, no
+  deprecated/yanked crates. ecoBin compliant. `yaml_serde` confirmed as
+  ecosystem YAML crate (libyaml-rs backend, pure Rust).
+- Zero files over 800 lines (largest: `discovery.rs` at 754L).
+- Zero `unsafe`, zero `TODO`/`FIXME`/`HACK`, zero doc warnings.
+
 ## V16 — Live Primal Composition on flockGate (Jul 17, 2026)
 
 ### Discovery reverse-mapping

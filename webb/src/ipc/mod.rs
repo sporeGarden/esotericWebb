@@ -43,6 +43,7 @@ pub mod petaltongue;
 pub mod primal_names;
 pub mod resilience;
 pub mod squirrel;
+pub mod transport;
 
 pub use envelope::{JsonRpcError, JsonRpcRequest, JsonRpcResponse};
 pub use primal_names::DOMAIN_PRIMAL_MAP;

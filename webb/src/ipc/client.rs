@@ -679,4 +679,39 @@ mod tests {
 
         server.join().unwrap();
     }
+
+    #[test]
+    fn health_liveness_skips_invalid_params_error() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap().to_string();
+
+        let server = std::thread::spawn(move || {
+            let (stream, _) = listener.accept().unwrap();
+            let mut reader = BufReader::new(&stream);
+
+            let mut line = String::new();
+            reader.read_line(&mut line).unwrap();
+            let req: serde_json::Value = serde_json::from_str(&line).unwrap();
+            let id = &req["id"];
+            let response = format!(
+                "{{\"jsonrpc\":\"2.0\",\"error\":{{\"code\":-32602,\"message\":\"invalid params\"}},\"id\":{id}}}\n"
+            );
+            (&stream).write_all(response.as_bytes()).unwrap();
+
+            let mut line2 = String::new();
+            reader.read_line(&mut line2).unwrap();
+            let req2: serde_json::Value = serde_json::from_str(&line2).unwrap();
+            let id2 = &req2["id"];
+            let response2 = format!(
+                "{{\"jsonrpc\":\"2.0\",\"result\":{{\"status\":\"healthy\"}},\"id\":{id2}}}\n"
+            );
+            (&stream).write_all(response2.as_bytes()).unwrap();
+        });
+
+        let mut client = PrimalClient::connect_tcp(&addr, "test").unwrap();
+        let result = client.health_liveness().unwrap();
+        assert!(result, "should skip -32602 and succeed on next method");
+
+        server.join().unwrap();
+    }
 }
