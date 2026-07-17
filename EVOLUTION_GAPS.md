@@ -143,7 +143,12 @@ Webb exercises primal composition -> discovers gap in a primal capability
   degraded but functional. `TransportEndpoint` type is ready for consumption.
 - **Handoff**: Next step: wire `ipc.resolve` call into discovery after local
   probe fails, deserialize response as `TransportEndpoint`.
-- **Status**: type-ready (V14), live query pending
+- **Progress (V16)**: songBird discovered via `SONGBIRD_JSONRPC_PORT=7780`
+  env var on flockGate. However songBird TCP 7780 speaks HTTP, not raw
+  NDJSON JSON-RPC — Webb's `PrimalClient` sends NDJSON and gets HTTP 400.
+  Either songBird needs a raw JSON-RPC endpoint or Webb needs an HTTP
+  transport adapter. Filed in V16 AAR handoff.
+- **Status**: type-ready (V14), env-var discovery works (V16), live health blocked by transport mismatch
 
 ### GAP-007: Voice interjection preview without live AI primal
 
@@ -363,6 +368,59 @@ Webb exercises primal composition -> discovers gap in a primal capability
   Content served via GitHub Pages until S3 cutover completes.
 - **Handoff**: sporePrint / primalSpring for pipeline readiness.
 - **Status**: open (blocked on S3 cutover)
+
+### GAP-036: Ecosystem socket naming convention divergence
+
+- **Primal**: all primals registering UDS sockets
+- **Spring (producer)**: ecosystem-wide (each spring registers its own socket)
+- **Severity**: low (V16 workaround in place)
+- **Evidence**: On flockGate (Wave 147c), some primals register domain-named
+  sockets (`visualization.sock`, `ai.sock`) while others register primal-named
+  sockets (`rhizocrypt.sock`, `loamspine.sock`, `toadstool.sock`). Webb's
+  original `probe_directory()` only matched domain names, causing 3 primals
+  to be invisible despite running. V16 added reverse-mapping as a workaround.
+- **Expected**: Ecosystem convention converges on one naming scheme (domain
+  or primal slug) or primals register both. `biomeOS/primalSpring` should
+  document the convention and enforce it in `gate.enroll`.
+- **Workaround**: Webb V16 `probe_directory()` does two-pass lookup (domain
+  first, primal slug reverse-map second). Works for all known primals.
+- **Handoff**: V16 AAR handoff for upstream primal teams.
+- **Status**: workaround shipped (V16), convention alignment pending
+
+### GAP-037: songBird uses HTTP transport, not raw JSON-RPC
+
+- **Primal**: mesh (`discovery.topology`, `discovery.health`)
+- **Spring (producer)**: songBird
+- **Severity**: medium
+- **Evidence**: songBird on flockGate listens on TCP 7780 but speaks HTTP
+  (returns `HTTP/1.1 400 Bad Request` to NDJSON payloads). Webb's
+  `PrimalClient` sends newline-delimited JSON over raw TCP, which is the
+  ecosystem standard for all other primals (squirrel, petaltongue, nestgate,
+  sweetgrass, loamspine, beardog).
+- **Expected**: Either songBird exposes a raw JSON-RPC endpoint (NDJSON
+  over TCP, per sourDough convention) or Webb adds an HTTP POST transport
+  adapter.
+- **Workaround**: songBird mesh domain marked as discovered but unhealthy.
+  Mesh bridge methods degrade gracefully.
+- **Handoff**: V16 AAR handoff for songBird team.
+- **Status**: open
+
+### GAP-038: Stale UDS sockets from crashed primals
+
+- **Primal**: rhizoCrypt, toadStool (and potentially others)
+- **Spring (producer)**: ecosystem-wide
+- **Severity**: low
+- **Evidence**: On flockGate, `rhizocrypt.sock` and `toadstool.sock`
+  exist on disk but `connect()` returns ECONNREFUSED. The primal processes
+  are not running but their socket files were not cleaned up on exit.
+  This causes Webb to discover them as "found" but fail health check.
+- **Expected**: Primals clean up their UDS sockets on shutdown (trap
+  SIGTERM/SIGINT). Alternatively, `gate.enroll` or biomeOS could gc stale
+  sockets.
+- **Workaround**: Webb's bridge correctly classifies these as unhealthy
+  (discovered but not connected). No false positives in composition.
+- **Handoff**: V16 AAR handoff for upstream primal teams.
+- **Status**: open
 
 ### GAP-024: Composition dispatch not yet exercised E2E against live biomeOS
 

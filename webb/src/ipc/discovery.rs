@@ -319,6 +319,14 @@ impl PrimalRegistry {
     }
 
     /// Probe a directory for `.sock` files and merge into existing endpoints.
+    ///
+    /// Resolves the socket file stem in two passes:
+    /// 1. Match as a **domain** name (`dag.sock` -> domain "dag")
+    /// 2. Match as a **primal slug** reverse-mapped through `DOMAIN_PRIMAL_MAP`
+    ///    (`rhizocrypt.sock` -> primal "rhizocrypt" -> domain "dag")
+    ///
+    /// This handles the ecosystem reality where some primals register
+    /// domain-named sockets and others register primal-named sockets.
     fn probe_directory(&mut self, dir: &std::path::Path) {
         let Ok(entries) = std::fs::read_dir(dir) else {
             return;
@@ -326,26 +334,35 @@ impl PrimalRegistry {
         for entry in entries.flatten() {
             let path = entry.path();
             if path.extension().and_then(|e| e.to_str()) == Some("sock") {
-                let domain = path.file_stem().and_then(|s| s.to_str()).map(str::to_owned);
-                if let Some(domain) = domain {
-                    let name = DOMAIN_PRIMAL_MAP
-                        .iter()
-                        .find(|&&(d, _)| d == domain)
-                        .map_or_else(|| domain.clone(), |&(_, n)| n.to_owned());
+                let Some(file_stem) = path.file_stem().and_then(|s| s.to_str()) else {
+                    continue;
+                };
 
-                    let ep =
-                        self.by_domain
-                            .entry(domain.clone())
-                            .or_insert_with(|| PrimalEndpoint {
-                                domain: domain.clone(),
-                                name: name.clone(),
-                                socket_path: None,
-                                tcp_addr: None,
-                                capabilities: Vec::new(),
-                                healthy: false,
-                            });
-                    ep.socket_path = Some(path);
-                }
+                let (resolved_domain, resolved_name) = DOMAIN_PRIMAL_MAP
+                    .iter()
+                    .find(|&&(d, _)| d == file_stem)
+                    .or_else(|| {
+                        DOMAIN_PRIMAL_MAP
+                            .iter()
+                            .find(|&&(_, n)| n == file_stem)
+                    })
+                    .map_or_else(
+                        || (file_stem.to_owned(), file_stem.to_owned()),
+                        |&(d, n)| (d.to_owned(), n.to_owned()),
+                    );
+
+                let ep =
+                    self.by_domain
+                        .entry(resolved_domain.clone())
+                        .or_insert_with(|| PrimalEndpoint {
+                            domain: resolved_domain,
+                            name: resolved_name,
+                            socket_path: None,
+                            tcp_addr: None,
+                            capabilities: Vec::new(),
+                            healthy: false,
+                        });
+                ep.socket_path = Some(path);
             }
         }
     }
@@ -658,6 +675,53 @@ name = "orphan"
 
         let ep = registry.by_domain.get("custom").unwrap();
         assert_eq!(ep.name, "custom");
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn probe_directory_reverse_maps_primal_slug_to_domain() {
+        let dir = std::env::temp_dir().join("esotericwebb-test-probe-reverse");
+        let _ = std::fs::create_dir_all(&dir);
+        std::fs::write(dir.join("rhizocrypt.sock"), "").unwrap();
+        std::fs::write(dir.join("loamspine.sock"), "").unwrap();
+        std::fs::write(dir.join("toadstool.sock"), "").unwrap();
+
+        let mut registry = PrimalRegistry::default();
+        registry.probe_directory(&dir);
+
+        let dag = registry.by_domain.get("dag").unwrap();
+        assert_eq!(dag.name, "rhizocrypt");
+        assert!(dag.socket_path.is_some());
+
+        let lineage = registry.by_domain.get("lineage").unwrap();
+        assert_eq!(lineage.name, "loamspine");
+
+        let compute = registry.by_domain.get("compute").unwrap();
+        assert_eq!(compute.name, "toadstool");
+
+        assert!(!registry.by_domain.contains_key("rhizocrypt"));
+        assert!(!registry.by_domain.contains_key("loamspine"));
+        assert!(!registry.by_domain.contains_key("toadstool"));
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn probe_directory_domain_named_still_works() {
+        let dir = std::env::temp_dir().join("esotericwebb-test-probe-domain");
+        let _ = std::fs::create_dir_all(&dir);
+        std::fs::write(dir.join("dag.sock"), "").unwrap();
+        std::fs::write(dir.join("visualization.sock"), "").unwrap();
+
+        let mut registry = PrimalRegistry::default();
+        registry.probe_directory(&dir);
+
+        let dag = registry.by_domain.get("dag").unwrap();
+        assert_eq!(dag.name, "rhizocrypt");
+
+        let viz = registry.by_domain.get("visualization").unwrap();
+        assert_eq!(viz.name, "petaltongue");
 
         let _ = std::fs::remove_dir_all(&dir);
     }

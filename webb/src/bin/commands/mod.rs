@@ -442,6 +442,7 @@ pub fn cmd_validate_all() -> Result<()> {
         "esotericwebb-exp003",
         "esotericwebb-exp004",
         "esotericwebb-exp005",
+        "esotericwebb-exp006",
     ];
 
     println!("=== Esoteric Webb — validate --all ===\n");

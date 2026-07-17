@@ -210,14 +210,14 @@ impl PrimalClient {
             "health",
             &primal_health,
         ];
+        let empty_params = serde_json::json!({});
         for method in methods {
-            match self.call(method, serde_json::Value::Null) {
+            match self.call(method, empty_params.clone()) {
                 Ok(resp) => {
-                    if resp
-                        .error
-                        .as_ref()
-                        .is_some_and(|e| e.code == super::envelope::ERROR_METHOD_NOT_FOUND)
-                    {
+                    if resp.error.as_ref().is_some_and(|e| {
+                        e.code == super::envelope::ERROR_METHOD_NOT_FOUND
+                            || e.code == super::envelope::ERROR_INVALID_PARAMS
+                    }) {
                         continue;
                     }
                     return Ok(resp.error.is_none());

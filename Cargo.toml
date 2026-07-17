@@ -15,6 +15,7 @@ members = [
     "experiments/exp003_state_emergence",
     "experiments/exp004_provenance_trio_tcp",
     "experiments/exp005_autoplay_coverage",
+    "experiments/exp006_live_composition",
 ]
 
 [workspace.package]

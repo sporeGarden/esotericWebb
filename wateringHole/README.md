@@ -38,12 +38,13 @@ wateringHole/
 
 | Handoff | Direction | Summary |
 |---------|-----------|---------|
-| `ESOTERICWEBB_V15_DEEP_DEBT_EVOLUTION_HANDOFF_JUL17_2026.md` | Outbound | **Current** — V15 domain wiring (crypto, mesh), mock cleanup, voice engine, ruleset validation |
+| `ESOTERICWEBB_V16_LIVE_COMPOSITION_AAR_HANDOFF_JUL17_2026.md` | Outbound | **Current** — V16 live primal composition on flockGate, discovery reverse-mapping, health hardening, AAR findings |
 
 ## Archived handoffs (fossil record)
 
 | Handoff | Direction | Summary |
 |---------|-----------|---------|
+| `ESOTERICWEBB_V15_DEEP_DEBT_EVOLUTION_HANDOFF_JUL17_2026.md` | Outbound | V15 domain wiring (crypto, mesh), mock cleanup, voice engine, ruleset validation |
 | `ESOTERICWEBB_V14_WAVE107_INTROSPECTION_HANDOFF_JUN10_2026.md` | Outbound | V14 method.describe, TransportEndpoint, 453 tests |
 | `ESOTERICWEBB_V13_WAVE75_METRICS_HANDOFF_JUN03_2026.md` | Outbound | V13 session metrics, mesh push propagation, 427 tests |
 | `ESOTERICWEBB_V12_WAVE74_ZERO_DEBT_HANDOFF_JUN03_2026.md` | Outbound | V12 zero debt, typed constructors, mesh registration, 378 tests |

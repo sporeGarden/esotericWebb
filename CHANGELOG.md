@@ -2,6 +2,56 @@
 
 All notable changes to Esoteric Webb are documented here.
 
+## V16 — Live Primal Composition on flockGate (Jul 17, 2026)
+
+### Discovery reverse-mapping
+
+- **`probe_directory()` evolved** to reverse-map primal slug sockets to
+  domains. `rhizocrypt.sock` -> dag, `loamspine.sock` -> lineage,
+  `toadstool.sock` -> compute. Unlocks 3 additional primals previously
+  invisible due to socket naming mismatch (primals registering by name
+  instead of domain). Two-pass lookup: domain first, then primal slug
+  via `DOMAIN_PRIMAL_MAP` reverse scan.
+- **4 new discovery tests**: `probe_directory_reverse_maps_primal_slug_to_domain`,
+  `probe_directory_domain_named_still_works`, verifying both directions.
+
+### Health check hardening
+
+- **`health_liveness()` sends `{}` instead of `null` params** — fixes
+  squirrel (and any primal requiring structured params per JSON-RPC 2.0).
+  Squirrel now healthy on flockGate.
+- **`-32602` (invalid params) treated as fallback trigger** — health
+  probe now falls through to next method name on invalid params, same
+  as method-not-found. More resilient against primals with strict param
+  validation.
+
+### Live composition validated (flockGate Wave 147c)
+
+- **6/9 primals connected**: squirrel (ai), petaltongue (viz), nestgate
+  (storage), loamspine (lineage), sweetgrass (provenance), beardog (crypto).
+- **8/9 discovered**: rhizocrypt and toadstool found but sockets stale
+  (process not running). songBird TCP-only (no UDS), needs env var.
+- **exp006_live_composition**: New experiment exercising live discovery,
+  session with bridge, `act(examine)`, `act(exit)`, enrichment pipeline
+  against real primals. 19 pass, 0 fail, 3 skip.
+- **`cmd_serve` validated end-to-end**: `session.start`, `session.state`,
+  `session.act`, `session.history` over TCP IPC. Enrichment fires —
+  scene pushed to petalTongue, flow score computed, knowledge gained.
+
+### Findings for upstream AAR
+
+- **Socket naming inconsistency**: Some primals register domain-named
+  sockets (`visualization.sock`), others register primal-named sockets
+  (`rhizocrypt.sock`). Webb now handles both, but ecosystem convention
+  should converge.
+- **squirrel params strictness**: `health.liveness` with `null` params
+  returns `-32602`. Webb fixed to send `{}`. Other consumers may hit this.
+- **rhizocrypt/toadstool stale sockets**: `.sock` files exist but
+  processes not behind them. Needs process liveness or socket cleanup.
+- **songBird HTTP transport**: songBird TCP 7780 speaks HTTP, not raw
+  NDJSON JSON-RPC. Webb's `PrimalClient` sends NDJSON. Needs HTTP
+  transport adapter or songBird raw JSON-RPC endpoint.
+
 ## V15 — Deep Debt Evolution: Domain Wiring, Mock Cleanup, Voice Engine (Jul 17, 2026)
 
 ### New primal domains wired

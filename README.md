@@ -2,11 +2,11 @@
 
 | | |
 |---|---|
-| **Version** | V15 |
-| **Tests** | 469 (450 unit + 18 E2E + 1 validation) |
+| **Version** | V16 |
+| **Tests** | 471 (452 unit + 18 E2E + 1 validation) |
 | **Coverage** | ~92% lines (`cargo llvm-cov`) |
-| **Rust files** | 52 (~14.5k LOC) |
-| **Experiments** | 5 (exp001–exp005) |
+| **Rust files** | 48 (~14.8k LOC) |
+| **Experiments** | 6 (exp001–exp006) |
 | **MSRV** | 1.87 (edition 2024) |
 | **License** | AGPL-3.0 + ORC + CC-BY-SA 4.0 |
 | **Unsafe** | `#![forbid(unsafe_code)]` (crate-level) |
@@ -21,7 +21,8 @@
 | **Trio tracking** | `primals_reached` in session state per `PROVENANCE_TRIO_INTEGRATION_GUIDE` |
 | **Local science** | flow, engagement, DDA, voice interjections, session metrics (absorbed patterns) |
 | **Ecosystem registry** | 490+ methods (primalSpring) |
-| **Last validation** | 2026-07-17 (V15) |
+| **Live primals (flockGate)** | 6/9 connected (squirrel, petaltongue, nestgate, loamspine, sweetgrass, beardog) |
+| **Last validation** | 2026-07-17 (V16) |
 
 **A [sporeGarden](https://github.com/sporeGarden) project — the primals as a composed CRPG.**
 
@@ -59,17 +60,17 @@ engine**. It consumes primals via JSON-RPC IPC — zero Rust crate dependencies
 on any spring. Primals are resolved from `plasmidBin/` or discovered via
 Songbird at runtime.
 
-| Domain | Primal | Role | Status (V15) | Key IPC methods |
+| Domain | Primal | Role | Status (V16) | Key IPC methods |
 |--------|--------|------|-------------|-----------------|
-| ai | Squirrel | AI narration, NPC dialogue, inference | Direct bridge | `ai.query`, `ai.suggest`, `ai.analyze` |
-| visualization | petalTongue | Scene rendering, input polling | Direct bridge | `visualization.render.scene`, `interaction.poll` |
-| dag | rhizoCrypt | Provenance DAG lifecycle | Composition-first (`nest.store`) | `dag.session.create`, `dag.event.append`, `dag.merkle.root` |
-| lineage | loamSpine | NPC personality certs | Composition-first (`nest.commit`) | `certificate.mint` |
-| compute | toadStool | GPU compute dispatch | Bridge ready | `compute.dispatch.submit` |
-| storage | nestGate | Key-value persistence | Bridge ready | `storage.store`, `storage.retrieve` |
-| provenance | sweetGrass | Creative attribution | Composition-first (`nest.store`) | `braid.create`, `braid.query` |
-| crypto | bearDog | Signing, verification, hashing | Bridge ready (V15) | `crypto.sign`, `crypto.verify`, `crypto.hash` |
-| mesh | songBird | Topology, discovery, bonds | Bridge ready (V15) | `discovery.topology`, `discovery.health`, `discovery.bonds` |
+| ai | Squirrel | AI narration, NPC dialogue, inference | Live on flockGate | `ai.query`, `ai.suggest`, `ai.analyze` |
+| visualization | petalTongue | Scene rendering, input polling | Live on flockGate | `visualization.render.scene`, `interaction.poll` |
+| dag | rhizoCrypt | Provenance DAG lifecycle | Found (stale socket) | `dag.session.create`, `dag.event.append`, `dag.merkle.root` |
+| lineage | loamSpine | NPC personality certs | Live on flockGate | `certificate.mint` |
+| compute | toadStool | GPU compute dispatch | Found (stale socket) | `compute.dispatch.submit` |
+| storage | nestGate | Key-value persistence | Live on flockGate | `storage.store`, `storage.retrieve` |
+| provenance | sweetGrass | Creative attribution | Live on flockGate | `braid.create`, `braid.query` |
+| crypto | bearDog | Signing, verification, hashing | Live on flockGate | `crypto.sign`, `crypto.verify`, `crypto.hash` |
+| mesh | songBird | Topology, discovery, bonds | TCP only (HTTP transport) | `discovery.topology`, `discovery.health`, `discovery.bonds` |
 | orchestration | biomeOS | Neural API, composition dispatch | Lifecycle wired | `primal.announce`, `health.version`, `health.drain` |
 
 ## The Core Thesis: Bounded Space, Infinite Exploration
