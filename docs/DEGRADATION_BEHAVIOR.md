@@ -21,7 +21,9 @@ unavailable primal (ecosystem invariant).
 | lineage | loamSpine | `certificate.mint` returns `Err` | NPC personality certs unavailable. Trust system works locally. |
 | compute | toadStool | `compute.dispatch.submit` returns `Err` | GPU compute unavailable. Local science (flow, DDA) still runs. |
 | storage | nestGate | `storage.store` returns `Err` | Key-value persistence unavailable. Session state is in-memory only. |
-| provenance | sweetGrass | `attribution.record` returns `Err` | Creative attribution unavailable. DAG provenance may still record (partial). |
+| provenance | sweetGrass | `braid.create` / `braid.query` returns `None` | Creative attribution unavailable. DAG provenance may still record (partial). |
+| crypto | bearDog | `crypto_sign` returns `None`; `crypto_verify` returns `false` | Provenance vertices unsigned. Content integrity trust-on-first-use. |
+| mesh | songBird | `mesh_topology` / `mesh_health` returns `None` | Topology data unavailable. Webb operates with local discovery only. |
 | orchestration | biomeOS | Neural API socket not found | Signal dispatch (`nest.store`, `nest.commit`) falls back to direct domain calls. `primal.announce` is a no-op. |
 
 ## Signal Dispatch Degradation

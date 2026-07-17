@@ -580,3 +580,110 @@ fn validate_valid_bundle_no_extra_issues() {
     let issues = bundle.validate();
     assert!(issues.is_empty(), "expected no issues, got: {issues:?}");
 }
+
+#[test]
+fn validate_ruleset_missing_plane_field() {
+    let mut rulesets = HashMap::new();
+    rulesets.insert(
+        "combat".to_owned(),
+        serde_json::json!({
+            "rules": [{"id": "r1", "effect": "damage"}]
+        }),
+    );
+    let bundle = ContentBundle {
+        meta: WorldMeta::default(),
+        narrative: NarrativeGraph::default(),
+        worlds: HashMap::new(),
+        npcs: HashMap::new(),
+        abilities: HashMap::new(),
+        scenes: HashMap::new(),
+        rulesets,
+        load_warnings: Vec::new(),
+    };
+    let issues = bundle.validate();
+    assert!(
+        issues
+            .iter()
+            .any(|i| i.contains("missing required 'plane'"))
+    );
+}
+
+#[test]
+fn validate_ruleset_missing_rules_array() {
+    let mut rulesets = HashMap::new();
+    rulesets.insert(
+        "combat".to_owned(),
+        serde_json::json!({
+            "plane": "combat"
+        }),
+    );
+    let bundle = ContentBundle {
+        meta: WorldMeta::default(),
+        narrative: NarrativeGraph::default(),
+        worlds: HashMap::new(),
+        npcs: HashMap::new(),
+        abilities: HashMap::new(),
+        scenes: HashMap::new(),
+        rulesets,
+        load_warnings: Vec::new(),
+    };
+    let issues = bundle.validate();
+    assert!(
+        issues
+            .iter()
+            .any(|i| i.contains("missing required 'rules'"))
+    );
+}
+
+#[test]
+fn validate_ruleset_rule_missing_id() {
+    let mut rulesets = HashMap::new();
+    rulesets.insert(
+        "combat".to_owned(),
+        serde_json::json!({
+            "plane": "combat",
+            "rules": [{"effect": "damage"}]
+        }),
+    );
+    let bundle = ContentBundle {
+        meta: WorldMeta::default(),
+        narrative: NarrativeGraph::default(),
+        worlds: HashMap::new(),
+        npcs: HashMap::new(),
+        abilities: HashMap::new(),
+        scenes: HashMap::new(),
+        rulesets,
+        load_warnings: Vec::new(),
+    };
+    let issues = bundle.validate();
+    assert!(issues.iter().any(|i| i.contains("rule[0] missing 'id'")));
+}
+
+#[test]
+fn validate_valid_ruleset_no_issues() {
+    let mut rulesets = HashMap::new();
+    rulesets.insert(
+        "combat".to_owned(),
+        serde_json::json!({
+            "plane": "combat",
+            "version": "1.0.0",
+            "description": "Combat rules for shadow plane",
+            "rules": [
+                {"id": "damage_calc", "type": "formula", "formula": "str * weapon_mod"},
+                {"id": "initiative", "type": "check", "stat": "dexterity"}
+            ]
+        }),
+    );
+    let bundle = ContentBundle {
+        meta: WorldMeta::default(),
+        narrative: minimal_narrative(),
+        worlds: HashMap::new(),
+        npcs: HashMap::new(),
+        abilities: HashMap::new(),
+        scenes: HashMap::new(),
+        rulesets,
+        load_warnings: Vec::new(),
+    };
+    let issues = bundle.validate_rulesets();
+    assert!(issues.is_empty(), "expected no issues, got: {issues:?}");
+}

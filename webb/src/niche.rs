@@ -2,9 +2,9 @@
 //! Niche self-knowledge for Esoteric Webb.
 //!
 //! Single source of truth for identity, capabilities, socket resolution,
-//! and biomeOS family integration. Follows the ludoSpring `niche.rs`
-//! pattern: a primal (or composition) has complete self-knowledge and
-//! discovers others at runtime.
+//! and biomeOS family integration. Follows the ecosystem niche pattern:
+//! a primal (or composition) has complete self-knowledge and discovers
+//! others at runtime.
 //!
 //! This module has **no IPC dependencies** — pure constants and metadata.
 

@@ -200,7 +200,7 @@ impl PrimalRegistry {
                 .or_else(|| {
                     std::env::var(format!("{upper}{}", crate::env_keys::PORT_SUFFIX))
                         .ok()
-                        .map(|port| format!("127.0.0.1:{port}"))
+                        .map(super::host_port)
                 })
                 .or_else(|| {
                     std::env::var(format!("{upper}{}", crate::env_keys::HTTP_ADDR_SUFFIX)).ok()
@@ -288,7 +288,7 @@ impl PrimalRegistry {
                 transport_section
                     .and_then(|t| t.get("port"))
                     .and_then(toml::Value::as_integer)
-                    .map(|port| format!("127.0.0.1:{port}"))
+                    .map(super::host_port)
             });
 
         let ep = self

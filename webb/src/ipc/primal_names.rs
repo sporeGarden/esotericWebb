@@ -15,8 +15,10 @@ pub const PETALTONGUE: &str = "petaltongue";
 pub const TOADSTOOL: &str = "toadstool";
 /// Discovery slug for `NestGate`.
 pub const NESTGATE: &str = "nestgate";
-/// Discovery slug for ludoSpring.
-pub const LUDOSPRING: &str = "ludospring";
+/// Discovery slug for bearDog.
+pub const BEARDOG: &str = "beardog";
+/// Discovery slug for songBird.
+pub const SONGBIRD: &str = "songbird";
 /// Discovery slug for rhizoCrypt.
 pub const RHIZOCRYPT: &str = "rhizocrypt";
 /// Discovery slug for `LoamSpine`.
@@ -40,6 +42,10 @@ pub mod domain {
     pub const LINEAGE: &str = "lineage";
     /// Provenance domain (sweetGrass).
     pub const PROVENANCE: &str = "provenance";
+    /// Cryptographic domain (bearDog).
+    pub const CRYPTO: &str = "crypto";
+    /// Mesh / discovery domain (songBird).
+    pub const MESH: &str = "mesh";
 }
 
 /// Domain-to-default-primal mapping for discovery.
@@ -55,6 +61,8 @@ pub const DOMAIN_PRIMAL_MAP: &[(&str, &str)] = &[
     (domain::DAG, RHIZOCRYPT),
     (domain::LINEAGE, LOAMSPINE),
     (domain::PROVENANCE, SWEETGRASS),
+    (domain::CRYPTO, BEARDOG),
+    (domain::MESH, SONGBIRD),
 ];
 
 /// Lowercase discovery slug → mixed-case display name.
@@ -68,7 +76,6 @@ pub fn display_name(slug: &str) -> &str {
         "petaltongue" => "petalTongue",
         "toadstool" => "ToadStool",
         "nestgate" => "NestGate",
-        "ludospring" => "ludoSpring",
         "rhizocrypt" => "rhizoCrypt",
         "loamspine" => "LoamSpine",
         "sweetgrass" => "sweetGrass",
@@ -95,7 +102,6 @@ pub fn discovery_slug(display: &str) -> &str {
         "petalTongue" => "petaltongue",
         "ToadStool" => "toadstool",
         "NestGate" => "nestgate",
-        "ludoSpring" => "ludospring",
         "rhizoCrypt" => "rhizocrypt",
         "LoamSpine" => "loamspine",
         "sweetGrass" => "sweetgrass",
@@ -128,7 +134,8 @@ mod tests {
     fn known_primals_have_display_names() {
         assert_eq!(display_name("squirrel"), "Squirrel");
         assert_eq!(display_name("rhizocrypt"), "rhizoCrypt");
-        assert_eq!(display_name("ludospring"), "ludoSpring");
+        assert_eq!(display_name("beardog"), "BearDog");
+        assert_eq!(display_name("songbird"), "Songbird");
         assert_eq!(display_name("esotericwebb"), "esotericWebb");
     }
 
@@ -144,7 +151,8 @@ mod tests {
             PETALTONGUE,
             TOADSTOOL,
             NESTGATE,
-            LUDOSPRING,
+            BEARDOG,
+            SONGBIRD,
             RHIZOCRYPT,
             LOAMSPINE,
             SWEETGRASS,
@@ -161,10 +169,11 @@ mod tests {
 
     #[test]
     fn domain_primal_map_covers_all_domains() {
-        assert_eq!(DOMAIN_PRIMAL_MAP.len(), 7);
+        assert_eq!(DOMAIN_PRIMAL_MAP.len(), 9);
         assert_eq!(primal_for_domain(domain::AI), Some(SQUIRREL));
         assert_eq!(primal_for_domain(domain::DAG), Some(RHIZOCRYPT));
-        assert_eq!(primal_for_domain("game"), None);
+        assert_eq!(primal_for_domain(domain::CRYPTO), Some(BEARDOG));
+        assert_eq!(primal_for_domain(domain::MESH), Some(SONGBIRD));
         assert_eq!(primal_for_domain("nonexistent"), None);
     }
 

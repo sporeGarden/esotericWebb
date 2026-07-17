@@ -133,7 +133,7 @@ impl PrimalLauncher {
         domain: &str,
     ) -> crate::error::Result<&SpawnedPrimal> {
         let binary = discover_binary(primal)?;
-        let addr = format!("127.0.0.1:{port}");
+        let addr = super::host_port(port);
 
         tracing::info!(primal, binary = %binary.display(), "spawning primal");
 

@@ -26,7 +26,7 @@ pub const BIOMEOS_FAMILY_ID: &str = "BIOMEOS_FAMILY_ID";
 pub const XDG_RUNTIME_DIR: &str = "XDG_RUNTIME_DIR";
 /// Current user name (fallback for socket directory naming).
 pub const USER: &str = "USER";
-/// Current user ID (numeric, for `/run/user/<uid>` paths).
+/// Current user ID (numeric, for `/run/user/{uid}` paths).
 pub const UID: &str = "UID";
 
 // ── Socket / discovery ──────────────────────────────────────────────────────
@@ -75,6 +75,17 @@ pub const ESOTERICWEBB_IPC_RETRY_MAX_MS: &str = "ESOTERICWEBB_IPC_RETRY_MAX_MS";
 pub const ESOTERICWEBB_IPC_CB_THRESHOLD: &str = "ESOTERICWEBB_IPC_CB_THRESHOLD";
 /// Circuit breaker cooldown in seconds (default: 5).
 pub const ESOTERICWEBB_IPC_CB_COOLDOWN_SECS: &str = "ESOTERICWEBB_IPC_CB_COOLDOWN_SECS";
+
+/// Transport priority override (`tcp` or `uds`).
+pub const ESOTERICWEBB_TRANSPORT_PRIORITY: &str = "ESOTERICWEBB_TRANSPORT_PRIORITY";
+
+// ── Network defaults ────────────────────────────────────────────────────────
+
+/// Default bind/connect address when only a port is known.
+///
+/// Overridable via `ESOTERICWEBB_DEFAULT_HOST` for environments
+/// where `127.0.0.1` is not appropriate (containers, Graphene).
+pub const ESOTERICWEBB_DEFAULT_HOST: &str = "ESOTERICWEBB_DEFAULT_HOST";
 
 // ── Deployment / plasmidBin ─────────────────────────────────────────────────
 

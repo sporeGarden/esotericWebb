@@ -6,13 +6,14 @@
 //! engagement metrics, dynamic difficulty adjustment) that Webb uses for
 //! real-time player experience evaluation.
 //!
-//! The patterns originate in ludoSpring's research but live here as Webb's
-//! own implementations. When a dedicated game-science primal emerges,
-//! Webb can swap these local calls for IPC — the gap drives primal evolution.
+//! These algorithms are Webb's own implementations. When a dedicated
+//! game-science primal emerges, Webb can swap local calls for IPC —
+//! the gap drives primal evolution (GAP-021).
 
 pub mod dda;
 pub mod engagement;
 pub mod flow;
+pub mod voice;
 
 /// Default flow channel half-width (Csikszentmihalyi model).
 pub const FLOW_CHANNEL_WIDTH: f64 = 0.15;

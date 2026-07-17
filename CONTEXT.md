@@ -35,7 +35,7 @@ of spring evolution.
 
 - **Main crate**: `esoteric-webb` (library + UniBin binary)
 - **Niche module**: `niche.rs` — self-knowledge (identity, capabilities, socket
-  resolution, family ID, neural-api discovery). Absorbed from ludoSpring V32 pattern.
+  resolution, family ID, neural-api discovery). Follows ecosystem niche pattern.
 - **IPC**: JSON-RPC 2.0 over TCP and Unix domain sockets (newline-delimited)
 - **Transport**: TCP (default, platform-agnostic) + UDS; `connect_transport()` parses `unix:`, `tcp:`, and implicit formats; XDG-compliant socket path resolution, capability-based discovery
 - **No cross-primal Rust imports**: all coordination via runtime IPC
@@ -58,7 +58,7 @@ Session: `session.start`, `session.state`, `session.actions`,
 
 MCP: `tools.list`, `tools.call`
 
-## Consumed primal capabilities (V6 — self-composed)
+## Consumed primal capabilities (V15 — 9 domains)
 
 AI (Squirrel via biomeOS): `ai.query`, `ai.suggest`, `ai.analyze`
 
@@ -73,15 +73,23 @@ DAG (rhizoCrypt): `dag.session.create`, `dag.event.append`, `dag.frontier.get`,
 
 Lineage (LoamSpine): `certificate.mint`
 
+Provenance (sweetGrass): `braid.create`, `braid.query`
+
+Crypto (bearDog): `crypto.sign`, `crypto.verify`, `crypto.hash`
+
+Mesh (songBird): `discovery.topology`, `discovery.health`, `discovery.query`,
+`discovery.bonds`
+
 ## Local science (absorbed, no IPC)
 
-Flow evaluation, engagement metrics, dynamic difficulty adjustment — pure math
-absorbed from ludoSpring patterns into `science/` module. When a game-science
-primal emerges, these can switch from local to IPC (GAP-021).
+Flow evaluation, engagement metrics, dynamic difficulty adjustment, and offline
+voice interjections — pure math absorbed into `science/` module. When a
+game-science primal emerges, these can switch from local to IPC (GAP-021).
 
 All primal calls go through `PrimalBridge` with graceful degradation. The
-enrichment pipeline: AI narration → NPC dialogue → local flow → scene push →
-provenance. Absent primals degrade to mechanical defaults. No spring dependencies.
+enrichment pipeline: AI narration → NPC dialogue → voice interjections → local
+flow → scene push → provenance. Absent primals degrade to mechanical defaults.
+No spring dependencies.
 
 ## Build
 

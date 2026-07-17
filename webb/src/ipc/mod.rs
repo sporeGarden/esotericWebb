@@ -48,6 +48,23 @@ pub use envelope::{JsonRpcError, JsonRpcRequest, JsonRpcResponse};
 pub use primal_names::DOMAIN_PRIMAL_MAP;
 pub use primal_names::domain;
 
+/// Resolve the default host address for TCP connections.
+///
+/// Overridable via `ESOTERICWEBB_DEFAULT_HOST` for containerized or
+/// Graphene deployments where `127.0.0.1` may not be correct.
+/// Returns `127.0.0.1` as the ecosystem default.
+#[must_use]
+pub fn default_host() -> String {
+    std::env::var(crate::env_keys::ESOTERICWEBB_DEFAULT_HOST)
+        .unwrap_or_else(|_| "127.0.0.1".to_owned())
+}
+
+/// Build a TCP address from a port using the default host.
+#[must_use]
+pub fn host_port(port: impl std::fmt::Display) -> String {
+    format!("{}:{port}", default_host())
+}
+
 // ── Compute domain methods ─────────────────────────────────
 
 /// Submit a compute task.
@@ -79,6 +96,26 @@ pub const METHOD_DAG_QUERY_VERTICES: &str = "dag.query.vertices";
 
 /// Mint a certificate.
 pub const METHOD_CERT_MINT: &str = "certificate.mint";
+
+// ── Crypto domain methods (bearDog) ────────────────────────
+
+/// Sign a payload with the session key.
+pub const METHOD_CRYPTO_SIGN: &str = "crypto.sign";
+/// Verify a signed payload.
+pub const METHOD_CRYPTO_VERIFY: &str = "crypto.verify";
+/// Hash arbitrary data (content-addressable identity).
+pub const METHOD_CRYPTO_HASH: &str = "crypto.hash";
+
+// ── Mesh domain methods (songBird) ─────────────────────────
+
+/// Query the live ecosystem topology.
+pub const METHOD_MESH_TOPOLOGY: &str = "discovery.topology";
+/// Query health of all known primals in the mesh.
+pub const METHOD_MESH_HEALTH: &str = "discovery.health";
+/// Query a specific primal's status by name.
+pub const METHOD_MESH_QUERY: &str = "discovery.query";
+/// List active bonds between primals.
+pub const METHOD_MESH_BONDS: &str = "discovery.bonds";
 
 // ── Composition dispatch (Wave 17 Neural API — atomic orchestration) ──
 // Ecosystem vocabulary: "compositions" (Wire names preserved as biomeOS contract)

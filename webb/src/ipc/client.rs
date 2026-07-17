@@ -131,22 +131,20 @@ impl PrimalClient {
     /// # Errors
     ///
     /// Returns [`IpcError`] if the address cannot be parsed or connection fails.
+    #[expect(
+        clippy::option_if_let_else,
+        reason = "if-let chain is clearer than nested map_or_else for transport dispatch"
+    )]
     pub fn connect_transport(address: &str, primal: &str) -> Result<Self, IpcError> {
-        address.strip_prefix("unix:").map_or_else(
-            || {
-                address.strip_prefix("tcp:").map_or_else(
-                    || {
-                        if address.starts_with('/') {
-                            Self::connect(Path::new(address), primal)
-                        } else {
-                            Self::connect_tcp(address, primal)
-                        }
-                    },
-                    |addr| Self::connect_tcp(addr, primal),
-                )
-            },
-            |path| Self::connect(Path::new(path), primal),
-        )
+        if let Some(path) = address.strip_prefix("unix:") {
+            Self::connect(Path::new(path), primal)
+        } else if let Some(addr) = address.strip_prefix("tcp:") {
+            Self::connect_tcp(addr, primal)
+        } else if address.starts_with('/') {
+            Self::connect(Path::new(address), primal)
+        } else {
+            Self::connect_tcp(address, primal)
+        }
     }
 
     /// The primal this client is connected to.

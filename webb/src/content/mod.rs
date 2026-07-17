@@ -128,6 +128,60 @@ impl ContentBundle {
             }
         }
 
+        issues.extend(self.validate_rulesets());
+
+        issues
+    }
+
+    /// Validate loaded rulesets for structural correctness.
+    ///
+    /// Each ruleset YAML should declare at minimum:
+    /// - `plane` (string): the narrative plane this ruleset governs
+    /// - `rules` (array): the list of rules
+    ///
+    /// Optional but recommended:
+    /// - `version` (string): ruleset version
+    /// - `description` (string): human-readable summary
+    #[must_use]
+    pub fn validate_rulesets(&self) -> Vec<String> {
+        let mut issues = Vec::new();
+        for (plane, ruleset) in &self.rulesets {
+            if !ruleset.is_object() {
+                issues.push(format!(
+                    "ruleset '{plane}': expected object, got {}",
+                    value_type_name(ruleset)
+                ));
+                continue;
+            }
+
+            if ruleset
+                .get("plane")
+                .and_then(serde_json::Value::as_str)
+                .is_none()
+            {
+                issues.push(format!("ruleset '{plane}': missing required 'plane' field"));
+            }
+
+            if ruleset
+                .get("rules")
+                .and_then(serde_json::Value::as_array)
+                .is_none()
+            {
+                issues.push(format!("ruleset '{plane}': missing required 'rules' array"));
+            }
+
+            if let Some(rules) = ruleset.get("rules").and_then(serde_json::Value::as_array) {
+                for (i, rule) in rules.iter().enumerate() {
+                    if !rule.is_object() {
+                        issues.push(format!("ruleset '{plane}': rule[{i}] is not an object"));
+                        continue;
+                    }
+                    if rule.get("id").and_then(serde_json::Value::as_str).is_none() {
+                        issues.push(format!("ruleset '{plane}': rule[{i}] missing 'id' field"));
+                    }
+                }
+            }
+        }
         issues
     }
 }
@@ -261,6 +315,18 @@ fn load_raw_yaml_dir(base: &Path, subdir: &str) -> HashMap<String, serde_json::V
         }
     }
     map
+}
+
+/// Human-readable type name for validation diagnostics.
+const fn value_type_name(v: &serde_json::Value) -> &'static str {
+    match v {
+        serde_json::Value::Null => "null",
+        serde_json::Value::Bool(_) => "bool",
+        serde_json::Value::Number(_) => "number",
+        serde_json::Value::String(_) => "string",
+        serde_json::Value::Array(_) => "array",
+        serde_json::Value::Object(_) => "object",
+    }
 }
 
 /// Trait for content items that have an ID field.

@@ -162,7 +162,13 @@ Webb exercises primal composition -> discovers gap in a primal capability
   automated preview.
 - **Handoff**: Self-owned for offline simulation; AI primal spring for live
   personality-constrained generation.
-- **Status**: open
+- **Progress (V11)**: Implemented `science/voice.rs` with offline voice
+  interjection engine. Built-in voice profiles (logic, empathy, perception)
+  fire based on game state predicates (knowledge, flags, trust, inventory,
+  plane). Wired into the enrichment pipeline — voice interjections fire on
+  every action, even without the AI primal. Custom voice profiles supported.
+- **Next**: YAML-authored voice profiles in content data, preview CLI command.
+- **Status**: partial (offline engine complete, content authoring pending)
 
 ### GAP-008: Creative content pack format for distribution
 
@@ -196,11 +202,16 @@ Webb exercises primal composition -> discovers gap in a primal capability
   validate` reports ruleset errors. When a game-science primal emerges
   (GAP-021), `science.ruleset_validate` confirms compatibility at composition
   time.
-- **Workaround**: Rulesets loaded as opaque YAML documents. No structural
-  validation beyond well-formedness.
+- **Progress (V11)**: `ContentBundle::validate_rulesets()` now validates
+  structural correctness of loaded rulesets: required `plane` field, required
+  `rules` array, per-rule `id` field. Four new tests cover missing fields,
+  invalid structure, and valid rulesets. `esotericwebb validate` reports
+  ruleset issues alongside other content diagnostics.
+- **Next**: Typed `RulesetCert` struct (replace opaque `serde_json::Value`),
+  per-rule effect/condition validation, game-science primal integration.
 - **Handoff**: Self-owned for loader; future game-science primal for
   validation endpoint (GAP-021).
-- **Status**: open
+- **Status**: partial (structural validation complete, typed model pending)
 
 ### GAP-010: plasmidBin population and deployment automation
 
@@ -265,25 +276,14 @@ Webb exercises primal composition -> discovers gap in a primal capability
 - **Handoff**: `ESOTERICWEBB_V51_AUDIT_EVOLUTION_HANDOFF_MAR29_2026.md`
 - **Status**: open
 
-### GAP-019: beardog crypto domain not wired into Webb bridge
+### GAP-019: beardog crypto domain not wired into Webb bridge → RESOLVED (V11)
 
-- **Primal**: crypto (`crypto.sign`, `crypto.hash`, `crypto.verify`)
-- **Spring (producer)**: esotericWebb (self) + beardog
-- **Severity**: medium
-- **Evidence**: Webb's "signed provenance" use case requires cryptographic
-  signing of DAG vertices and session commits. beardog V4 has real
-  cryptography (Ed25519, SHA-256, post-quantum Kyber/Dilithium, HSM
-  abstraction) but Webb's PrimalBridge has no crypto domain methods.
-  The Tower domain has `crypto.sign`, `crypto.hash`, `discovery.query`
-  listed in CONTEXT.md but no bridge delegations to exercise them.
-- **Expected**: Webb wires `crypto.sign` for provenance vertex signing,
-  `crypto.verify` for integrity checks on loaded content packs, and
-  `crypto.hash` for DAG merkle root computation. These feed into the
-  provenance trio: signed vertices → rhizoCrypt DAG → loamSpine lineage.
-- **Workaround**: Provenance vertices are unsigned. Content integrity is
-  trust-on-first-use.
-- **Handoff**: Self-owned (Webb bridge evolution). beardog primal is ready.
-- **Status**: open
+- **Status**: resolved — `crypto` domain added to `DOMAIN_PRIMAL_MAP` with
+  bearDog as the default primal. Three bridge methods wired: `crypto_sign`,
+  `crypto_verify`, `crypto_hash`. Method constants: `crypto.sign`,
+  `crypto.verify`, `crypto.hash`. All degrade gracefully when bearDog is
+  unavailable (unsigned provenance, trust-on-first-use content). Three
+  standalone degradation tests added.
 
 ### GAP-020: Deploy graph format divergence (TOML fragments vs biomeOS JSON)
 

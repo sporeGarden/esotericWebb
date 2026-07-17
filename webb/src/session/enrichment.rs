@@ -34,6 +34,7 @@ impl GameSession {
         let action_str = format!("{kind}:{id}");
 
         let Some(bridge) = self.bridge.as_mut() else {
+            self.enrich_voices_locally(&mut enrichment);
             self.enrich_flow_locally(&mut enrichment);
             return enrichment;
         };
@@ -84,10 +85,36 @@ impl GameSession {
             }
         }
 
-        // Phase 3: Flow evaluation (local science — no IPC)
+        // Phase 3: Offline voice interjections (local science — no IPC)
+        self.enrich_voices_locally(&mut enrichment);
+
+        // Phase 4: Flow evaluation (local science — no IPC)
         self.enrich_flow_locally(&mut enrichment);
 
         enrichment
+    }
+
+    /// Evaluate offline voice interjections against current game state.
+    ///
+    /// Fires built-in voice profiles without requiring the AI primal.
+    /// These supplement (not replace) any AI-generated voice notes from
+    /// NPC dialogue. Only adds voices that aren't already present.
+    fn enrich_voices_locally(&self, enrichment: &mut PrimalEnrichment) {
+        use crate::science::voice::{BUILT_IN_VOICES, evaluate_voices};
+        let fired = evaluate_voices(&self.state, BUILT_IN_VOICES);
+        let existing_ids: std::collections::HashSet<String> = enrichment
+            .voice_notes
+            .iter()
+            .map(|v| v.voice_id.clone())
+            .collect();
+        for interjection in fired {
+            if !existing_ids.contains(&interjection.voice_id) {
+                enrichment.voice_notes.push(VoiceEnrichment {
+                    voice_id: interjection.voice_id,
+                    text: interjection.text,
+                });
+            }
+        }
     }
 
     /// Evaluate flow state using local science (no primal IPC required).

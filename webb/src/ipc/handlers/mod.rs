@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! JSON-RPC handler dispatch — domain-split (ludoSpring pattern).
+//! JSON-RPC handler dispatch — domain-split (ecosystem pattern).
 //!
 //! Each handler module owns a concern:
 //! - [`lifecycle`]: health, readiness, identity, capabilities

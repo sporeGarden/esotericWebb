@@ -586,11 +586,19 @@ mod tests {
     }
 
     #[test]
-    fn discover_with_no_sockets_is_standalone() {
+    fn discover_returns_status_for_every_domain() {
         let bridge = PrimalBridge::discover();
         assert_eq!(bridge.statuses().len(), DOMAIN_PRIMAL_MAP.len());
         for s in bridge.statuses() {
-            assert!(!s.healthy);
+            assert!(!s.domain.is_empty());
+            assert!(!s.name.is_empty());
+            if s.healthy {
+                assert!(
+                    s.transport.is_some(),
+                    "healthy primal {} must report transport",
+                    s.name,
+                );
+            }
         }
     }
 
@@ -624,5 +632,84 @@ mod tests {
     fn standalone_has_no_neural_api() {
         let bridge = PrimalBridge::standalone();
         assert!(!bridge.has_neural_api());
+    }
+
+    // ── Crypto domain (bearDog) tests ───────────────────────
+
+    #[test]
+    fn standalone_crypto_sign_returns_none() {
+        let mut bridge = PrimalBridge::standalone();
+        let result = bridge
+            .crypto_sign(&serde_json::json!({"payload": "test"}))
+            .unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn standalone_crypto_verify_returns_false() {
+        let mut bridge = PrimalBridge::standalone();
+        let result = bridge
+            .crypto_verify(&serde_json::json!({"payload": "test", "sig": "abc"}))
+            .unwrap();
+        assert!(!result);
+    }
+
+    #[test]
+    fn standalone_crypto_hash_returns_none() {
+        let mut bridge = PrimalBridge::standalone();
+        let result = bridge
+            .crypto_hash(&serde_json::json!({"data": "content"}))
+            .unwrap();
+        assert!(result.is_none());
+    }
+
+    // ── Mesh domain (songBird) tests ────────────────────────
+
+    #[test]
+    fn standalone_mesh_topology_returns_none() {
+        let mut bridge = PrimalBridge::standalone();
+        let result = bridge.mesh_topology().unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn standalone_mesh_health_returns_none() {
+        let mut bridge = PrimalBridge::standalone();
+        let result = bridge.mesh_health().unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn standalone_mesh_query_returns_none() {
+        let mut bridge = PrimalBridge::standalone();
+        let result = bridge.mesh_query("rhizocrypt").unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn standalone_mesh_bonds_returns_none() {
+        let mut bridge = PrimalBridge::standalone();
+        let result = bridge.mesh_bonds().unwrap();
+        assert!(result.is_none());
+    }
+
+    // ── Provenance / attribution domain (sweetGrass) tests ──
+
+    #[test]
+    fn standalone_attribution_create_returns_none() {
+        let mut bridge = PrimalBridge::standalone();
+        let result = bridge
+            .attribution_create(&serde_json::json!({"session_id": "s1"}))
+            .unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn standalone_attribution_query_returns_none() {
+        let mut bridge = PrimalBridge::standalone();
+        let result = bridge
+            .attribution_query(&serde_json::json!({"session_id": "s1"}))
+            .unwrap();
+        assert!(result.is_none());
     }
 }

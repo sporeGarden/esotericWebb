@@ -2,6 +2,79 @@
 
 All notable changes to Esoteric Webb are documented here.
 
+## V15 — Deep Debt Evolution: Domain Wiring, Mock Cleanup, Voice Engine (Jul 17, 2026)
+
+### New primal domains wired
+
+- **Crypto domain (bearDog)**: `crypto.sign`, `crypto.verify`, `crypto.hash`
+  bridge methods with graceful degradation. GAP-019 resolved.
+- **Mesh domain (songBird)**: `discovery.topology`, `discovery.health`,
+  `discovery.query`, `discovery.bonds` bridge methods. First milestone enabler
+  for static site rendering of ecosystem topology.
+- **Provenance attribution (sweetGrass)**: `braid.create`, `braid.query`
+  bridge methods for the attribution leg of the provenance trio.
+- `DOMAIN_PRIMAL_MAP` expanded to 9 domains.
+
+### Hardcoded constant evolution
+
+- **Default host abstracted**: All `127.0.0.1` hardcoding in `launcher.rs`,
+  `discovery.rs` replaced with `ipc::host_port()` / `ipc::default_host()`
+  functions. Overridable via `ESOTERICWEBB_DEFAULT_HOST` env var for
+  containers and Graphene deployments.
+- **`ESOTERICWEBB_TRANSPORT_PRIORITY`** env key added to `env_keys.rs`.
+
+### Production mock cleanup
+
+- **Vestigial `SquirrelClient` removed** from `squirrel.rs` — wrapper struct
+  was superseded by `PrimalBridge` domain methods. Types (`ChatResponse`,
+  `DialogueResponse`, `VoiceNote`) and method constants retained.
+- **Vestigial `PetalTongueClient` removed** from `petaltongue.rs` — same
+  pattern. Types (`InputEvent`) and method constants retained.
+- **ludoSpring remnant cleaned**: `LUDOSPRING` constant removed from
+  `primal_names.rs`; replaced with `BEARDOG` and `SONGBIRD`. Display name
+  round-trip tests updated.
+- **Doc comment evolution**: All `ludoSpring pattern` references evolved to
+  `ecosystem pattern` — the patterns are Webb's now.
+
+### Offline voice interjection engine (GAP-007 partial)
+
+- **`science/voice.rs` created** — offline voice interjection engine that
+  fires Disco Elysium-style internal voices based on game state predicates.
+  Built-in profiles: Logic, Empathy, Perception. Triggers on knowledge, flags,
+  trust thresholds, inventory, narrative plane.
+- **Wired into enrichment pipeline**: `enrich_voices_locally()` fires on every
+  action (with or without AI primal). Supplements AI-generated voice notes
+  without replacing them.
+- 7 new tests covering trigger evaluation, priority sorting, custom profiles.
+
+### RulesetCert validation (GAP-009 partial)
+
+- **`ContentBundle::validate_rulesets()`** validates structural correctness:
+  required `plane` field, required `rules` array, per-rule `id` field.
+- Integrated into `validate()` — `esotericwebb validate` now reports ruleset
+  issues alongside content diagnostics.
+- 4 new tests: missing plane, missing rules, missing rule ID, valid ruleset.
+
+### Documentation and cleanup
+
+- Root docs (README.md, CONTEXT.md) updated to V15.
+- Degradation contracts updated with crypto and mesh domains.
+- V15 handoff filed to local and ecosystem wateringHole.
+
+### Metrics
+
+| Metric | V14 | V15 |
+|--------|-----|-----|
+| Tests | 453 | 469 |
+| Domains in bridge | 7 | 9 (+crypto, +mesh) |
+| Bridge methods | 22 | 32 (+crypto 3, +mesh 4, +attribution 2, +enrichment) |
+| Hardcoded `127.0.0.1` | 3 | 0 |
+| Production mock structs | 2 | 0 |
+| Voice interjection engine | none | built-in (3 profiles, 6 triggers) |
+| Ruleset validation | none | structural (plane + rules + id) |
+
+---
+
 ## V14 — Wave 107: Method introspection, TransportEndpoint, ecosystem absorption (Jun 10, 2026)
 
 ### `method.describe` — runtime method introspection (barraCuda pattern)

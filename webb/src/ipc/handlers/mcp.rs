@@ -3,7 +3,7 @@
 //!
 //! `tools.list` returns MCP-compliant descriptors with typed `input_schema`
 //! (JSON Schema) for each tool. `tools.call` dispatches to the same handler
-//! functions used by JSON-RPC — zero duplicate logic (ludoSpring pattern).
+//! functions used by JSON-RPC — zero duplicate logic (ecosystem pattern).
 
 use serde_json::Value;
 

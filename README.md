@@ -2,26 +2,26 @@
 
 | | |
 |---|---|
-| **Version** | V14 |
-| **Tests** | 453 (434 unit + 18 E2E + 1 validation) |
+| **Version** | V15 |
+| **Tests** | 469 (450 unit + 18 E2E + 1 validation) |
 | **Coverage** | ~92% lines (`cargo llvm-cov`) |
-| **Rust files** | 44 (~14.2k LOC) |
+| **Rust files** | 52 (~14.5k LOC) |
 | **Experiments** | 5 (exp001–exp005) |
 | **MSRV** | 1.87 (edition 2024) |
 | **License** | AGPL-3.0 + ORC + CC-BY-SA 4.0 |
 | **Unsafe** | `#![forbid(unsafe_code)]` (crate-level) |
 | **C deps** | Zero (ecoBin compliant) |
-| **Bridge methods** | 22 (all domains, all degrading, composition-first) |
+| **Bridge methods** | 32 (all domains, all degrading, composition-first) |
 | **Capabilities exposed** | 26 (sourDough + lifecycle + narrative + session + introspection + MCP) |
-| **Primals consumed** | 7 domains (ai, viz, dag, lineage, compute, storage, provenance) |
+| **Primals consumed** | 9 domains (ai, viz, dag, lineage, compute, storage, provenance, crypto, mesh) |
 | **Composition adoption** | Wave 17 — `nest.store`, `nest.commit`, `primal.announce` |
 | **Mesh registration** | Wave 107 — `route.register` with stability tiers + push propagation |
 | **Wave compliance** | Wave 107 — zero debt, typed errors, mesh-visible, introspection, TransportEndpoint |
 | **Degradation contracts** | Written per-domain in `docs/DEGRADATION_BEHAVIOR.md` |
 | **Trio tracking** | `primals_reached` in session state per `PROVENANCE_TRIO_INTEGRATION_GUIDE` |
-| **Local science** | flow, engagement, DDA, session metrics (absorbed from ludoSpring patterns) |
+| **Local science** | flow, engagement, DDA, voice interjections, session metrics (absorbed patterns) |
 | **Ecosystem registry** | 490+ methods (primalSpring) |
-| **Last validation** | 2026-06-10 (V14) |
+| **Last validation** | 2026-07-17 (V15) |
 
 **A [sporeGarden](https://github.com/sporeGarden) project — the primals as a composed CRPG.**
 
@@ -59,7 +59,7 @@ engine**. It consumes primals via JSON-RPC IPC — zero Rust crate dependencies
 on any spring. Primals are resolved from `plasmidBin/` or discovered via
 Songbird at runtime.
 
-| Domain | Primal | Role | Status (V11) | Key IPC methods |
+| Domain | Primal | Role | Status (V15) | Key IPC methods |
 |--------|--------|------|-------------|-----------------|
 | ai | Squirrel | AI narration, NPC dialogue, inference | Direct bridge | `ai.query`, `ai.suggest`, `ai.analyze` |
 | visualization | petalTongue | Scene rendering, input polling | Direct bridge | `visualization.render.scene`, `interaction.poll` |
@@ -67,9 +67,10 @@ Songbird at runtime.
 | lineage | loamSpine | NPC personality certs | Composition-first (`nest.commit`) | `certificate.mint` |
 | compute | toadStool | GPU compute dispatch | Bridge ready | `compute.dispatch.submit` |
 | storage | nestGate | Key-value persistence | Bridge ready | `storage.store`, `storage.retrieve` |
-| provenance | sweetGrass | Creative attribution | Composition-first (`nest.store`) | `attribution.record` |
+| provenance | sweetGrass | Creative attribution | Composition-first (`nest.store`) | `braid.create`, `braid.query` |
+| crypto | bearDog | Signing, verification, hashing | Bridge ready (V15) | `crypto.sign`, `crypto.verify`, `crypto.hash` |
+| mesh | songBird | Topology, discovery, bonds | Bridge ready (V15) | `discovery.topology`, `discovery.health`, `discovery.bonds` |
 | orchestration | biomeOS | Neural API, composition dispatch | Lifecycle wired | `primal.announce`, `health.version`, `health.drain` |
-| ~~game~~ | ~~ludoSpring~~ | ~~Flow, DDA, engagement~~ | **Removed V6** | Local `science/` — see GAP-021 |
 
 ## The Core Thesis: Bounded Space, Infinite Exploration
 
@@ -124,7 +125,8 @@ webb/              Main Rust crate (narrative engine + IPC + director + bridge)
   src/director/    Game director (outcome evaluation, DDA integration)
   src/content/     YAML content loader, ability/NPC/scene models (tests in tests.rs)
   src/session/     Game session, enrichment pipeline, types (tests in tests.rs)
-  src/niche.rs     Self-knowledge (identity, 25 capabilities, socket resolution)
+  src/science/     Local game science (flow, engagement, DDA, voice interjections)
+  src/niche.rs     Self-knowledge (identity, 26 capabilities, socket resolution)
   src/state/       World state (knowledge, trust, inventory, flags, conditions)
   capability_registry.toml   All 25 exposed JSON-RPC methods
 content/           YAML game content (authored by creative teams)

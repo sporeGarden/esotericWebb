@@ -6,10 +6,9 @@
 //! in their own file prevents the bridge module from growing beyond
 //! the 1000-line ecosystem limit as new domains are wired.
 //!
-//! ## Architecture (V6 — ludoSpring decomposition)
+//! ## Architecture (V6+ — direct primal composition)
 //!
-//! Webb no longer routes through ludoSpring. All calls go to the
-//! underlying primals directly:
+//! All calls go directly to the underlying primals:
 //!
 //! - **AI domain** (Squirrel): narration, NPC dialogue, voice checks,
 //!   summarization — using biomeOS semantic methods (`ai.query`,
@@ -30,10 +29,11 @@ use crate::ipc::squirrel::{
     VoiceNote,
 };
 use crate::ipc::{
-    METHOD_CERT_MINT, METHOD_COMPUTE_SUBMIT, METHOD_DAG_EVENT_APPEND, METHOD_DAG_FRONTIER_GET,
-    METHOD_DAG_MERKLE_ROOT, METHOD_DAG_QUERY_VERTICES, METHOD_DAG_SESSION_COMPLETE,
-    METHOD_DAG_SESSION_CREATE, METHOD_STORAGE_RETRIEVE, METHOD_STORAGE_STORE, SIGNAL_NEST_COMMIT,
-    SIGNAL_NEST_STORE,
+    METHOD_CERT_MINT, METHOD_COMPUTE_SUBMIT, METHOD_CRYPTO_HASH, METHOD_CRYPTO_SIGN,
+    METHOD_CRYPTO_VERIFY, METHOD_DAG_EVENT_APPEND, METHOD_DAG_FRONTIER_GET, METHOD_DAG_MERKLE_ROOT,
+    METHOD_DAG_QUERY_VERTICES, METHOD_DAG_SESSION_COMPLETE, METHOD_DAG_SESSION_CREATE,
+    METHOD_MESH_BONDS, METHOD_MESH_HEALTH, METHOD_MESH_QUERY, METHOD_MESH_TOPOLOGY,
+    METHOD_STORAGE_RETRIEVE, METHOD_STORAGE_STORE, SIGNAL_NEST_COMMIT, SIGNAL_NEST_STORE,
 };
 
 use super::{PrimalBridge, degraded_summary_limit};
@@ -81,7 +81,7 @@ impl PrimalBridge {
     /// NPC dialogue via AI primal (`ai.query` with NPC personality context).
     ///
     /// Webb formats the NPC context into a prompt and calls Squirrel
-    /// directly. No ludoSpring mediation.
+    /// directly via biomeOS semantic methods.
     ///
     /// # Errors
     ///
@@ -368,6 +368,132 @@ impl PrimalBridge {
         params: &serde_json::Value,
     ) -> Result<Option<serde_json::Value>, IpcError> {
         self.call_passthrough(domain::LINEAGE, METHOD_CERT_MINT, params.clone())
+    }
+
+    // ── Provenance / attribution domain (sweetGrass) ──────────
+
+    /// Create an attribution braid (sweetGrass).
+    ///
+    /// Braids weave action → provenance → lineage → attribution into a
+    /// single traceable record. Returns the braid ID if successful.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IpcError`] if the call fails unexpectedly.
+    pub fn attribution_create(
+        &mut self,
+        params: &serde_json::Value,
+    ) -> Result<Option<String>, IpcError> {
+        self.call_extract_id(
+            domain::PROVENANCE,
+            "braid.create",
+            params.clone(),
+            &["braid_id", "id"],
+        )
+    }
+
+    /// Query attribution records for a session or content item.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IpcError`] if the call fails unexpectedly.
+    pub fn attribution_query(
+        &mut self,
+        params: &serde_json::Value,
+    ) -> Result<Option<serde_json::Value>, IpcError> {
+        self.call_passthrough(domain::PROVENANCE, "braid.query", params.clone())
+    }
+
+    // ── Crypto domain (bearDog) ─────────────────────────────
+
+    /// Sign a payload with the session key (bearDog).
+    ///
+    /// Returns the signature bytes as a hex string. Degrades to `None`
+    /// when bearDog is unavailable — the game continues without
+    /// cryptographic sealing.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IpcError`] if the call fails unexpectedly.
+    pub fn crypto_sign(&mut self, params: &serde_json::Value) -> Result<Option<String>, IpcError> {
+        self.call_extract_id(
+            domain::CRYPTO,
+            METHOD_CRYPTO_SIGN,
+            params.clone(),
+            &["signature", "sig"],
+        )
+    }
+
+    /// Verify a signed payload (bearDog).
+    ///
+    /// Returns `true` if the signature is valid, `false` if bearDog
+    /// is unavailable (degradation: unsigned is assumed valid locally).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IpcError`] if the call fails unexpectedly.
+    pub fn crypto_verify(&mut self, params: &serde_json::Value) -> Result<bool, IpcError> {
+        self.call_or_default(domain::CRYPTO, METHOD_CRYPTO_VERIFY, params.clone(), false)
+    }
+
+    /// Hash arbitrary data for content-addressable identity (bearDog).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IpcError`] if the call fails unexpectedly.
+    pub fn crypto_hash(&mut self, params: &serde_json::Value) -> Result<Option<String>, IpcError> {
+        self.call_extract_id(
+            domain::CRYPTO,
+            METHOD_CRYPTO_HASH,
+            params.clone(),
+            &["hash", "digest"],
+        )
+    }
+
+    // ── Mesh / topology domain (songBird) ───────────────────
+
+    /// Query the live ecosystem topology from songBird.
+    ///
+    /// Returns the full mesh graph: gates, primals, bonds, health
+    /// status. This is the primary data source for the first milestone
+    /// (static site rendering of ecosystem topology).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IpcError`] if the call fails unexpectedly.
+    pub fn mesh_topology(&mut self) -> Result<Option<serde_json::Value>, IpcError> {
+        self.call_passthrough(domain::MESH, METHOD_MESH_TOPOLOGY, serde_json::Value::Null)
+    }
+
+    /// Query mesh-wide health from songBird.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IpcError`] if the call fails unexpectedly.
+    pub fn mesh_health(&mut self) -> Result<Option<serde_json::Value>, IpcError> {
+        self.call_passthrough(domain::MESH, METHOD_MESH_HEALTH, serde_json::Value::Null)
+    }
+
+    /// Query a specific primal's mesh status by name.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IpcError`] if the call fails unexpectedly.
+    pub fn mesh_query(&mut self, primal: &str) -> Result<Option<serde_json::Value>, IpcError> {
+        self.call_passthrough(
+            domain::MESH,
+            METHOD_MESH_QUERY,
+            serde_json::json!({ "primal": primal }),
+        )
+    }
+
+    /// List active bonds between primals in the mesh.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IpcError`] if the call fails unexpectedly.
+    pub fn mesh_bonds(&mut self) -> Result<Option<serde_json::Value>, IpcError> {
+        self.call_passthrough(domain::MESH, METHOD_MESH_BONDS, serde_json::Value::Null)
     }
 
     // ── Signal dispatch (Wave 17 orchestration collapse) ─────
