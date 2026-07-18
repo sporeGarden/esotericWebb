@@ -10,12 +10,14 @@ use serde::{Deserialize, Serialize};
 
 /// Visualization primal method names.
 pub const METHOD_RENDER_SCENE: &str = "visualization.render.scene";
-/// Generic UI render.
+/// Generic UI render — accepts `{type, content}` and renders immediately.
 pub const METHOD_UI_RENDER: &str = "ui.render";
 /// Subscribe to input events.
 pub const METHOD_INTERACTION_SUBSCRIBE: &str = "interaction.subscribe";
 /// Poll for input events.
 pub const METHOD_INTERACTION_POLL: &str = "interaction.poll";
+/// Unsubscribe from input events.
+pub const METHOD_INTERACTION_UNSUBSCRIBE: &str = "interaction.unsubscribe";
 
 /// Player input event.
 #[derive(Debug, Clone, Serialize, Deserialize)]

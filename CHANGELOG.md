@@ -2,6 +2,44 @@
 
 All notable changes to Esoteric Webb are documented here.
 
+## V21 — Live Visual System + petalTongue Composition (Jul 18, 2026)
+
+### Scene push fix (petalTongue `ui.render`)
+
+- **Switched from `visualization.render.scene` to `ui.render`**: The former
+  expects a full 3D `SceneGraph` wire format that doesn't match CRPG narrative
+  scenes. `ui.render` accepts `{type, content}` and is confirmed working with
+  petalTongue v1.6.6. `scene_pushed: true` now reflects actual renderer
+  acceptance.
+- **Correct degradation semantics**: `push_scene_to_ui()` now returns `false`
+  when no visualization primal is connected (previously returned `true` via
+  fire-and-forget `call_fire`).
+- **New bridge method**: `render_ui(payload)` — returns `bool` indicating
+  whether petalTongue actually rendered the content.
+
+### Input polling
+
+- **`session.poll_input`** JSON-RPC method: polls petalTongue's
+  `interaction.poll` and returns pending `InputEvent` objects. Available for
+  live frontend or external controller consumption.
+- **`GameSession::poll_visualization_input()`** public method: delegates to
+  bridge's `poll_input()`.
+
+### HTML frontend
+
+- **`GET /`** now serves a self-contained interactive HTML/JS game client.
+  No build step, no external deps — `include_str!` at compile time.
+- **`GET /api/status`** preserved as JSON health endpoint.
+- Frontend calls `session.state`, `session.actions`, `session.act` via
+  JSON-RPC POST. Supports full game loop in the browser.
+- Dark theme, monospace UI, real-time enrichment display.
+
+### GAP-002 update
+
+- Status moved from `open` to `partial`. Documented petalTongue's SceneGraph
+  schema requirements and confirmed `ui.render` as the working path for
+  text-based narrative.
+
 ## V19 — HTTP Transport + Aldric NPC Fix + Gap Closures (Jul 18, 2026)
 
 ### HTTP POST transport adapter

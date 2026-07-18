@@ -40,18 +40,22 @@ Webb exercises primal composition -> discovers gap in a primal capability
 - **Primal**: visualization (`visualization.render.scene`)
 - **Spring (producer)**: petalTongue
 - **Severity**: medium
-- **Evidence**: Webb defines `DialogueTreeScene` payloads but the
-  `visualization.render.scene` capability has not confirmed support for
-  dialogue tree rendering with choice highlighting, voice interjection
-  panels, or skill check result display.
-- **Expected**: The visualization primal accepts a `DialogueTreeScene`
-  payload and renders it as an interactive dialogue UI with choices,
-  voice notes, and skill checks.
-- **Workaround**: Webb uses text-mode preview (`esotericwebb preview`)
-  which renders to stdout without the visualization primal.
-- **Handoff**: File to wateringHole when the visualization primal reaches
-  RPGPT UI phase.
-- **Status**: open
+- **Evidence**: petalTongue v1.6.6 exposes `visualization.render.scene` but
+  requires a full `SceneGraph` wire format with `nodes` (map), `edges`,
+  `transform` (position/rotation/scale), and other 3D-graph fields. Webb's
+  CRPG scene model (node + description + NPCs + turn) does not match this
+  schema. The `ui.render` method accepts simpler payloads and works today
+  (confirmed: `{"type":"text","content":"..."}` returns `rendered: true`).
+- **Expected**: Either (a) petalTongue defines a `SceneGraph` subtype for
+  text/narrative scenes (dialogue trees, choices, voice notes), or (b) Webb
+  continues using `ui.render` for text content and `visualization.render.scene`
+  only when a full scene graph is available.
+- **Workaround**: Webb now uses `ui.render` for scene pushes (V21). Scene push
+  confirmed working with live petalTongue composition.
+- **Handoff**: petalTongue team — define CRPG scene type for
+  `visualization.render.scene`, or document `ui.render` as the intended path
+  for text-based narrative composition.
+- **Status**: partial (workaround shipped, upstream schema TBD)
 
 ### GAP-003: AI primal NPC dialogue constraint enforcement
 

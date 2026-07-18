@@ -198,3 +198,5 @@ pub const METHOD_SESSION_NARRATE: &str = "session.narrate";
 pub const METHOD_SESSION_GRAPH: &str = "session.graph";
 /// Get session engagement metrics (V13 — game science / DDA).
 pub const METHOD_SESSION_METRICS: &str = "session.metrics";
+/// Poll petalTongue for pending player input events.
+pub const METHOD_SESSION_POLL_INPUT: &str = "session.poll_input";

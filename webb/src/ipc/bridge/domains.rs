@@ -22,7 +22,9 @@
 //! Game science (flow, engagement, DDA) is now local via `science/`.
 
 use crate::ipc::envelope::IpcError;
-use crate::ipc::petaltongue::{InputEvent, METHOD_INTERACTION_POLL, METHOD_RENDER_SCENE};
+use crate::ipc::petaltongue::{
+    InputEvent, METHOD_INTERACTION_POLL, METHOD_RENDER_SCENE, METHOD_UI_RENDER,
+};
 use crate::ipc::primal_names::domain;
 use crate::ipc::squirrel::{
     ChatResponse, DialogueResponse, METHOD_AI_ANALYZE, METHOD_AI_QUERY, METHOD_AI_SUGGEST,
@@ -182,13 +184,32 @@ impl PrimalBridge {
 
     // ── Visualization domain (petalTongue) ─────────────────
 
-    /// Push a scene payload for rendering.
+    /// Push a scene payload for rendering via the full `SceneGraph` protocol.
     ///
     /// # Errors
     ///
     /// Returns [`IpcError`] if the call fails unexpectedly.
     pub fn render_scene(&mut self, scene: &serde_json::Value) -> Result<(), IpcError> {
         self.call_fire(domain::VISUALIZATION, METHOD_RENDER_SCENE, scene.clone())
+    }
+
+    /// Render content via petalTongue's `ui.render` — simpler than the full
+    /// `SceneGraph` protocol and confirmed working (v1.6.6+).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IpcError`] if the call fails unexpectedly.
+    pub fn render_ui(&mut self, payload: serde_json::Value) -> Result<bool, IpcError> {
+        let result: serde_json::Value = self.call_or_default(
+            domain::VISUALIZATION,
+            METHOD_UI_RENDER,
+            payload,
+            serde_json::json!({"rendered": false}),
+        )?;
+        Ok(result
+            .get("rendered")
+            .and_then(serde_json::Value::as_bool)
+            .unwrap_or(false))
     }
 
     /// Poll for player input events from petalTongue.

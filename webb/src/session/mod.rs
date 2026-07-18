@@ -108,6 +108,16 @@ impl GameSession {
         self.bridge.take()
     }
 
+    /// Poll petalTongue for pending player input events.
+    ///
+    /// Returns an empty vec if the visualization primal is unavailable.
+    pub fn poll_visualization_input(&mut self) -> Vec<crate::ipc::petaltongue::InputEvent> {
+        let Some(bridge) = self.bridge.as_mut() else {
+            return Vec::new();
+        };
+        bridge.poll_input().unwrap_or_default()
+    }
+
     /// Initialize provenance session via DAG primal if available.
     ///
     /// Creates a DAG session and stores the returned session ID in

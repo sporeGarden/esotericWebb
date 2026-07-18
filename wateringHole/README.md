@@ -38,12 +38,13 @@ wateringHole/
 
 | Handoff | Direction | Summary |
 |---------|-----------|---------|
-| `ESOTERICWEBB_V18_E2E_DEMO_HANDOFF_JUL18_2026.md` | Outbound | **Current** — V18 E2E demo scenario, guided composition tour, `esotericwebb demo` subcommand |
+| `ESOTERICWEBB_V21_LIVE_VISUAL_AAR_JUL18_2026.md` | Outbound | **Current** — V21 live visual system, petalTongue `ui.render` composition, HTML frontend, GAP-002 partial |
 
 ## Archived handoffs (fossil record)
 
 | Handoff | Direction | Summary |
 |---------|-----------|---------|
+| `ESOTERICWEBB_V18_E2E_DEMO_HANDOFF_JUL18_2026.md` | Outbound | V18 E2E demo scenario, guided composition tour |
 | `ESOTERICWEBB_DEPLOY_UNBLOCK_AAR_JUL18_2026.md` | Outbound | Deploy blocker resolution: binary in depot, forgejo synced, flockGate:8090 live |
 | `ESOTERICWEBB_V16_LIVE_COMPOSITION_AAR_HANDOFF_JUL17_2026.md` | Outbound | V16 live primal composition on flockGate, discovery reverse-mapping, health hardening, AAR findings |
 | `ESOTERICWEBB_V15_DEEP_DEBT_EVOLUTION_HANDOFF_JUL17_2026.md` | Outbound | V15 domain wiring (crypto, mesh), mock cleanup, voice engine, ruleset validation |

@@ -139,6 +139,32 @@ where
     )
 }
 
+/// Helper: lock session mutably.
+fn with_session_mut<F>(session: &SharedSession, f: F) -> Result<Value, JsonRpcError>
+where
+    F: FnOnce(&mut crate::session::GameSession) -> Result<Value, JsonRpcError>,
+{
+    let mut guard = session
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    guard.as_mut().map_or_else(
+        || {
+            Err(JsonRpcError::application(
+                "no active session — call session.start first",
+            ))
+        },
+        f,
+    )
+}
+
+/// `session.poll_input` — poll petalTongue for player input events.
+pub(super) fn handle_session_poll_input(session: &SharedSession) -> Result<Value, JsonRpcError> {
+    with_session_mut(session, |s| {
+        let events = s.poll_visualization_input();
+        Ok(serde_json::json!({ "events": events }))
+    })
+}
+
 #[cfg(test)]
 #[expect(clippy::unwrap_used, reason = "test code")]
 mod tests {

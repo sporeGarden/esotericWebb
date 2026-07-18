@@ -152,6 +152,10 @@ fn is_http_request(line: &str) -> bool {
         || line.starts_with("OPTIONS ")
 }
 
+#[expect(
+    clippy::too_many_lines,
+    reason = "linear HTTP dispatch — clarity over splitting"
+)]
 fn handle_http_request(
     request_line: &str,
     reader: &mut BufReader<&std::net::TcpStream>,
@@ -194,17 +198,30 @@ fn handle_http_request(
     }
 
     if is_get {
-        let status_json = build_status_response(session);
+        let path = request_line.split_whitespace().nth(1).unwrap_or("/");
+
+        let response_body = if path == "/api/status" {
+            build_status_response(session)
+        } else {
+            build_html_frontend()
+        };
+
+        let content_type = if path == "/api/status" {
+            "application/json"
+        } else {
+            "text/html; charset=utf-8"
+        };
+
         let _ = write!(
             writer,
             "HTTP/1.1 200 OK\r\n\
-             Content-Type: application/json\r\n\
+             Content-Type: {content_type}\r\n\
              Content-Length: {}\r\n\
              Access-Control-Allow-Origin: *\r\n\
              \r\n\
              {}",
-            status_json.len(),
-            status_json
+            response_body.len(),
+            response_body
         );
         let _ = writer.flush();
         return;
@@ -265,7 +282,12 @@ fn handle_http_request(
     let _ = writer.flush();
 }
 
-/// Build a JSON status response for GET requests (browser-navigable).
+/// Build the interactive HTML frontend for browser access.
+fn build_html_frontend() -> String {
+    include_str!("../../static/index.html").to_owned()
+}
+
+/// Build a JSON status response for GET /api/status.
 fn build_status_response(session: &SharedSession) -> String {
     let guard = session
         .lock()

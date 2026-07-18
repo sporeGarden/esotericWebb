@@ -152,6 +152,9 @@ impl GameSession {
     }
 
     /// Push current scene state to petalTongue for rendering.
+    ///
+    /// Uses `ui.render` which accepts rich text content directly, rather than
+    /// the full `visualization.render.scene` `SceneGraph` protocol (GAP-002).
     pub(crate) fn push_scene_to_ui(&mut self) -> bool {
         let npcs = self.current_scene_npcs();
         let scene_desc = self.director.current_scene_description(&self.bundle);
@@ -163,15 +166,26 @@ impl GameSession {
             return false;
         };
 
-        let scene = serde_json::json!({
-            "node": node_id,
-            "description": scene_desc,
-            "npcs": npcs,
-            "turn": turn,
-            "is_ending": is_ending,
+        let npc_list = npcs.join(", ");
+        let content = if npc_list.is_empty() {
+            format!("[{node_id} | turn {turn}]\n\n{scene_desc}")
+        } else {
+            format!("[{node_id} | turn {turn}]\n\n{scene_desc}\n\nPresent: {npc_list}")
+        };
+
+        let payload = serde_json::json!({
+            "type": "text",
+            "content": content,
+            "metadata": {
+                "node": node_id,
+                "turn": turn,
+                "is_ending": is_ending,
+                "npcs": npcs,
+            }
         });
-        match bridge.render_scene(&scene) {
-            Ok(()) => true,
+
+        match bridge.render_ui(payload) {
+            Ok(rendered) => rendered,
             Err(e) => {
                 tracing::debug!("scene push degraded: {e}");
                 false
@@ -437,9 +451,9 @@ mod tests {
     fn push_scene_with_standalone_bridge() {
         let mut s = session_with_standalone_bridge();
         let pushed = s.push_scene_to_ui();
-        // Standalone bridge has no visualization domain, but call_fire
-        // returns Ok(()) when domain is absent — push succeeds silently.
-        assert!(pushed);
+        // Standalone bridge has no visualization domain — render_ui returns
+        // the default `rendered: false` when domain is absent.
+        assert!(!pushed);
     }
 
     #[test]
@@ -477,7 +491,8 @@ mod tests {
         let (text, ctx) = s.act(ActionKind::Exit, "room").unwrap();
         assert!(!text.is_empty());
         assert!(ctx.enrichment.ai_narration.is_none());
-        assert!(ctx.enrichment.scene_pushed);
+        // No visualization domain in standalone — scene not pushed.
+        assert!(!ctx.enrichment.scene_pushed);
     }
 
     #[test]

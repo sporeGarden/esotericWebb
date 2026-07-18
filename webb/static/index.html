@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>esotericWebb — Live Composition</title>
+<style>
+:root {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --border: #30363d;
+  --text: #c9d1d9;
+  --dim: #8b949e;
+  --accent: #58a6ff;
+  --green: #3fb950;
+  --orange: #d29922;
+  --red: #f85149;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+header {
+  padding: 1rem 2rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+header h1 { font-size: 1.1rem; color: var(--accent); }
+header .status { font-size: 0.8rem; color: var(--green); }
+header .status.disconnected { color: var(--red); }
+main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 0;
+  overflow: hidden;
+}
+#narrative {
+  padding: 2rem;
+  overflow-y: auto;
+  max-height: calc(100vh - 60px);
+}
+.entry {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.entry .turn { color: var(--dim); font-size: 0.75rem; margin-bottom: 0.5rem; }
+.entry .outcome { line-height: 1.6; }
+.entry .enrichment { margin-top: 0.5rem; font-size: 0.8rem; color: var(--dim); }
+#sidebar {
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  padding: 1.5rem;
+  overflow-y: auto;
+  max-height: calc(100vh - 60px);
+}
+#sidebar h2 { font-size: 0.9rem; color: var(--dim); margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.1em; }
+#sidebar h3 { font-size: 0.85rem; color: var(--accent); margin: 1rem 0 0.5rem; }
+.action-btn {
+  display: block;
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  margin-bottom: 0.5rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+}
+.action-btn:hover { border-color: var(--accent); background: #1c2128; }
+.action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.action-btn .kind { color: var(--accent); }
+#state-info { font-size: 0.8rem; color: var(--dim); line-height: 1.6; }
+#state-info .node { color: var(--green); }
+.loading { text-align: center; padding: 3rem; color: var(--dim); }
+</style>
+</head>
+<body>
+<header>
+  <h1>esotericWebb</h1>
+  <span id="conn-status" class="status">connecting...</span>
+</header>
+<main>
+  <div id="narrative"><div class="loading">Loading session...</div></div>
+  <div id="sidebar">
+    <h2>Session</h2>
+    <div id="state-info"></div>
+    <h3>Actions</h3>
+    <div id="actions"></div>
+  </div>
+</main>
+<script>
+const API = window.location.origin;
+let reqId = 1;
+
+async function rpc(method, params) {
+  const res = await fetch(API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jsonrpc: '2.0', id: reqId++, method, params: params || {} })
+  });
+  const json = await res.json();
+  if (json.error) throw new Error(json.error.message);
+  return json.result;
+}
+
+function setStatus(text, ok) {
+  const el = document.getElementById('conn-status');
+  el.textContent = text;
+  el.className = ok ? 'status' : 'status disconnected';
+}
+
+function renderState(state) {
+  const info = document.getElementById('state-info');
+  info.innerHTML = `
+    <div>Node: <span class="node">${state.current_node || '—'}</span></div>
+    <div>Turn: ${state.turn || 0}</div>
+    <div>Knowledge: ${(state.knowledge || []).length}</div>
+    <div>Ending: ${state.is_ending ? 'yes' : 'no'}</div>
+  `;
+}
+
+function renderActions(actions) {
+  const el = document.getElementById('actions');
+  if (!actions || !actions.length) {
+    el.innerHTML = '<div style="color:var(--dim)">No actions available</div>';
+    return;
+  }
+  el.innerHTML = actions.map(a =>
+    `<button class="action-btn" data-kind="${a.kind}" data-id="${a.id || ''}">
+      <span class="kind">${a.kind}</span> ${a.label || a.id || ''}
+    </button>`
+  ).join('');
+  el.querySelectorAll('.action-btn').forEach(btn => {
+    btn.addEventListener('click', () => doAction(btn.dataset.kind, btn.dataset.id));
+  });
+}
+
+function appendNarrative(turn, outcome, enrichment) {
+  const el = document.getElementById('narrative');
+  if (el.querySelector('.loading')) el.innerHTML = '';
+  const entry = document.createElement('div');
+  entry.className = 'entry';
+  let enrichHtml = '';
+  if (enrichment) {
+    const parts = [];
+    if (enrichment.scene_pushed) parts.push('scene pushed');
+    if (enrichment.in_flow) parts.push('in flow');
+    if (enrichment.voice_notes && enrichment.voice_notes.length)
+      parts.push(`voices: ${enrichment.voice_notes.map(v => v.voice_id).join(', ')}`);
+    if (parts.length) enrichHtml = `<div class="enrichment">${parts.join(' · ')}</div>`;
+  }
+  entry.innerHTML = `<div class="turn">Turn ${turn}</div><div class="outcome">${outcome}</div>${enrichHtml}`;
+  el.appendChild(entry);
+  entry.scrollIntoView({ behavior: 'smooth' });
+}
+
+async function doAction(kind, id) {
+  document.querySelectorAll('.action-btn').forEach(b => b.disabled = true);
+  try {
+    const result = await rpc('session.act', { kind, id });
+    appendNarrative(
+      result.state?.turn || '?',
+      result.outcome || '',
+      result.narration_context?.enrichment
+    );
+    renderState(result.state);
+    await refreshActions();
+  } catch (e) {
+    appendNarrative('!', `Error: ${e.message}`, null);
+  }
+}
+
+async function refreshActions() {
+  try {
+    const actions = await rpc('session.actions');
+    renderActions(Array.isArray(actions) ? actions : actions?.actions || []);
+  } catch { renderActions([]); }
+}
+
+async function init() {
+  try {
+    const state = await rpc('session.state');
+    setStatus('connected', true);
+    renderState(state);
+    const desc = state.scene_description || state.current_node || '';
+    if (desc) appendNarrative(state.turn || 0, desc, null);
+    await refreshActions();
+  } catch (e) {
+    setStatus('error: ' + e.message, false);
+    document.getElementById('narrative').innerHTML =
+      `<div class="loading">Session not started. POST session.start to begin.</div>`;
+  }
+}
+
+init();
+</script>
+</body>
+</html>

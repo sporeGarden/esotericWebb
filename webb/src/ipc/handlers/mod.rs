@@ -16,8 +16,8 @@ use super::{
     METHOD_IDENTITY_GET, METHOD_LIVENESS, METHOD_METHOD_DESCRIBE, METHOD_NARRATIVE_STATUS,
     METHOD_PRIMAL_ANNOUNCE, METHOD_PRIMAL_INFO, METHOD_READINESS, METHOD_SCENE_CURRENT,
     METHOD_SESSION_ACT, METHOD_SESSION_ACTIONS, METHOD_SESSION_GRAPH, METHOD_SESSION_HISTORY,
-    METHOD_SESSION_METRICS, METHOD_SESSION_NARRATE, METHOD_SESSION_START, METHOD_SESSION_STATE,
-    METHOD_TOOLS_CALL, METHOD_TOOLS_LIST,
+    METHOD_SESSION_METRICS, METHOD_SESSION_NARRATE, METHOD_SESSION_POLL_INPUT,
+    METHOD_SESSION_START, METHOD_SESSION_STATE, METHOD_TOOLS_CALL, METHOD_TOOLS_LIST,
 };
 use crate::session::GameSession;
 
@@ -75,6 +75,7 @@ pub fn dispatch_with_session(request: &JsonRpcRequest, session: &SharedSession) 
         METHOD_SESSION_NARRATE => session::handle_session_narrate(session),
         METHOD_SESSION_GRAPH => session::handle_session_graph(session),
         METHOD_SESSION_METRICS => session::handle_session_metrics(session),
+        METHOD_SESSION_POLL_INPUT => session::handle_session_poll_input(session),
 
         _ => Err(JsonRpcError::method_not_found(format!(
             "method not found: {}",
