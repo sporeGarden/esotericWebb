@@ -4,8 +4,8 @@
 
 use esoteric_webb::error::WebbError;
 use esoteric_webb::ipc::bridge::PrimalBridge;
-use esoteric_webb::session::types::ActionKind;
 use esoteric_webb::session::GameSession;
+use esoteric_webb::session::types::ActionKind;
 use serde::{Deserialize, Serialize};
 
 type Result<T> = esoteric_webb::error::Result<T>;
@@ -79,11 +79,13 @@ struct DemoResult {
     primal_status: Vec<String>,
 }
 
-#[expect(clippy::too_many_lines, reason = "linear E2E sequence, clarity over splitting")]
+#[expect(
+    clippy::too_many_lines,
+    reason = "linear E2E sequence, clarity over splitting"
+)]
 pub(super) fn run(content_path: &str, scenario_path: &str, json: bool) -> Result<()> {
-    let yaml = std::fs::read_to_string(scenario_path).map_err(|e| WebbError::Other(
-        format!("reading {scenario_path}: {e}")
-    ))?;
+    let yaml = std::fs::read_to_string(scenario_path)
+        .map_err(|e| WebbError::Other(format!("reading {scenario_path}: {e}")))?;
     let scenario: DemoScenario = serde_yaml::from_str(&yaml)?;
 
     if !json {
@@ -131,7 +133,10 @@ pub(super) fn run(content_path: &str, scenario_path: &str, json: bool) -> Result
         let kind = match ActionKind::parse(&step.action.kind) {
             Ok(k) => k,
             Err(e) => {
-                let msg = format!("step {step_num}: invalid action kind '{}': {e}", step.action.kind);
+                let msg = format!(
+                    "step {step_num}: invalid action kind '{}': {e}",
+                    step.action.kind
+                );
                 errors.push(msg.clone());
                 steps_failed += 1;
                 if !json {
@@ -148,24 +153,23 @@ pub(super) fn run(content_path: &str, scenario_path: &str, json: bool) -> Result
                 if let Some(ref needle) = step.expected.outcome_contains {
                     let haystack = outcome.to_lowercase();
                     if !haystack.contains(&needle.to_lowercase()) {
-                        let msg = format!(
-                            "step {step_num}: outcome missing '{needle}'"
-                        );
+                        let msg = format!("step {step_num}: outcome missing '{needle}'");
                         errors.push(msg);
                         step_ok = false;
                     }
                 }
 
-                if step.expected.enrichment.scene_pushed == Some(true) && ctx.enrichment.scene_pushed {
+                if step.expected.enrichment.scene_pushed == Some(true)
+                    && ctx.enrichment.scene_pushed
+                {
                     scene_pushes += 1;
                 }
 
                 if let Some(ref node) = step.expected.state.current_node {
                     let actual = session.current_node_id();
                     if actual != node {
-                        let msg = format!(
-                            "step {step_num}: expected node '{node}', got '{actual}'"
-                        );
+                        let msg =
+                            format!("step {step_num}: expected node '{node}', got '{actual}'");
                         errors.push(msg);
                         step_ok = false;
                     }
@@ -277,12 +281,11 @@ pub(super) fn run(content_path: &str, scenario_path: &str, json: bool) -> Result
     } else {
         println!();
         println!("=== Results ===");
+        println!("  Steps: {}/{} passed", steps_passed, scenario.steps.len());
         println!(
-            "  Steps: {}/{} passed",
-            steps_passed,
-            scenario.steps.len()
+            "  Verification: {}",
+            if verification_passed { "PASS" } else { "FAIL" }
         );
-        println!("  Verification: {}", if verification_passed { "PASS" } else { "FAIL" });
         println!("  Scene pushes: {scene_pushes}");
         println!("  Turn: {turn}");
         if !errors.is_empty() {

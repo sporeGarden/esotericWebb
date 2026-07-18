@@ -1,3 +1,4 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 id: study
-description: "The study is lined with books — leather-bound volumes in languages you half-recognize. A desk sits beneath a window, papers scattered across it. Something about the bookshelf on the east wall draws your eye."
+description: "The study is lined with books — leather-bound volumes in languages you half-recognize. A desk sits beneath a window, papers scattered across it. Something about the bookshelf on the east wall draws your eye. Aldric Voss sits in a worn armchair, absorbed in a tome bound with brass clasps."
+npcs: [aldric]

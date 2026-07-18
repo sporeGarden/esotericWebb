@@ -7,7 +7,10 @@
 
 use std::process::ExitCode;
 
-#[expect(clippy::too_many_lines, reason = "experiment runner is a single integration flow")]
+#[expect(
+    clippy::too_many_lines,
+    reason = "experiment runner is a single integration flow"
+)]
 fn main() -> ExitCode {
     use esoteric_webb::experiment::{check_bool, check_skip, finish_with_code, section};
     use esoteric_webb::ipc::bridge::PrimalBridge;
@@ -39,7 +42,11 @@ fn main() -> ExitCode {
         } else {
             "absent"
         };
-        println!("    {name:<14} {domain:<16} {icon}", name = s.name, domain = s.domain);
+        println!(
+            "    {name:<14} {domain:<16} {icon}",
+            name = s.name,
+            domain = s.domain
+        );
     }
     println!("    {connected}/{total} connected", total = statuses.len());
 
@@ -74,8 +81,7 @@ fn main() -> ExitCode {
     // ── Session with bridge ──
 
     section("session with bridge");
-    let session_result =
-        esoteric_webb::session::GameSession::with_bridge("content", Some(bridge));
+    let session_result = esoteric_webb::session::GameSession::with_bridge("content", Some(bridge));
 
     let Ok(mut session) = session_result else {
         check_skip("content/ not loadable — skipping session tests");
@@ -83,8 +89,14 @@ fn main() -> ExitCode {
     };
 
     let snap = session.snapshot();
-    check_bool("session starts at entrance", snap.current_node == "entrance");
-    check_bool("session has available actions", !snap.available_actions.is_empty());
+    check_bool(
+        "session starts at entrance",
+        snap.current_node == "entrance",
+    );
+    check_bool(
+        "session has available actions",
+        !snap.available_actions.is_empty(),
+    );
     check_bool(
         "session loaded content bundle",
         !session.bundle().meta.name.is_empty(),
@@ -100,7 +112,10 @@ fn main() -> ExitCode {
     match act_result {
         Ok((outcome, ctx)) => {
             check_bool("examine returns outcome text", !outcome.is_empty());
-            check_bool("narration context has scene", !ctx.scene_description.is_empty());
+            check_bool(
+                "narration context has scene",
+                !ctx.scene_description.is_empty(),
+            );
             let enriched = ctx.enrichment.ai_narration.is_some()
                 || ctx.enrichment.scene_pushed
                 || !ctx.enrichment.voice_notes.is_empty();
@@ -136,7 +151,10 @@ fn main() -> ExitCode {
         match session.act(ActionKind::Exit, &target) {
             Ok((outcome, ctx)) => {
                 check_bool("exit action succeeds", true);
-                check_bool("node changed", session.snapshot().current_node != "entrance" || target == "entrance");
+                check_bool(
+                    "node changed",
+                    session.snapshot().current_node != "entrance" || target == "entrance",
+                );
                 println!("    now at: {}", session.snapshot().current_node);
                 println!("    outcome: {}", &outcome[..outcome.len().min(80)]);
                 if ctx.enrichment.scene_pushed {

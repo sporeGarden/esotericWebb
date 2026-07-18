@@ -155,10 +155,10 @@ impl PrimalRegistry {
                 });
 
             if let Some(tcp_addr) = addr {
-                let ep =
-                    self.by_domain
-                        .entry(domain.to_owned())
-                        .or_insert_with(|| PrimalEndpoint::empty(domain, name));
+                let ep = self
+                    .by_domain
+                    .entry(domain.to_owned())
+                    .or_insert_with(|| PrimalEndpoint::empty(domain, name));
                 ep.tcp_addr = Some(tcp_addr);
             }
         }
@@ -275,20 +275,16 @@ impl PrimalRegistry {
                 let (resolved_domain, resolved_name) = DOMAIN_PRIMAL_MAP
                     .iter()
                     .find(|&&(d, _)| d == file_stem)
-                    .or_else(|| {
-                        DOMAIN_PRIMAL_MAP
-                            .iter()
-                            .find(|&&(_, n)| n == file_stem)
-                    })
+                    .or_else(|| DOMAIN_PRIMAL_MAP.iter().find(|&&(_, n)| n == file_stem))
                     .map_or_else(
                         || (file_stem.to_owned(), file_stem.to_owned()),
                         |&(d, n)| (d.to_owned(), n.to_owned()),
                     );
 
-                let ep =
-                    self.by_domain
-                        .entry(resolved_domain.clone())
-                        .or_insert_with(|| PrimalEndpoint::empty(resolved_domain, resolved_name));
+                let ep = self
+                    .by_domain
+                    .entry(resolved_domain.clone())
+                    .or_insert_with(|| PrimalEndpoint::empty(resolved_domain, resolved_name));
                 ep.socket_path = Some(path);
             }
         }

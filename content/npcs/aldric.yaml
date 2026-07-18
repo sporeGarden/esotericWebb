@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+id: aldric
+name: "Aldric Voss"
+role: occult scholar
+knows:
+  - ritual_history
+  - true_name
+  - sigil_meanings
+trust_initial: 0
+trust_rewards:
+  2:
+    description: "Aldric peers at you over his spectacles and shares a fragment about the shop's sigils."
+    grants_knowledge: [sigil_meanings]
+  4:
+    description: "Aldric produces a crumbling journal page with the ritual's true purpose."
+    grants_knowledge: [ritual_history]
+  6:
+    description: "Aldric whispers the true name — the one that binds."
+    grants_knowledge: [true_name]
+lies_about:
+  his_involvement:
+    detection_dc: 18
+arc: "aloof -> intrigued -> confiding -> revelatory"
