@@ -153,11 +153,14 @@ fn is_http_request(line: &str) -> bool {
 }
 
 fn handle_http_request(
-    _request_line: &str,
+    request_line: &str,
     reader: &mut BufReader<&std::net::TcpStream>,
     mut writer: &std::net::TcpStream,
     session: &SharedSession,
 ) {
+    let is_get = request_line.starts_with("GET ");
+    let is_options = request_line.starts_with("OPTIONS ");
+
     let mut content_length: usize = 0;
 
     loop {
@@ -176,10 +179,44 @@ fn handle_http_request(
         }
     }
 
+    if is_options {
+        let _ = write!(
+            writer,
+            "HTTP/1.1 204 No Content\r\n\
+             Access-Control-Allow-Origin: *\r\n\
+             Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n\
+             Access-Control-Allow-Headers: Content-Type\r\n\
+             Content-Length: 0\r\n\
+             \r\n"
+        );
+        let _ = writer.flush();
+        return;
+    }
+
+    if is_get {
+        let status_json = build_status_response(session);
+        let _ = write!(
+            writer,
+            "HTTP/1.1 200 OK\r\n\
+             Content-Type: application/json\r\n\
+             Content-Length: {}\r\n\
+             Access-Control-Allow-Origin: *\r\n\
+             \r\n\
+             {}",
+            status_json.len(),
+            status_json
+        );
+        let _ = writer.flush();
+        return;
+    }
+
     let body = if content_length > 0 {
         let mut buf = vec![0u8; content_length];
         if std::io::Read::read_exact(reader, &mut buf).is_err() {
-            let _ = write!(writer, "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n");
+            let _ = write!(
+                writer,
+                "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n"
+            );
             let _ = writer.flush();
             return;
         }
@@ -218,7 +255,7 @@ fn handle_http_request(
          Content-Type: application/json\r\n\
          Content-Length: {}\r\n\
          Access-Control-Allow-Origin: *\r\n\
-         Access-Control-Allow-Methods: POST, OPTIONS\r\n\
+         Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n\
          Access-Control-Allow-Headers: Content-Type\r\n\
          \r\n\
          {}",
@@ -226,6 +263,34 @@ fn handle_http_request(
         resp_json
     );
     let _ = writer.flush();
+}
+
+/// Build a JSON status response for GET requests (browser-navigable).
+fn build_status_response(session: &SharedSession) -> String {
+    let guard = session
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    let session_info = guard.as_ref().map_or(serde_json::json!(null), |sess| {
+        let snap = sess.snapshot();
+        serde_json::json!({
+            "turn": snap.turn,
+            "current_node": snap.current_node,
+            "is_ending": snap.is_ending,
+            "knowledge_count": snap.knowledge.len(),
+            "available_actions": snap.available_actions.len(),
+        })
+    });
+    drop(guard);
+
+    let status = serde_json::json!({
+        "service": "esotericWebb",
+        "version": env!("CARGO_PKG_VERSION"),
+        "status": "healthy",
+        "session": session_info,
+        "protocol": "JSON-RPC 2.0 over POST",
+        "docs": "POST a JSON-RPC request to this URL. Methods: health.liveness, session.state, session.act, session.actions",
+    });
+    serde_json::to_string_pretty(&status).unwrap_or_else(|_| r#"{"status":"healthy"}"#.to_owned())
 }
 
 fn handle_jsonrpc_line(line: &str, mut writer: &std::net::TcpStream, session: &SharedSession) {
