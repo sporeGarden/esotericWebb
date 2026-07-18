@@ -26,7 +26,9 @@
 //! 3. `plasmidBin/<primal>/metadata.toml` `[transport]` section
 
 use std::collections::HashMap;
+use std::net::TcpStream;
 use std::path::PathBuf;
+use std::time::Duration;
 
 pub use super::transport::TransportEndpoint;
 
@@ -41,6 +43,8 @@ pub struct PrimalEndpoint {
     pub socket_path: Option<PathBuf>,
     /// TCP address (host:port) if known.
     pub tcp_addr: Option<String>,
+    /// HTTP endpoint URL (for primals using HTTP transport, e.g. songBird `/jsonrpc`).
+    pub http_url: Option<String>,
     /// Capabilities advertised by this primal.
     pub capabilities: Vec<String>,
     /// Whether the primal responded to a health check.
@@ -55,6 +59,7 @@ impl PrimalEndpoint {
             name: name.into(),
             socket_path: None,
             tcp_addr: None,
+            http_url: None,
             capabilities: Vec::new(),
             healthy: false,
         }
@@ -108,7 +113,7 @@ impl PrimalRegistry {
     pub fn discover() -> Self {
         let mut registry = Self::default();
 
-        // Phase 1: TCP discovery from env vars
+        // Phase 1: TCP discovery from env vars (including HTTP URLs)
         registry.discover_tcp_from_env();
 
         // Phase 2: TCP/metadata discovery from plasmidBin
@@ -121,6 +126,9 @@ impl PrimalRegistry {
                 registry.probe_directory(&dir);
             }
         }
+
+        // Phase 4: Well-known HTTP endpoints (primals using HTTP transport)
+        registry.discover_http_well_known();
 
         registry
     }
@@ -142,6 +150,16 @@ impl PrimalRegistry {
     fn discover_tcp_from_env(&mut self) {
         for &(domain, name) in DOMAIN_PRIMAL_MAP {
             let upper = name.to_uppercase();
+
+            // Check for HTTP URL first (e.g. SONGBIRD_HTTP_URL=http://127.0.0.1:7780/jsonrpc)
+            if let Ok(url) = std::env::var(format!("{upper}{}", crate::env_keys::HTTP_URL_SUFFIX)) {
+                let ep = self
+                    .by_domain
+                    .entry(domain.to_owned())
+                    .or_insert_with(|| PrimalEndpoint::empty(domain, name));
+                ep.http_url = Some(url);
+                continue;
+            }
 
             let addr = std::env::var(format!("{upper}{}", crate::env_keys::ADDR_SUFFIX))
                 .ok()
@@ -241,6 +259,13 @@ impl PrimalRegistry {
             ep.tcp_addr = tcp_addr;
         }
 
+        if ep.http_url.is_none() {
+            ep.http_url = transport_section
+                .and_then(|t| t.get("http_url"))
+                .and_then(toml::Value::as_str)
+                .map(str::to_owned);
+        }
+
         if ep.capabilities.is_empty() {
             ep.capabilities.clone_from(&methods);
         }
@@ -286,6 +311,42 @@ impl PrimalRegistry {
                     .entry(resolved_domain.clone())
                     .or_insert_with(|| PrimalEndpoint::empty(resolved_domain, resolved_name));
                 ep.socket_path = Some(path);
+            }
+        }
+    }
+
+    /// Probe well-known HTTP endpoints for primals that use HTTP transport.
+    ///
+    /// Currently: songBird on `127.0.0.1:7780/jsonrpc` (mesh domain).
+    /// Only probes if the domain isn't already discovered via other means.
+    fn discover_http_well_known(&mut self) {
+        use super::primal_names::domain;
+
+        const WELL_KNOWN_HTTP: &[(&str, &str, &str, u16)] =
+            &[(domain::MESH, "songbird", "/jsonrpc", 7780)];
+
+        for &(domain, name, path, port) in WELL_KNOWN_HTTP {
+            if let Some(ep) = self.by_domain.get(domain) {
+                if ep.http_url.is_some() || ep.tcp_addr.is_some() || ep.socket_path.is_some() {
+                    continue;
+                }
+            }
+
+            let addr = format!("{}:{port}", super::default_host());
+            if TcpStream::connect_timeout(
+                &addr
+                    .parse()
+                    .unwrap_or_else(|_| std::net::SocketAddr::from(([127, 0, 0, 1], port))),
+                Duration::from_millis(200),
+            )
+            .is_ok()
+            {
+                let url = format!("http://{addr}{path}");
+                let ep = self
+                    .by_domain
+                    .entry(domain.to_owned())
+                    .or_insert_with(|| PrimalEndpoint::empty(domain, name));
+                ep.http_url = Some(url);
             }
         }
     }
@@ -401,6 +462,7 @@ mod tests {
                 name: "rhizocrypt".to_owned(),
                 socket_path: Some(PathBuf::from("/tmp/rhizocrypt.sock")),
                 tcp_addr: None,
+                http_url: None,
                 capabilities: vec!["dag.session.create".to_owned()],
                 healthy: true,
             },
@@ -418,6 +480,7 @@ mod tests {
             name: "rhizocrypt".to_owned(),
             socket_path: Some(PathBuf::from("/tmp/dag.sock")),
             tcp_addr: Some("127.0.0.1:9401".to_owned()),
+            http_url: None,
             capabilities: vec!["dag.session.create".to_owned()],
             healthy: false,
         };

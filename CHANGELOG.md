@@ -2,6 +2,39 @@
 
 All notable changes to Esoteric Webb are documented here.
 
+## V19 — HTTP Transport + Aldric NPC Fix + Gap Closures (Jul 18, 2026)
+
+### HTTP POST transport adapter
+
+- **New transport variant**: `PrimalClient::connect_http()` speaks JSON-RPC
+  over HTTP/1.1 POST. Zero external deps — raw TCP + manual HTTP framing.
+- **`connect_transport`** now handles `http://` URLs (e.g. songBird `/jsonrpc`).
+- **Well-known port probe**: Discovery phase 4 checks songBird on port 7780.
+  SongBird now shows as "discovered" (was "absent") — will be "healthy" once
+  its backend runs behind the drawbridge.
+- **Env var support**: `<PRIMAL>_HTTP_URL` sets HTTP endpoint per primal.
+- **plasmidBin metadata**: `[transport] http_url` field supported.
+
+### Content fixes
+
+- **`content/npcs/aldric.yaml`**: Created Aldric Voss (occult scholar) — deep
+  NPC with trust arc and knowledge grants (sigils, ritual history, true name).
+- **`content/scenes/study.yaml`**: Wired `npcs: [aldric]` so demo step 6
+  exercises a real NPC interaction (was false-positive string match).
+- **`content/README.md`**: Author onboarding guide with file format reference.
+
+### Gap closures (Wave 150a confirmations)
+
+- **GAP-010** → resolved: depot operational (59+ binaries, 4 arch)
+- **GAP-036** → resolved: socket naming convention closed ecosystem-wide
+- **GAP-037** → resolved: songBird shipped `/jsonrpc` (Webb now has adapter)
+- **GAP-038** → resolved: stale UDS cleanup closed ecosystem-wide
+
+### Hygiene
+
+- `cargo fmt` applied (3 files from dimensional review)
+- Discovery `PrimalEndpoint` gains `http_url` field for HTTP-speaking primals
+
 ## V18 — E2E Demo Scenario: Guided Composition Tour (Jul 18, 2026)
 
 ### E2E demo runner (`esotericwebb demo`)

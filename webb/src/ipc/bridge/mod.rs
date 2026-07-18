@@ -38,6 +38,15 @@ fn degraded_summary_limit() -> usize {
         .unwrap_or(200)
 }
 
+/// Parse an HTTP URL into (addr, path) for `PrimalClient::connect_http`.
+fn parse_http_url(url: &str) -> Option<(String, String)> {
+    let stripped = url.strip_prefix("http://")?;
+    let (addr, path) = stripped
+        .split_once('/')
+        .map_or((stripped, "/jsonrpc"), |(a, p)| (a, p));
+    Some((addr.to_owned(), format!("/{path}")))
+}
+
 /// Status of a single primal connection.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PrimalStatus {
@@ -102,6 +111,20 @@ impl PrimalBridge {
                                 healthy = true;
                                 transport_used = Some(format!("uds:{}", sock.display()));
                                 clients.insert(domain.to_owned(), client);
+                            }
+                        }
+                    }
+                }
+
+                if !healthy {
+                    if let Some(ref url) = ep.http_url {
+                        if let Some((addr, path)) = parse_http_url(url) {
+                            if let Ok(mut client) = PrimalClient::connect_http(&addr, &path, name) {
+                                if client.health_liveness().unwrap_or(false) {
+                                    healthy = true;
+                                    transport_used = Some(format!("http:{url}"));
+                                    clients.insert(domain.to_owned(), client);
+                                }
                             }
                         }
                     }

@@ -233,7 +233,7 @@ Webb exercises primal composition -> discovers gap in a primal capability
 - **Workaround**: Webb operates in offline/preview mode. Primals are
   discovered locally if manually started.
 - **Handoff**: biomeOS/primalSpring for deployment tooling.
-- **Status**: open
+- **Status**: **resolved** (Wave 150a — depot operational, 59+ binaries, 4 arch, manifest.toml tracks state)
 
 ### GAP-016: ludoSpring UDS-only transport blocks container composition → SUPERSEDED (V6)
 
@@ -385,7 +385,7 @@ Webb exercises primal composition -> discovers gap in a primal capability
 - **Workaround**: Webb V16 `probe_directory()` does two-pass lookup (domain
   first, primal slug reverse-map second). Works for all known primals.
 - **Handoff**: V16 AAR handoff for upstream primal teams.
-- **Status**: workaround shipped (V16), convention alignment pending
+- **Status**: **resolved** (Wave 150a — closed ecosystem-wide)
 
 ### GAP-037: songBird uses HTTP transport, not raw JSON-RPC
 
@@ -403,7 +403,7 @@ Webb exercises primal composition -> discovers gap in a primal capability
 - **Workaround**: songBird mesh domain marked as discovered but unhealthy.
   Mesh bridge methods degrade gracefully.
 - **Handoff**: V16 AAR handoff for songBird team.
-- **Status**: open
+- **Status**: **resolved** (Wave 148a — songBird shipped `/jsonrpc` endpoint; Webb needs HTTP transport adapter to consume it)
 
 ### GAP-038: Stale UDS sockets from crashed primals
 
@@ -420,7 +420,7 @@ Webb exercises primal composition -> discovers gap in a primal capability
 - **Workaround**: Webb's bridge correctly classifies these as unhealthy
   (discovered but not connected). No false positives in composition.
 - **Handoff**: V16 AAR handoff for upstream primal teams.
-- **Status**: open
+- **Status**: **resolved** (Wave 150a — closed ecosystem-wide)
 
 ### GAP-024: Composition dispatch not yet exercised E2E against live biomeOS
 

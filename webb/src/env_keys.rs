@@ -50,6 +50,8 @@ pub const ADDR_SUFFIX: &str = "_ADDRESS";
 pub const PORT_SUFFIX: &str = "_JSONRPC_PORT";
 /// Suffix for HTTP address fallback.
 pub const HTTP_ADDR_SUFFIX: &str = "_HTTP_ADDRESS";
+/// Suffix for HTTP URL override (e.g. `SONGBIRD_HTTP_URL=http://127.0.0.1:7780/jsonrpc`).
+pub const HTTP_URL_SUFFIX: &str = "_HTTP_URL";
 
 // ── Webb-specific configuration ─────────────────────────────────────────────
 

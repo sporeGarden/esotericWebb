@@ -35,10 +35,11 @@ fn default_timeout() -> Duration {
 /// Monotonically increasing request ID.
 static NEXT_ID: AtomicU64 = AtomicU64::new(1);
 
-/// Transport layer — UDS or TCP, both carrying line-delimited JSON-RPC.
+/// Transport layer — UDS, TCP (NDJSON), or HTTP POST (JSON-RPC over HTTP/1.1).
 enum Transport {
     Uds(BufReader<UnixStream>),
     Tcp(BufReader<TcpStream>),
+    Http { addr: String, path: String },
 }
 
 impl std::fmt::Debug for Transport {
@@ -46,6 +47,7 @@ impl std::fmt::Debug for Transport {
         match self {
             Self::Uds(_) => f.write_str("Transport::Uds"),
             Self::Tcp(_) => f.write_str("Transport::Tcp"),
+            Self::Http { addr, path } => write!(f, "Transport::Http({addr}{path})"),
         }
     }
 }
@@ -55,6 +57,10 @@ impl Transport {
         match self {
             Self::Uds(r) => r.read_line(buf),
             Self::Tcp(r) => r.read_line(buf),
+            Self::Http { .. } => Err(std::io::Error::new(
+                std::io::ErrorKind::Unsupported,
+                "HTTP transport uses call_http, not read_line",
+            )),
         }
     }
 
@@ -62,6 +68,10 @@ impl Transport {
         match self {
             Self::Uds(r) => r.get_mut().write_all(data),
             Self::Tcp(r) => r.get_mut().write_all(data),
+            Self::Http { .. } => Err(std::io::Error::new(
+                std::io::ErrorKind::Unsupported,
+                "HTTP transport uses call_http, not write_all",
+            )),
         }
     }
 
@@ -69,6 +79,11 @@ impl Transport {
     #[cfg(test)]
     const fn is_tcp(&self) -> bool {
         matches!(self, Self::Tcp(_))
+    }
+
+    /// Whether this transport speaks HTTP.
+    const fn is_http(&self) -> bool {
+        matches!(self, Self::Http { .. })
     }
 }
 
@@ -120,6 +135,26 @@ impl PrimalClient {
         })
     }
 
+    /// Connect to a primal via HTTP POST (JSON-RPC over HTTP/1.1).
+    ///
+    /// Used for primals like songBird that expose `/jsonrpc` endpoints
+    /// rather than raw NDJSON TCP streams.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IpcError::ConnectionRefused`] if the address is unreachable.
+    pub fn connect_http(addr: &str, path: &str, primal: &str) -> Result<Self, IpcError> {
+        let test_stream = TcpStream::connect(addr).map_err(|e| classify_io_error(&e))?;
+        drop(test_stream);
+        Ok(Self {
+            transport: Transport::Http {
+                addr: addr.to_owned(),
+                path: path.to_owned(),
+            },
+            primal: primal.to_owned(),
+        })
+    }
+
     /// Connect using a transport address string.
     ///
     /// Supports:
@@ -140,6 +175,9 @@ impl PrimalClient {
             Self::connect(Path::new(path), primal)
         } else if let Some(addr) = address.strip_prefix("tcp:") {
             Self::connect_tcp(addr, primal)
+        } else if let Some(url) = address.strip_prefix("http://") {
+            let (addr, path) = url.split_once('/').unwrap_or((url, "jsonrpc"));
+            Self::connect_http(addr, &format!("/{path}"), primal)
         } else if address.starts_with('/') {
             Self::connect(Path::new(address), primal)
         } else {
@@ -166,6 +204,10 @@ impl PrimalClient {
         let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
         let request = JsonRpcRequest::with_id(method, Some(params), id);
 
+        if self.transport.is_http() {
+            return self.call_http(&request);
+        }
+
         let mut line = serde_json::to_string(&request).map_err(|e| IpcError::Serialization {
             detail: e.to_string(),
         })?;
@@ -189,6 +231,102 @@ impl PrimalClient {
         serde_json::from_str::<JsonRpcResponse>(&response_line).map_err(|e| {
             IpcError::ProtocolError {
                 detail: e.to_string(),
+            }
+        })
+    }
+
+    /// HTTP POST transport for JSON-RPC (songBird `/jsonrpc` pattern).
+    ///
+    /// Opens a fresh TCP connection per call, sends HTTP/1.1 POST with
+    /// JSON body, reads the response. No external HTTP crate needed.
+    fn call_http(&self, request: &JsonRpcRequest) -> Result<JsonRpcResponse, IpcError> {
+        let Transport::Http { ref addr, ref path } = self.transport else {
+            return Err(IpcError::ProtocolError {
+                detail: "call_http on non-HTTP transport".to_owned(),
+            });
+        };
+
+        let body = serde_json::to_string(request).map_err(|e| IpcError::Serialization {
+            detail: e.to_string(),
+        })?;
+
+        let http_request = format!(
+            "POST {path} HTTP/1.1\r\n\
+             Host: {addr}\r\n\
+             Content-Type: application/json\r\n\
+             Content-Length: {len}\r\n\
+             Connection: close\r\n\
+             \r\n\
+             {body}",
+            len = body.len(),
+        );
+
+        let mut stream = TcpStream::connect(addr).map_err(|e| classify_io_error(&e))?;
+        let timeout = default_timeout();
+        stream
+            .set_read_timeout(Some(timeout))
+            .map_err(|e| classify_io_error(&e))?;
+        stream
+            .set_write_timeout(Some(timeout))
+            .map_err(|e| classify_io_error(&e))?;
+        stream
+            .write_all(http_request.as_bytes())
+            .map_err(|e| classify_io_error(&e))?;
+
+        let mut reader = BufReader::new(&stream);
+        let mut status_line = String::new();
+        reader
+            .read_line(&mut status_line)
+            .map_err(|e| classify_io_error(&e))?;
+
+        if !status_line.contains("200") {
+            let code = status_line
+                .split_whitespace()
+                .nth(1)
+                .unwrap_or("?")
+                .to_owned();
+            return Err(IpcError::ProtocolError {
+                detail: format!("HTTP {code} from {addr}{path}"),
+            });
+        }
+
+        let mut content_length: usize = 0;
+        loop {
+            let mut header = String::new();
+            reader
+                .read_line(&mut header)
+                .map_err(|e| classify_io_error(&e))?;
+            if header.trim().is_empty() {
+                break;
+            }
+            if let Some(val) = header.strip_prefix("Content-Length:") {
+                content_length = val.trim().parse().unwrap_or(0);
+            } else if let Some(val) = header.strip_prefix("content-length:") {
+                content_length = val.trim().parse().unwrap_or(0);
+            }
+        }
+
+        let response_body = if content_length > 0 {
+            let mut buf = vec![0u8; content_length];
+            std::io::Read::read_exact(&mut reader, &mut buf).map_err(|e| classify_io_error(&e))?;
+            String::from_utf8_lossy(&buf).into_owned()
+        } else {
+            let mut buf = String::new();
+            reader
+                .read_line(&mut buf)
+                .map_err(|e| classify_io_error(&e))?;
+            buf
+        };
+
+        if response_body.trim().is_empty() {
+            return Err(IpcError::ProtocolError {
+                detail: "empty HTTP response body".to_owned(),
+            });
+        }
+
+        serde_json::from_str::<JsonRpcResponse>(response_body.trim()).map_err(|e| {
+            IpcError::ProtocolError {
+                detail: format!("HTTP response parse error: {e}"),
             }
         })
     }

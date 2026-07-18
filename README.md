@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Version** | V18 |
+| **Version** | V19 |
 | **Tests** | 472 (453 unit + 18 E2E + 1 validation) |
 | **Coverage** | ~92% lines (`cargo llvm-cov`) |
 | **Rust files** | 50 (~16k LOC) |
@@ -21,9 +21,10 @@
 | **Trio tracking** | `primals_reached` in session state per `PROVENANCE_TRIO_INTEGRATION_GUIDE` |
 | **Local science** | flow, engagement, DDA, voice interjections, session metrics (absorbed patterns) |
 | **Ecosystem registry** | 490+ methods (primalSpring) |
-| **Live primals (flockGate)** | 6/9 connected (squirrel, petaltongue, nestgate, loamspine, sweetgrass, beardog) |
+| **Live primals (flockGate)** | 6/9 healthy, 9/9 discovered (HTTP transport for songBird) |
 | **E2E demo** | `esotericwebb demo` — guided scenario exercising all connected primals |
-| **Last validation** | 2026-07-18 (V18) |
+| **Transports** | NDJSON/TCP, UDS, HTTP POST (`/jsonrpc`) |
+| **Last validation** | 2026-07-18 (V19) |
 
 **A [sporeGarden](https://github.com/sporeGarden) project — the primals as a composed CRPG.**
 
