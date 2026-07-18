@@ -121,17 +121,84 @@ pub fn serve_tcp(addr: &str, session: &SharedSession) -> crate::error::Result<()
 }
 
 fn handle_tcp_connection(stream: &std::net::TcpStream, session: &SharedSession) {
-    let reader = BufReader::new(stream);
-    let mut writer = stream;
+    let mut reader = BufReader::new(stream);
+    let writer = stream;
 
-    for line in reader.lines() {
-        let Ok(line) = line else { break };
-        let line = line.trim().to_owned();
-        if line.is_empty() {
-            continue;
+    let mut first_line = String::new();
+    if reader.read_line(&mut first_line).is_err() {
+        return;
+    }
+    let first_line = first_line.trim().to_owned();
+
+    if is_http_request(&first_line) {
+        handle_http_request(&first_line, &mut reader, writer, session);
+    } else {
+        handle_jsonrpc_line(&first_line, writer, session);
+        for line in reader.lines() {
+            let Ok(line) = line else { break };
+            let line = line.trim().to_owned();
+            if line.is_empty() {
+                continue;
+            }
+            handle_jsonrpc_line(&line, writer, session);
         }
+    }
+}
 
-        let response = match serde_json::from_str::<JsonRpcRequest>(&line) {
+fn is_http_request(line: &str) -> bool {
+    line.starts_with("POST ")
+        || line.starts_with("GET ")
+        || line.starts_with("PUT ")
+        || line.starts_with("OPTIONS ")
+}
+
+fn handle_http_request(
+    _request_line: &str,
+    reader: &mut BufReader<&std::net::TcpStream>,
+    mut writer: &std::net::TcpStream,
+    session: &SharedSession,
+) {
+    let mut content_length: usize = 0;
+
+    loop {
+        let mut header = String::new();
+        if reader.read_line(&mut header).is_err() {
+            return;
+        }
+        let header = header.trim().to_owned();
+        if header.is_empty() {
+            break;
+        }
+        if let Some(val) = header.strip_prefix("Content-Length:") {
+            content_length = val.trim().parse().unwrap_or(0);
+        } else if let Some(val) = header.strip_prefix("content-length:") {
+            content_length = val.trim().parse().unwrap_or(0);
+        }
+    }
+
+    let body = if content_length > 0 {
+        let mut buf = vec![0u8; content_length];
+        if std::io::Read::read_exact(reader, &mut buf).is_err() {
+            let _ = write!(writer, "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n");
+            let _ = writer.flush();
+            return;
+        }
+        String::from_utf8_lossy(&buf).to_string()
+    } else {
+        String::new()
+    };
+
+    let response = if body.is_empty() {
+        super::envelope::JsonRpcResponse::error(
+            super::envelope::JsonRpcError {
+                code: super::envelope::ERROR_PARSE,
+                message: "empty request body".to_string(),
+                data: None,
+            },
+            serde_json::Value::Null,
+        )
+    } else {
+        match serde_json::from_str::<JsonRpcRequest>(&body) {
             Ok(req) => dispatch_with_session(&req, session),
             Err(e) => super::envelope::JsonRpcResponse::error(
                 super::envelope::JsonRpcError {
@@ -141,14 +208,47 @@ fn handle_tcp_connection(stream: &std::net::TcpStream, session: &SharedSession) 
                 },
                 serde_json::Value::Null,
             ),
-        };
+        }
+    };
 
-        let Ok(resp_json) = serde_json::to_string(&response) else {
-            continue;
-        };
-        let _ = writeln!(writer, "{resp_json}");
-        let _ = writer.flush();
+    let resp_json = serde_json::to_string(&response).unwrap_or_default();
+    let _ = write!(
+        writer,
+        "HTTP/1.1 200 OK\r\n\
+         Content-Type: application/json\r\n\
+         Content-Length: {}\r\n\
+         Access-Control-Allow-Origin: *\r\n\
+         Access-Control-Allow-Methods: POST, OPTIONS\r\n\
+         Access-Control-Allow-Headers: Content-Type\r\n\
+         \r\n\
+         {}",
+        resp_json.len(),
+        resp_json
+    );
+    let _ = writer.flush();
+}
+
+fn handle_jsonrpc_line(line: &str, mut writer: &std::net::TcpStream, session: &SharedSession) {
+    if line.is_empty() {
+        return;
     }
+    let response = match serde_json::from_str::<JsonRpcRequest>(line) {
+        Ok(req) => dispatch_with_session(&req, session),
+        Err(e) => super::envelope::JsonRpcResponse::error(
+            super::envelope::JsonRpcError {
+                code: super::envelope::ERROR_PARSE,
+                message: format!("parse error: {e}"),
+                data: None,
+            },
+            serde_json::Value::Null,
+        ),
+    };
+
+    let Ok(resp_json) = serde_json::to_string(&response) else {
+        return;
+    };
+    let _ = writeln!(writer, "{resp_json}");
+    let _ = writer.flush();
 }
 
 fn handle_connection(stream: &std::os::unix::net::UnixStream, session: &SharedSession) {
