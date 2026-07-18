@@ -28,6 +28,8 @@
 
 **A [sporeGarden](https://github.com/sporeGarden) project — the primals as a composed CRPG.**
 
+**Live**: `webb.primals.eco` (flockGate:8090, subdomain standard Wave 150d)
+
 Esoteric Webb is not a spring. It is a standalone cross-evolution substrate
 that composes deployed primals (genomeBins/ecoBins from `plasmidBin/`) into
 a creator/player game system via BYOB composition. Its dual purpose:
