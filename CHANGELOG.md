@@ -2,6 +2,31 @@
 
 All notable changes to Esoteric Webb are documented here.
 
+## V18 — E2E Demo Scenario: Guided Composition Tour (Jul 18, 2026)
+
+### E2E demo runner (`esotericwebb demo`)
+
+- **New `demo` subcommand**: Replays a guided YAML scenario against a live
+  session with full primal composition. Exercises navigation, NPC talk,
+  abilities, and scene pushes. Reports pass/fail per step + verification.
+- **JSON output mode** (`--json`): Machine-readable results for CI/operator use.
+- **`content/demos/guided_tour.yaml`**: 8-step walkthrough visiting 3 rooms,
+  talking to 2 NPCs, using 2 abilities, verifying scene pushes and knowledge
+  accumulation. Exercises 6/9 connected primals.
+
+### Session API additions
+
+- `GameSession::turn()` — current turn number (const fn).
+- `GameSession::history_len()` — action count (const fn).
+- `GameSession::knowledge()` — sorted knowledge keys.
+
+### Architecture
+
+- New module `commands/demo.rs` — demo scenario runner (DemoScenario YAML
+  deserialization, step replay, expectation checking, verification).
+- Follows `LIVE_FRONTEND_E2E_TUTORIAL_STANDARD` pattern: demo scenarios double
+  as E2E verification suites for operators.
+
 ## V17 — Deep Debt: Smart Refactoring, Clone Reduction, Module Extraction (Jul 17, 2026)
 
 ### Smart file refactoring

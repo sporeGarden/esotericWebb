@@ -290,6 +290,24 @@ impl GameSession {
         self.director.current_node_id()
     }
 
+    /// Current turn number.
+    #[must_use]
+    pub const fn turn(&self) -> u32 {
+        self.turn
+    }
+
+    /// Number of actions in history.
+    #[must_use]
+    pub const fn history_len(&self) -> usize {
+        self.history.len()
+    }
+
+    /// Knowledge keys (sorted).
+    #[must_use]
+    pub fn knowledge(&self) -> Vec<String> {
+        self.sorted_knowledge()
+    }
+
     /// Whether the game has reached an ending.
     #[must_use]
     pub fn is_ended(&self) -> bool {

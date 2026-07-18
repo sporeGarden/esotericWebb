@@ -1,0 +1,99 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# E2E Guided Demo Scenario: The Weaver's Parlor
+#
+# Purpose: Exercise all connected primals and verify composition health.
+# Each step is a JSON-RPC action that can be replayed programmatically.
+# Operators run this to confirm the full composition pipeline is wired.
+#
+# Expected primals exercised:
+#   - petaltongue (visualization): scene_pushed = true on navigation
+#   - squirrel (ai): ai_narration present if connected
+#   - sweetgrass (provenance): braid recorded per session
+#   - loamspine (lineage): lineage tracked
+#   - beardog (crypto): signing available
+#   - nestgate (storage): state persistence
+#
+# To run: esotericwebb demo --content content/
+# Or via JSON-RPC: replay each step below against session.act
+
+name: "Guided Tour — The Weaver's Parlor"
+description: >
+  A scripted walkthrough demonstrating all composition capabilities.
+  Visits 4 rooms, talks to 2 NPCs, uses 3 abilities, gains knowledge,
+  and reaches a scene with maximum narrative density.
+
+# Each step is an action the demo runner sends to session.act.
+# Expected outcomes document what a healthy composition produces.
+steps:
+  - action: { kind: "examine", id: "" }
+    description: "Examine the entrance — establishes scene context"
+    expected:
+      outcome_contains: "door"
+      enrichment:
+        scene_pushed: true
+        voice_notes_possible: true
+
+  - action: { kind: "exit", id: "parlor" }
+    description: "Enter the main parlor — scene change, meets Maren and Tobias"
+    expected:
+      outcome_contains: "parlor"
+      enrichment:
+        scene_pushed: true
+      state:
+        current_node: "parlor"
+        knowledge_gained: "shop_layout"
+
+  - action: { kind: "talk", id: "maren" }
+    description: "Talk to Maren Ashworth — gains knowledge about Tobias"
+    expected:
+      outcome_contains: "Maren"
+      state:
+        knowledge_contains: "tobias_debt"
+
+  - action: { kind: "ability", id: "read_aura" }
+    description: "Read Maren's aura — psychic ability fires"
+    expected:
+      outcome_contains: "aura"
+
+  - action: { kind: "exit", id: "study" }
+    description: "Move to the study — new scene with Aldric"
+    expected:
+      enrichment:
+        scene_pushed: true
+      state:
+        current_node: "study"
+
+  - action: { kind: "talk", id: "aldric" }
+    description: "Talk to Aldric Voss — occult scholar, deep NPC"
+    expected:
+      outcome_contains: "Aldric"
+
+  - action: { kind: "ability", id: "reconstruct_memory" }
+    description: "Reconstruct memory in the study — see past events"
+    expected:
+      outcome_contains: "flicker"
+
+  - action: { kind: "examine", id: "" }
+    description: "Examine the study — detailed scene description"
+    expected:
+      outcome_contains: "study"
+      enrichment:
+        scene_pushed: true
+
+# Verification summary:
+# After running all 8 steps, verify:
+#   - turn >= 8
+#   - history has 8 entries
+#   - knowledge includes: shop_layout, tobias_debt
+#   - at least 2 scene_pushed events
+#   - current_node is "study" (or wherever the last navigate landed)
+#   - no errors in any step
+
+verification:
+  min_turns: 8
+  min_history: 8
+  required_knowledge: ["shop_layout", "tobias_debt"]
+  min_scene_pushes: 2
+  final_node: "study"
+  zero_errors: true

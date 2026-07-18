@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! `UniBin` subcommand implementations.
 
+mod demo;
 mod preview;
 
 use esoteric_webb::content::ContentBundle;
@@ -414,4 +415,9 @@ fn current_scene_npcs(bundle: &ContentBundle, director: &GameDirector) -> Vec<St
         .and_then(|node| bundle.scenes.get(&node.content_ref))
         .map(|scene| scene.npcs.clone())
         .unwrap_or_default()
+}
+
+/// Run a guided demo scenario — E2E verification of live composition.
+pub fn cmd_demo(content_path: &str, scenario_path: &str, json: bool) -> Result<()> {
+    demo::run(content_path, scenario_path, json)
 }

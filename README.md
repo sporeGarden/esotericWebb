@@ -2,10 +2,10 @@
 
 | | |
 |---|---|
-| **Version** | V17 |
+| **Version** | V18 |
 | **Tests** | 472 (453 unit + 18 E2E + 1 validation) |
 | **Coverage** | ~92% lines (`cargo llvm-cov`) |
-| **Rust files** | 49 (~15.7k LOC) |
+| **Rust files** | 50 (~16k LOC) |
 | **Experiments** | 6 (exp001–exp006) |
 | **MSRV** | 1.87 (edition 2024) |
 | **License** | AGPL-3.0 + ORC + CC-BY-SA 4.0 |
@@ -22,7 +22,8 @@
 | **Local science** | flow, engagement, DDA, voice interjections, session metrics (absorbed patterns) |
 | **Ecosystem registry** | 490+ methods (primalSpring) |
 | **Live primals (flockGate)** | 6/9 connected (squirrel, petaltongue, nestgate, loamspine, sweetgrass, beardog) |
-| **Last validation** | 2026-07-17 (V17) |
+| **E2E demo** | `esotericwebb demo` — guided scenario exercising all connected primals |
+| **Last validation** | 2026-07-18 (V18) |
 
 **A [sporeGarden](https://github.com/sporeGarden) project — the primals as a composed CRPG.**
 

@@ -9,6 +9,7 @@
 //! - `graph`     — visualize the `NarrativeGraph` as DOT
 //! - `replay`    — replay a provenance-traced session
 //! - `new-world` — scaffold a new content directory with template YAML
+//! - `demo`      — E2E guided demo scenario (composition verification)
 
 mod commands;
 
@@ -111,6 +112,18 @@ enum Command {
     },
     /// Show primal composition status — which primals are discovered and healthy.
     Status,
+    /// Run a guided demo scenario — E2E verification of live composition.
+    Demo {
+        /// Path to content directory.
+        #[arg(long, default_value = "content")]
+        content: String,
+        /// Path to demo scenario YAML.
+        #[arg(long, default_value = "content/demos/guided_tour.yaml")]
+        scenario: String,
+        /// Output results as JSON.
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 fn main() {
@@ -153,6 +166,11 @@ fn main() {
         Command::Replay { session, content } => commands::cmd_replay(&session, &content),
         Command::NewWorld { output } => commands::cmd_new_world(&output),
         Command::Status => commands::cmd_status(),
+        Command::Demo {
+            content,
+            scenario,
+            json,
+        } => commands::cmd_demo(&content, &scenario, json),
     };
     if let Err(e) = result {
         eprintln!("error: {e}");
