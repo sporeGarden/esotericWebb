@@ -34,7 +34,9 @@
 
 pub mod bridge;
 pub mod client;
+mod client_http;
 pub mod discovery;
+mod discovery_paths;
 pub mod envelope;
 pub mod handlers;
 pub mod launcher;
