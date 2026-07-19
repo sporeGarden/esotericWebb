@@ -18,6 +18,64 @@ use super::types::{ActionKind, PrimalEnrichment, VoiceEnrichment};
 use crate::science::FLOW_CHANNEL_WIDTH;
 use crate::science::flow::flow_channel_metrics;
 
+/// Build a `SceneGraph` JSON for petalTongue's `visualization.render.scene`.
+///
+/// Uses the `game_scene` node type with 2D-as-3D-slice layout (orthographic
+/// camera at z=0, `Transform3D` optional per Wave 150h scene unification).
+/// NPC nodes are positioned incrementally along the x-axis.
+fn build_game_scene_graph(
+    node_id: &str,
+    description: &str,
+    npcs: &[String],
+    turn: u32,
+    is_ending: bool,
+) -> serde_json::Value {
+    let mut nodes = serde_json::Map::new();
+
+    nodes.insert(
+        node_id.to_owned(),
+        serde_json::json!({
+            "id": node_id,
+            "label": node_id,
+            "type": "game_scene",
+            "description": description,
+            "transform": { "position": [0.0, 0.0, 0.0], "scale": [1.0, 1.0, 1.0] },
+            "metadata": { "turn": turn, "is_ending": is_ending }
+        }),
+    );
+
+    for (i, npc) in npcs.iter().enumerate() {
+        let npc_id = format!("npc_{npc}");
+        #[expect(clippy::cast_precision_loss, reason = "NPC count is small")]
+        let x = (i as f64 + 1.0) * 2.0;
+        nodes.insert(
+            npc_id.clone(),
+            serde_json::json!({
+                "id": npc_id,
+                "label": npc,
+                "type": "game_npc",
+                "transform": { "position": [x, 0.0, 0.0], "scale": [1.0, 1.0, 1.0] }
+            }),
+        );
+    }
+
+    let edges: Vec<serde_json::Value> = npcs
+        .iter()
+        .map(|npc| {
+            serde_json::json!({
+                "a": node_id,
+                "b": format!("npc_{npc}"),
+                "label": "present_in"
+            })
+        })
+        .collect();
+
+    serde_json::json!({
+        "nodes": nodes,
+        "edges": edges
+    })
+}
+
 impl GameSession {
     /// Best-effort enrichment via primal composition.
     ///
@@ -153,8 +211,9 @@ impl GameSession {
 
     /// Push current scene state to petalTongue for rendering.
     ///
-    /// Uses `ui.render` which accepts rich text content directly, rather than
-    /// the full `visualization.render.scene` `SceneGraph` protocol (GAP-002).
+    /// Attempts `visualization.render.scene` with a `game_scene` `SceneGraph`
+    /// (2D-as-3D-slice: orthographic camera at z=0, optional `Transform3D`).
+    /// Falls back to `ui.render` if the scene graph format is rejected.
     pub(crate) fn push_scene_to_ui(&mut self) -> bool {
         let npcs = self.current_scene_npcs();
         let scene_desc = self.director.current_scene_description(&self.bundle);
@@ -165,6 +224,15 @@ impl GameSession {
         let Some(bridge) = self.bridge.as_mut() else {
             return false;
         };
+
+        let scene_graph = build_game_scene_graph(&node_id, &scene_desc, &npcs, turn, is_ending);
+
+        match bridge.render_scene(&scene_graph) {
+            Ok(()) => return true,
+            Err(e) => {
+                tracing::debug!("scene graph rejected, falling back to ui.render: {e}");
+            }
+        }
 
         let npc_list = npcs.join(", ");
         let content = if npc_list.is_empty() {
@@ -187,7 +255,7 @@ impl GameSession {
         match bridge.render_ui(payload) {
             Ok(rendered) => rendered,
             Err(e) => {
-                tracing::debug!("scene push degraded: {e}");
+                tracing::debug!("ui.render fallback degraded: {e}");
                 false
             }
         }

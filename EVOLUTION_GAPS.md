@@ -55,7 +55,8 @@ Webb exercises primal composition -> discovers gap in a primal capability
 - **Handoff**: petalTongue team — define CRPG scene type for
   `visualization.render.scene`, or document `ui.render` as the intended path
   for text-based narrative composition.
-- **Status**: partial (workaround shipped, upstream schema TBD)
+- **Status**: partial (workaround shipped, `game_scene` binding attempted first
+  with fallback to `ui.render` — will auto-activate when petalTongue updates)
 
 ### GAP-003: AI primal NPC dialogue constraint enforcement
 

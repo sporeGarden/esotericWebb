@@ -472,10 +472,11 @@ mod tests {
     }
 
     #[test]
-    fn standalone_render_scene_is_noop() {
+    fn standalone_render_scene_returns_not_found() {
         let mut bridge = PrimalBridge::standalone();
         let result = bridge.render_scene(&serde_json::json!({"type": "test"}));
-        assert!(result.is_ok());
+        assert!(result.is_err());
+        assert!(result.unwrap_err().is_connection_error());
     }
 
     #[test]

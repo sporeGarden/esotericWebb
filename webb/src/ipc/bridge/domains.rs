@@ -186,11 +186,20 @@ impl PrimalBridge {
 
     /// Push a scene payload for rendering via the full `SceneGraph` protocol.
     ///
+    /// Returns an error if the visualization domain rejects the scene format,
+    /// allowing callers to fall back to simpler rendering methods.
+    ///
     /// # Errors
     ///
-    /// Returns [`IpcError`] if the call fails unexpectedly.
+    /// Returns [`IpcError`] if the domain is absent or the call fails.
     pub fn render_scene(&mut self, scene: &serde_json::Value) -> Result<(), IpcError> {
-        self.call_fire(domain::VISUALIZATION, METHOD_RENDER_SCENE, scene.clone())
+        if !self.has(domain::VISUALIZATION) {
+            return Err(IpcError::PrimalNotFound {
+                domain: domain::VISUALIZATION.to_owned(),
+            });
+        }
+        let _ = self.resilient_call(domain::VISUALIZATION, METHOD_RENDER_SCENE, scene.clone())?;
+        Ok(())
     }
 
     /// Render content via petalTongue's `ui.render` — simpler than the full

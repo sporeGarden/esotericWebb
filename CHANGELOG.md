@@ -2,6 +2,22 @@
 
 All notable changes to Esoteric Webb are documented here.
 
+## V22 — Scene Graph Binding Fix (Jul 18, 2026)
+
+### P1: `ui.render` → `visualization.render.scene` with fallback
+
+- **`push_scene_to_ui()`** now attempts `visualization.render.scene` first
+  using the `game_scene` node type (2D-as-3D-slice format per Wave 150h
+  scene unification). Falls back to `ui.render` if rejected.
+- **`build_game_scene_graph()`** constructs a proper SceneGraph with typed
+  nodes (`game_scene`, `game_npc`), Transform3D at z=0 (orthographic),
+  and edges for NPC presence.
+- **`render_scene()`** now propagates errors (was fire-and-forget) so the
+  fallback logic can detect format rejection and try `ui.render`.
+- **Forward-compatible**: When petalTongue updates to v1.7+ (optional
+  Transform3D), the scene graph path will activate automatically without
+  code changes.
+
 ## V21 — Live Visual System + petalTongue Composition (Jul 18, 2026)
 
 ### Scene push fix (petalTongue `ui.render`)
