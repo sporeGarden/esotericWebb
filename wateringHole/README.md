@@ -38,12 +38,13 @@ wateringHole/
 
 | Handoff | Direction | Summary |
 |---------|-----------|---------|
-| `ESOTERICWEBB_V22_SCENE_BINDING_AAR_JUL18_2026.md` | Outbound | **Current** — V22 scene graph binding fix, `game_scene` format, fallback to `ui.render` |
+| `ESOTERICWEBB_WAVE150O_RESTART_AAR_JUL20_2026.md` | Outbound | **Current** — Service restart, scorecard corrections (0 prod unwraps, 0 >800L) |
 
 ## Archived handoffs (fossil record)
 
 | Handoff | Direction | Summary |
 |---------|-----------|---------|
+| `ESOTERICWEBB_V22_SCENE_BINDING_AAR_JUL18_2026.md` | Outbound | V22 scene graph binding fix, `game_scene` format, fallback to `ui.render` |
 | `ESOTERICWEBB_V21_LIVE_VISUAL_AAR_JUL18_2026.md` | Outbound | V21 live visual system, petalTongue `ui.render` composition, HTML frontend |
 | `ESOTERICWEBB_V18_E2E_DEMO_HANDOFF_JUL18_2026.md` | Outbound | V18 E2E demo scenario, guided composition tour |
 | `ESOTERICWEBB_DEPLOY_UNBLOCK_AAR_JUL18_2026.md` | Outbound | Deploy blocker resolution: binary in depot, forgejo synced, flockGate:8090 live |
