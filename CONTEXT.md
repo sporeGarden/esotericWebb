@@ -37,7 +37,7 @@ of spring evolution.
 - **Niche module**: `niche.rs` — self-knowledge (identity, capabilities, socket
   resolution, family ID, neural-api discovery). Follows ecosystem niche pattern.
 - **IPC**: JSON-RPC 2.0 over TCP and Unix domain sockets (newline-delimited)
-- **Transport**: TCP (default, platform-agnostic) + UDS; `connect_transport()` parses `unix:`, `tcp:`, and implicit formats; XDG-compliant socket path resolution, capability-based discovery
+- **Transport**: TCP (default, platform-agnostic) + UDS + HTTP POST (`/jsonrpc`); `connect_transport()` parses `unix:`, `tcp:`, `http:` formats; XDG-compliant socket path resolution, capability-based discovery
 - **No cross-primal Rust imports**: all coordination via runtime IPC
 - **Content**: YAML-authored worlds, NPCs, abilities, scenes, narrative graphs
 - **Primal resolution**: `plasmidBin/` filesystem probe, Songbird discovery, XDG/biomeOS sockets
@@ -58,11 +58,11 @@ Session: `session.start`, `session.state`, `session.actions`,
 
 MCP: `tools.list`, `tools.call`
 
-## Consumed primal capabilities (V15 — 9 domains)
+## Consumed primal capabilities (9 domains)
 
 AI (Squirrel via biomeOS): `ai.query`, `ai.suggest`, `ai.analyze`
 
-Visualization (petalTongue): `visualization.render.scene`, `interaction.poll`
+Visualization (petalTongue): `visualization.render.scene`, `ui.render`, `interaction.poll`
 
 Compute (ToadStool): `compute.dispatch.submit`
 

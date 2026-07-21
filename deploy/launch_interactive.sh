@@ -95,7 +95,7 @@ elif [ -x "$START_PRIMAL" ]; then
     sleep 1
     "$START_PRIMAL" songbird server &
     sleep 1
-    "$START_PRIMAL" ludospring server &
+    "$START_PRIMAL" squirrel server &
 
     echo ""
     echo "Launching petalTongue in live mode..."

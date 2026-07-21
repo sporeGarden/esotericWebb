@@ -2,29 +2,24 @@
 
 | | |
 |---|---|
-| **Version** | V19 |
-| **Tests** | 472 (453 unit + 18 E2E + 1 validation) |
-| **Coverage** | ~92% lines (`cargo llvm-cov`) |
-| **Rust files** | 50 (~16k LOC) |
+| **Version** | V22 |
+| **Tests** | 453 |
+| **Rust files** | 58 (~17k LOC) |
 | **Experiments** | 6 (exp001–exp006) |
 | **MSRV** | 1.87 (edition 2024) |
 | **License** | AGPL-3.0 + ORC + CC-BY-SA 4.0 |
 | **Unsafe** | `#![forbid(unsafe_code)]` (crate-level) |
 | **C deps** | Zero (ecoBin compliant) |
-| **Bridge methods** | 32 (all domains, all degrading, composition-first) |
-| **Capabilities exposed** | 26 (sourDough + lifecycle + narrative + session + introspection + MCP) |
+| **Prod unwraps** | 0 |
+| **Files >800L** | 0 |
+| **Bridge methods** | 33 (all domains, all degrading, composition-first) |
+| **Capabilities exposed** | 27 (sourDough + lifecycle + narrative + session + introspection + MCP) |
 | **Primals consumed** | 9 domains (ai, viz, dag, lineage, compute, storage, provenance, crypto, mesh) |
-| **Composition adoption** | Wave 17 — `nest.store`, `nest.commit`, `primal.announce` |
-| **Mesh registration** | Wave 107 — `route.register` with stability tiers + push propagation |
-| **Wave compliance** | Wave 107 — zero debt, typed errors, mesh-visible, introspection, TransportEndpoint |
-| **Degradation contracts** | Written per-domain in `docs/DEGRADATION_BEHAVIOR.md` |
-| **Trio tracking** | `primals_reached` in session state per `PROVENANCE_TRIO_INTEGRATION_GUIDE` |
-| **Local science** | flow, engagement, DDA, voice interjections, session metrics (absorbed patterns) |
-| **Ecosystem registry** | 490+ methods (primalSpring) |
-| **Live primals (flockGate)** | 6/9 healthy, 9/9 discovered (HTTP transport for songBird) |
-| **E2E demo** | `esotericwebb demo` — guided scenario exercising all connected primals |
+| **Live primals (flockGate)** | 6/9 healthy |
 | **Transports** | NDJSON/TCP, UDS, HTTP POST (`/jsonrpc`) |
-| **Last validation** | 2026-07-18 (V19) |
+| **Frontend** | `webb.primals.eco` — self-contained HTML, zero external deps |
+| **Scene push** | `visualization.render.scene` (game_scene) with `ui.render` fallback |
+| **Last validation** | 2026-07-21 (V22) |
 
 **A [sporeGarden](https://github.com/sporeGarden) project — the primals as a composed CRPG.**
 
@@ -64,18 +59,17 @@ engine**. It consumes primals via JSON-RPC IPC — zero Rust crate dependencies
 on any spring. Primals are resolved from `plasmidBin/` or discovered via
 Songbird at runtime.
 
-| Domain | Primal | Role | Status (V17) | Key IPC methods |
+| Domain | Primal | Role | Status (V22) | Key IPC methods |
 |--------|--------|------|-------------|-----------------|
-| ai | Squirrel | AI narration, NPC dialogue, inference | Live on flockGate | `ai.query`, `ai.suggest`, `ai.analyze` |
-| visualization | petalTongue | Scene rendering, input polling | Live on flockGate | `visualization.render.scene`, `interaction.poll` |
-| dag | rhizoCrypt | Provenance DAG lifecycle | Found (stale socket) | `dag.session.create`, `dag.event.append`, `dag.merkle.root` |
-| lineage | loamSpine | NPC personality certs | Live on flockGate | `certificate.mint` |
-| compute | toadStool | GPU compute dispatch | Found (stale socket) | `compute.dispatch.submit` |
-| storage | nestGate | Key-value persistence | Live on flockGate | `storage.store`, `storage.retrieve` |
-| provenance | sweetGrass | Creative attribution | Live on flockGate | `braid.create`, `braid.query` |
-| crypto | bearDog | Signing, verification, hashing | Live on flockGate | `crypto.sign`, `crypto.verify`, `crypto.hash` |
-| mesh | songBird | Topology, discovery, bonds | TCP only (HTTP transport) | `discovery.topology`, `discovery.health`, `discovery.bonds` |
-| orchestration | biomeOS | Neural API, composition dispatch | Lifecycle wired | `primal.announce`, `health.version`, `health.drain` |
+| ai | Squirrel | AI narration, NPC dialogue, inference | **Live** | `ai.query`, `ai.suggest`, `ai.analyze` |
+| visualization | petalTongue | Scene rendering, input polling | **Live** | `visualization.render.scene`, `ui.render`, `interaction.poll` |
+| dag | rhizoCrypt | Provenance DAG lifecycle | Offline | `dag.session.create`, `dag.event.append`, `dag.merkle.root` |
+| lineage | loamSpine | NPC personality certs | **Live** | `certificate.mint` |
+| compute | toadStool | GPU compute dispatch | Offline | `compute.dispatch.submit` |
+| storage | nestGate | Key-value persistence | **Live** | `storage.store`, `storage.retrieve` |
+| provenance | sweetGrass | Creative attribution | **Live** | `braid.create`, `braid.query` |
+| crypto | bearDog | Signing, verification, hashing | **Live** | `crypto.sign`, `crypto.verify`, `crypto.hash` |
+| mesh | songBird | Topology, discovery, bonds | Discovered (HTTP) | `discovery.topology`, `discovery.health`, `discovery.bonds` |
 
 ## The Core Thesis: Bounded Space, Infinite Exploration
 
@@ -135,7 +129,7 @@ webb/              Main Rust crate (narrative engine + IPC + director + bridge)
   src/state/       World state (knowledge, trust, inventory, flags, conditions)
   capability_registry.toml   All 25 exposed JSON-RPC methods
 content/           YAML game content (authored by creative teams)
-experiments/       5 standalone validation crates (exp001–exp005)
+experiments/       6 standalone validation crates (exp001–exp006)
 graphs/            biomeOS deploy graphs (8 TOML compositions, secure_by_default)
 niches/            BYOB niche definition (esoteric-webb.yaml)
 deploy/            Composition fragment for biomeOS/primalSpring

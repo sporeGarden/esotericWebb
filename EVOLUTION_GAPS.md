@@ -35,28 +35,18 @@ Webb exercises primal composition -> discovers gap in a primal capability
 
 ## Open gaps
 
-### GAP-002: Visualization primal lacks CRPG dialogue tree scene type
+### GAP-002: Visualization primal CRPG scene type
 
 - **Primal**: visualization (`visualization.render.scene`)
 - **Spring (producer)**: petalTongue
-- **Severity**: medium
-- **Evidence**: petalTongue v1.6.6 exposes `visualization.render.scene` but
-  requires a full `SceneGraph` wire format with `nodes` (map), `edges`,
-  `transform` (position/rotation/scale), and other 3D-graph fields. Webb's
-  CRPG scene model (node + description + NPCs + turn) does not match this
-  schema. The `ui.render` method accepts simpler payloads and works today
-  (confirmed: `{"type":"text","content":"..."}` returns `rendered: true`).
-- **Expected**: Either (a) petalTongue defines a `SceneGraph` subtype for
-  text/narrative scenes (dialogue trees, choices, voice notes), or (b) Webb
-  continues using `ui.render` for text content and `visualization.render.scene`
-  only when a full scene graph is available.
-- **Workaround**: Webb now uses `ui.render` for scene pushes (V21). Scene push
-  confirmed working with live petalTongue composition.
-- **Handoff**: petalTongue team — define CRPG scene type for
-  `visualization.render.scene`, or document `ui.render` as the intended path
-  for text-based narrative composition.
-- **Status**: partial (workaround shipped, `game_scene` binding attempted first
-  with fallback to `ui.render` — will auto-activate when petalTongue updates)
+- **Severity**: low
+- **Evidence**: petalTongue shipped scene unification (all 4 phases, Wave 150i):
+  Transform3D optional, orthographic camera at z=0, 569 scene tests. Webb V22
+  sends `game_scene` SceneGraph with `ui.render` fallback. Forward-compatible:
+  auto-activates when petalTongue v1.7+ deploys to flockGate.
+- **Workaround**: `push_scene_to_ui()` attempts `visualization.render.scene`
+  first, falls back to `ui.render` on rejection. Both paths confirmed working.
+- **Status**: **resolved on Webb side** (V22); awaiting petalTongue v1.7+ deploy
 
 ### GAP-003: AI primal NPC dialogue constraint enforcement
 
@@ -134,26 +124,17 @@ Webb exercises primal composition -> discovers gap in a primal capability
 ### GAP-006: Discovery primal capability-filtered queries
 
 - **Primal**: discovery (`discovery.query`, `capability.resolve`, `ipc.resolve`)
-- **Spring (producer)**: Songbird
-- **Severity**: medium (closer — TransportEndpoint type landed V14)
-- **Evidence**: Webb's `PrimalRegistry::discover()` probes filesystem socket
-  directories but does not yet call songBird's `ipc.resolve` for tier-5
-  topology-aware resolution. In the 4-gate mesh collective (Wave 107),
-  songBird returns structured `TransportEndpoint` responses from
-  `capability.resolve` and `ipc.resolve` (MeshRelay endpoints for cross-gate).
-- **Expected**: After filesystem probe, Webb queries songBird `ipc.resolve`
-  for primals not found locally, receiving `TransportEndpoint` (UDS/TCP/MeshRelay)
-  responses. The `TransportEndpoint` type (V14) already matches this wire format.
-- **Workaround**: Filesystem probe covers tiers 1-4. Tier-5 is logged as
-  degraded but functional. `TransportEndpoint` type is ready for consumption.
-- **Handoff**: Next step: wire `ipc.resolve` call into discovery after local
-  probe fails, deserialize response as `TransportEndpoint`.
-- **Progress (V16)**: songBird discovered via `SONGBIRD_JSONRPC_PORT=7780`
-  env var on flockGate. However songBird TCP 7780 speaks HTTP, not raw
-  NDJSON JSON-RPC — Webb's `PrimalClient` sends NDJSON and gets HTTP 400.
-  Either songBird needs a raw JSON-RPC endpoint or Webb needs an HTTP
-  transport adapter. Filed in V16 AAR handoff.
-- **Status**: type-ready (V14), env-var discovery works (V16), live health blocked by transport mismatch
+- **Spring (producer)**: songBird
+- **Severity**: low
+- **Evidence**: Webb probes filesystem sockets (tiers 1-4) and well-known HTTP
+  endpoints (songBird `/jsonrpc`). Tier-5 topology-aware `ipc.resolve` queries
+  via songBird are not yet wired — would enable cross-gate primal resolution
+  via `TransportEndpoint` (MeshRelay endpoints).
+- **Expected**: After local probe, Webb queries songBird `ipc.resolve` for
+  primals not found locally. `TransportEndpoint` type (V14) matches the wire format.
+- **Workaround**: Local discovery covers all primals on flockGate. HTTP
+  transport adapter (V19) talks to songBird `/jsonrpc`. Single-gate sufficient.
+- **Status**: open (tier-5 cross-gate resolution pending; local discovery functional)
 
 ### GAP-007: Voice interjection preview without live AI primal
 
@@ -223,29 +204,13 @@ Webb exercises primal composition -> discovers gap in a primal capability
   validation endpoint (GAP-021).
 - **Status**: partial (structural validation complete, typed model pending)
 
-### GAP-010: plasmidBin population and deployment automation
+### ~~GAP-010~~: plasmidBin population → RESOLVED (Wave 150a)
 
-- **Primal**: all (deployment infrastructure)
-- **Spring (producer)**: ecosystem (biomeOS, primalSpring)
-- **Severity**: medium
-- **Evidence**: `ecoPrimals/plasmidBin/` has been established as the primal
-  deployment surface but is not yet populated with actual genomeBin/ecoBin
-  artifacts. Webb's BYOB deploy graph references primals by capability but
-  cannot resolve them until binaries land in `plasmidBin/`.
-- **Expected**: CI pipelines or `genome fetch` tooling populate `plasmidBin/`
-  with versioned, checksummed, PIE-verified primal binaries. A
-  `manifest.lock` tracks deployed state.
-- **Workaround**: Webb operates in offline/preview mode. Primals are
-  discovered locally if manually started.
-- **Handoff**: biomeOS/primalSpring for deployment tooling.
-- **Status**: **resolved** (Wave 150a — depot operational, 59+ binaries, 4 arch, manifest.toml tracks state)
+- **Status**: resolved — depot operational, 59+ binaries, 4 arch, manifest.toml tracks state.
 
-### GAP-016: ludoSpring UDS-only transport blocks container composition → SUPERSEDED (V6)
+### ~~GAP-016~~: ludoSpring UDS transport → SUPERSEDED (V6)
 
-- **Status**: superseded — Webb no longer depends on ludoSpring (V6 decomposition).
-  Game science (flow, engagement, DDA) absorbed locally. AI delegation routes
-  directly to Squirrel via biomeOS semantic methods. This gap is no longer
-  relevant to Webb; it may still apply to other ludoSpring consumers.
+- **Status**: superseded — Webb no longer depends on ludoSpring.
 
 ### GAP-017: biomeOS neural-api fails to start in benchScale
 
@@ -286,14 +251,9 @@ Webb exercises primal composition -> discovers gap in a primal capability
 - **Handoff**: `ESOTERICWEBB_V51_AUDIT_EVOLUTION_HANDOFF_MAR29_2026.md`
 - **Status**: open
 
-### GAP-019: beardog crypto domain not wired into Webb bridge → RESOLVED (V11)
+### ~~GAP-019~~: bearDog crypto domain → RESOLVED (V11)
 
-- **Status**: resolved — `crypto` domain added to `DOMAIN_PRIMAL_MAP` with
-  bearDog as the default primal. Three bridge methods wired: `crypto_sign`,
-  `crypto_verify`, `crypto_hash`. Method constants: `crypto.sign`,
-  `crypto.verify`, `crypto.hash`. All degrade gracefully when bearDog is
-  unavailable (unsigned provenance, trust-on-first-use content). Three
-  standalone degradation tests added.
+- **Status**: resolved — crypto domain wired with 3 bridge methods.
 
 ### GAP-020: Deploy graph format divergence (TOML fragments vs biomeOS JSON)
 
@@ -374,58 +334,17 @@ Webb exercises primal composition -> discovers gap in a primal capability
 - **Handoff**: sporePrint / primalSpring for pipeline readiness.
 - **Status**: open (blocked on S3 cutover)
 
-### GAP-036: Ecosystem socket naming convention divergence
+### ~~GAP-036~~: Socket naming convention → RESOLVED (Wave 150a)
 
-- **Primal**: all primals registering UDS sockets
-- **Spring (producer)**: ecosystem-wide (each spring registers its own socket)
-- **Severity**: low (V16 workaround in place)
-- **Evidence**: On flockGate (Wave 147c), some primals register domain-named
-  sockets (`visualization.sock`, `ai.sock`) while others register primal-named
-  sockets (`rhizocrypt.sock`, `loamspine.sock`, `toadstool.sock`). Webb's
-  original `probe_directory()` only matched domain names, causing 3 primals
-  to be invisible despite running. V16 added reverse-mapping as a workaround.
-- **Expected**: Ecosystem convention converges on one naming scheme (domain
-  or primal slug) or primals register both. `biomeOS/primalSpring` should
-  document the convention and enforce it in `gate.enroll`.
-- **Workaround**: Webb V16 `probe_directory()` does two-pass lookup (domain
-  first, primal slug reverse-map second). Works for all known primals.
-- **Handoff**: V16 AAR handoff for upstream primal teams.
-- **Status**: **resolved** (Wave 150a — closed ecosystem-wide)
+- **Status**: resolved — closed ecosystem-wide. Webb V16 two-pass lookup handles both schemes.
 
-### GAP-037: songBird uses HTTP transport, not raw JSON-RPC
+### ~~GAP-037~~: songBird HTTP transport → RESOLVED (V19 + Wave 148a)
 
-- **Primal**: mesh (`discovery.topology`, `discovery.health`)
-- **Spring (producer)**: songBird
-- **Severity**: medium
-- **Evidence**: songBird on flockGate listens on TCP 7780 but speaks HTTP
-  (returns `HTTP/1.1 400 Bad Request` to NDJSON payloads). Webb's
-  `PrimalClient` sends newline-delimited JSON over raw TCP, which is the
-  ecosystem standard for all other primals (squirrel, petaltongue, nestgate,
-  sweetgrass, loamspine, beardog).
-- **Expected**: Either songBird exposes a raw JSON-RPC endpoint (NDJSON
-  over TCP, per sourDough convention) or Webb adds an HTTP POST transport
-  adapter.
-- **Workaround**: songBird mesh domain marked as discovered but unhealthy.
-  Mesh bridge methods degrade gracefully.
-- **Handoff**: V16 AAR handoff for songBird team.
-- **Status**: **resolved** (Wave 148a — songBird shipped `/jsonrpc` endpoint; Webb needs HTTP transport adapter to consume it)
+- **Status**: resolved — songBird shipped `/jsonrpc`; Webb V19 shipped HTTP POST transport adapter.
 
-### GAP-038: Stale UDS sockets from crashed primals
+### ~~GAP-038~~: Stale UDS sockets → RESOLVED (Wave 150a)
 
-- **Primal**: rhizoCrypt, toadStool (and potentially others)
-- **Spring (producer)**: ecosystem-wide
-- **Severity**: low
-- **Evidence**: On flockGate, `rhizocrypt.sock` and `toadstool.sock`
-  exist on disk but `connect()` returns ECONNREFUSED. The primal processes
-  are not running but their socket files were not cleaned up on exit.
-  This causes Webb to discover them as "found" but fail health check.
-- **Expected**: Primals clean up their UDS sockets on shutdown (trap
-  SIGTERM/SIGINT). Alternatively, `gate.enroll` or biomeOS could gc stale
-  sockets.
-- **Workaround**: Webb's bridge correctly classifies these as unhealthy
-  (discovered but not connected). No false positives in composition.
-- **Handoff**: V16 AAR handoff for upstream primal teams.
-- **Status**: **resolved** (Wave 150a — closed ecosystem-wide)
+- **Status**: resolved — closed ecosystem-wide.
 
 ### GAP-024: Composition dispatch not yet exercised E2E against live biomeOS
 
